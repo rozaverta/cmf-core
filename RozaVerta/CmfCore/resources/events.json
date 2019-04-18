@@ -1,0 +1,50 @@
+{
+	"type": "#/event_collection",
+	"items": [
+		{
+			"name": "onSystem",
+			"title": "Progress system events"
+		},
+		{
+			"name": "onSystemProcessorModule",
+			"title": "Process module install, update or uninstall",
+			"completable": true
+		},
+		{
+			"name": "onSystemProcessorDatabaseTable",
+			"title": "Process database table create, update or drop",
+			"completable": true
+		},
+		{
+			"name": "onSystemProcessorConfigFile",
+			"title": "Process save system config file for module",
+			"completable": true
+		},
+		{
+			"name": "onSystemProcessorEvent",
+			"title": "Process register event for module",
+			"completable": true
+		},
+		{
+			"name": "onThrowable",
+			"title": "Fatal error"
+		},
+		{
+			"name": "onRender",
+			"title": "Render view events"
+		},
+		{
+			"name": "onResponseSend",
+			"title": "Send content",
+			"completable": true
+		},
+		{
+			"name": "onResponseRedirect",
+			"title": "Redirect page"
+		},
+		{
+			"name": "onLanguage",
+			"title": "Calling an event after initialize the instance class of the language / Select language"
+		}
+	]
+}

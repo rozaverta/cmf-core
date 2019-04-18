@@ -1,0 +1,60 @@
+{
+	"type": "#/database_table",
+	"name": "template_packages",
+	"columns": [
+		{
+			"name": "id",
+			"type": "integer",
+			"autoIncrement": true
+		},
+		{
+			"name": "module_id",
+			"type": "integer"
+		},
+		{
+			"name": "name"
+		},
+		{
+			"name": "description",
+			"default": ""
+		},
+		{
+			"name": "version",
+			"default": "1.0"
+		},
+		{
+			"name": "author",
+			"default": ""
+		},
+		{
+			"name": "link",
+			"default": ""
+		},
+		{
+			"name": "readme",
+			"type": "text",
+			"default": ""
+		},
+		{
+			"name": "license",
+			"type": "text",
+			"default": ""
+		}
+	],
+	"primaryKey": "id",
+	"indexes": [
+		{
+			"name": "index__module_id",
+			"columns": [
+				"module_id"
+			]
+		},
+		{
+			"name": "index__name",
+			"type": "unique",
+			"columns": [
+				"name"
+			]
+		}
+	]
+}

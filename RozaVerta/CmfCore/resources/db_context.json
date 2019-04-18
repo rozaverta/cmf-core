@@ -1,0 +1,62 @@
+{
+	"type": "#/database_table",
+	"name": "context",
+	"columns": [
+		{
+			"name": "id",
+			"type": "integer",
+			"autoIncrement": true
+		},
+		{
+			"name": "name"
+		},
+		{
+			"name": "title"
+		},
+		{
+			"name": "description",
+			"default": ""
+		},
+		{
+			"name": "hostname",
+			"default": ""
+		},
+		{
+			"name": "host_port",
+			"type": "integer",
+			"default": 0
+		},
+		{
+			"name": "host_ssl",
+			"type": "boolean",
+			"default": false
+		},
+		{
+			"name": "path",
+			"default": ""
+		},
+		{
+			"name": "query_path",
+			"default": ""
+		},
+		{
+			"name": "default_context",
+			"type": "boolean",
+			"default": false
+		},
+		{
+			"name": "properties",
+			"type": "json_array"
+		}
+	],
+	"primaryKey": "id",
+	"indexes": [
+		{
+			"name": "index__name",
+			"type": "unique",
+			"columns": [
+				"name"
+			]
+		}
+	]
+}

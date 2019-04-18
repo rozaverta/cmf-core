@@ -1,0 +1,35 @@
+{
+    "name": "rozaverta/cmf-core",
+    "type": "library",
+    "description": "CMF2 Anaconda develop library.",
+    "keywords": [
+        "cmf",
+        "cms",
+        "rozaverta",
+        "anaconda"
+    ],
+    "license": "MIT",
+    "authors": [
+        {"name": "GoshaV Maniako", "email": "gosha@rozaverta.com"}
+    ],
+    "require": {
+        "php": "^7.2",
+        "ext-pdo": "*",
+        "ext-ctype": "*",
+        "ext-json": "*",
+        "ext-fileinfo": "*",
+        "ext-zip": "*",
+        "doctrine/dbal": "^2.9",
+        "symfony/event-dispatcher": "^4.2",
+        "symfony/console": "^4.2",
+        "symfony/polyfill-mbstring": "^1.10"
+    },
+    "autoload": {
+        "psr-4": {
+            "RozaVerta\\CmfCore\\": "RozaVerta/CmfCore"
+        },
+        "files": [
+            "RozaVerta/CmfCore/boot.inc.php"
+        ]
+    }
+}

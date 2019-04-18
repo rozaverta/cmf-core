@@ -1,0 +1,34 @@
+{
+	"type": "#/database_table",
+	"name": "events",
+	"columns": [
+		{
+			"name": "id",
+			"type": "integer",
+			"autoIncrement": true
+		},
+		{
+			"name": "name"
+		},
+		{
+			"name": "title"
+		},
+		{
+			"name": "module_id",
+			"type": "integer"
+		},
+		{
+			"name": "completable",
+			"type": "boolean"
+		}
+	],
+	"primaryKey": "id",
+	"indexes": [
+		{
+			"name": "index__module_id",
+			"columns": [
+				"module_id"
+			]
+		}
+	]
+}

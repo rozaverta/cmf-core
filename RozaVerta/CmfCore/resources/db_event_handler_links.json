@@ -1,0 +1,39 @@
+{
+	"type": "#/database_table",
+	"name": "event_handler_links",
+	"columns": [
+		{
+			"name": "id",
+			"type": "integer",
+			"autoIncrement": true
+		},
+		{
+			"name": "handler_id",
+			"type": "integer"
+		},
+		{
+			"name": "event_id",
+			"type": "integer"
+		},
+		{
+			"name": "priority",
+			"type": "smallint",
+			"default": 1
+		}
+	],
+	"primaryKey": "id",
+	"indexes": [
+		{
+			"name": "index__handler_id",
+			"columns": [
+				"handler_id"
+			]
+		},
+		{
+			"name": "index__event_id",
+			"columns": [
+				"event_id"
+			]
+		}
+	]
+}

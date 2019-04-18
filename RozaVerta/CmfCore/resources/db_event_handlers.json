@@ -1,0 +1,27 @@
+{
+	"type": "#/database_table",
+	"name": "event_handlers",
+	"columns": [
+		{
+			"name": "id",
+			"type": "integer",
+			"autoIncrement": true
+		},
+		{
+			"name": "module_id",
+			"type": "integer"
+		},
+		{
+			"name": "class_name"
+		}
+	],
+	"primaryKey": "id",
+	"indexes": [
+		{
+			"name": "index__module_id",
+			"columns": [
+				"module_id"
+			]
+		}
+	]
+}

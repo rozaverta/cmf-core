@@ -12,7 +12,9 @@ use Doctrine\DBAL\Platforms\AbstractPlatform;
 use InvalidArgumentException;
 use JsonSerializable;
 use RozaVerta\CmfCore\Database\Connection;
+use RozaVerta\CmfCore\Database\DatabaseManager;
 use RozaVerta\CmfCore\Database\Interfaces\SchemeDesignerInterface;
+use RozaVerta\CmfCore\Database\Query\Builder;
 use RozaVerta\CmfCore\Interfaces\Arrayable;
 use RozaVerta\CmfCore\Interfaces\VarExportInterface;
 use RozaVerta\CmfCore\Traits\GetTrait;
@@ -84,5 +86,17 @@ class SchemeDesigner implements SchemeDesignerInterface, Arrayable, JsonSerializ
 	static public function getSchemaBuilder(): array
 	{
 		return [];
+	}
+
+	/**
+	 * Create query builder for current table
+	 *
+	 * @param string|null $alias
+	 * @param string|null $connection
+	 * @return Builder
+	 */
+	static public function find( ? string $alias = null, ? string $connection = null ): Builder
+	{
+		return DatabaseManager::table( static::class, $alias, $connection );
 	}
 }

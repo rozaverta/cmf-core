@@ -8,6 +8,8 @@
 
 namespace RozaVerta\CmfCore\Database\Interfaces;
 
+use RozaVerta\CmfCore\Database\Query\Builder;
+
 interface SchemeDesignerInterface
 {
 	static public function __set_state( $data );
@@ -25,4 +27,13 @@ interface SchemeDesignerInterface
 	 * @return array
 	 */
 	static public function getSchemaBuilder(): array;
+
+	/**
+	 * Create query builder for current table
+	 *
+	 * @param string|null $alias
+	 * @param string|null $connection
+	 * @return Builder
+	 */
+	static public function find( ? string $alias = null, ? string $connection = null ): Builder;
 }

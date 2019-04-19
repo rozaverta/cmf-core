@@ -26,7 +26,6 @@ use Throwable;
  * @method mixed getPort() Gets the port of the currently connected database.
  * @method string getUsername() Gets the username used by this connection.
  * @method string getPassword() Gets the password used by this connection.
- * @method string|null getServerVersion() Returns the database server version if the underlying driver supports it.
  * @method bool isAutoCommit() Returns the current auto-commit mode for this connection.
  * @method bool isConnected() Whether an actual connection to the database is established.
  * @method bool connect() Establishes the connection with the database.

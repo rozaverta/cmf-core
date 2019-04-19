@@ -15,30 +15,8 @@
 			"name": "name"
 		},
 		{
-			"name": "description",
-			"default": ""
-		},
-		{
 			"name": "version",
 			"default": "1.0"
-		},
-		{
-			"name": "author",
-			"default": ""
-		},
-		{
-			"name": "link",
-			"default": ""
-		},
-		{
-			"name": "readme",
-			"type": "text",
-			"default": ""
-		},
-		{
-			"name": "license",
-			"type": "text",
-			"default": ""
 		}
 	],
 	"primaryKey": "id",

@@ -59,7 +59,8 @@ abstract class Controller implements ControllerInterface
 	public function __construct( MountPoint $mountPoint, array $data = [] )
 	{
 		$module = $mountPoint->getModule();
-		if( __NAMESPACE__ . '\\' !== $module->getNamespaceName() )
+		$name = get_class($this);
+		if( strpos($name, $module->getNamespaceName()) !== 0 )
 		{
 			throw new ExpectedModuleException("Invalid current module");
 		}

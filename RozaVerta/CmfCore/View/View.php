@@ -65,8 +65,6 @@ final class View extends Lexer
 
 	private $packages = [];
 
-	private $plugins = [];
-
 	private $call = [];
 
 	private $protected = [];
@@ -147,7 +145,7 @@ final class View extends Lexer
 				}
 			}
 
-			$cache->export($this->plugins);
+			$cache->export($plugins);
 		}
 
 		return $this;
@@ -323,7 +321,7 @@ final class View extends Lexer
 	{
 		$event = new RenderGetterEvent($this, $name, $this->get($name, $default));
 		$this->event->dispatch($event);
-		return $event->getParam("value");
+		return $event->propertyValue;
 	}
 
 	// assets

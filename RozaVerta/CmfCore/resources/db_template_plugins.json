@@ -15,9 +15,6 @@
 			"name": "name"
 		},
 		{
-			"name": "title"
-		},
-		{
 			"name": "visible",
 			"type": "boolean",
 			"default": true

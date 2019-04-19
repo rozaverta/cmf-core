@@ -772,12 +772,8 @@ final class App
 		$data = $this->controller->getPageData();
 		$template = isset( $data["template"] ) ? $data["template"] : "main";
 
-		if( isset($data['package']) )
-		{
-			$view->usePackage($data['package']);
-		}
-
 		$view
+			->usePackage($data['package'] ?? $this->system("package", "main"))
 			->setProtectedKeys($protected)
 			->set($data);
 

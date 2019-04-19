@@ -8,6 +8,7 @@
 
 namespace RozaVerta\CmfCore\Controllers;
 
+use Doctrine\DBAL\DBALException;
 use RozaVerta\CmfCore\Route\Controller;
 use RozaVerta\CmfCore\Schemes\Modules_SchemeDesigner;
 use RozaVerta\CmfCore\Support\Prop;
@@ -27,7 +28,7 @@ class Welcome extends Controller
 					"title" => "https://rozaverta.com"
 				],
 				[
-					"link"  => "https://github.com/rozaverta/cmf",
+					"link"  => "https://github.com/rozaverta/cmf-core",
 					"title" => "GitHub"
 				]
 			]
@@ -118,14 +119,32 @@ framework and a content management system (CMS).</p>
 
 		$body  = "<h3>Base info</h3>";
 		$body .= "<strong>Domain:</strong> " . $app->host->getName() . "<br>";
-		$body .= "<strong>Web-site:</strong> " . $app->system("siteName", $app->host->getName()) . "</p>";
-		$body .= "<p><strong>PHP Version:</strong> " . PHP_VERSION . "</p>";
+		$body .= "<strong>Web-site:</strong> " . $app->system("siteName", $app->host->getName()) . "<br>";
+		$body .= "<strong>PHP Version:</strong> " . PHP_VERSION . "</p>";
+
+		$driver = $db["driver"] ?? "mysql";
+
+		try {
+			$ping = $app->db->ping();
+			$originalDriver = $app->db->getDbalConnection()->getDriver()->getName();
+			if(!empty($originalDriver))
+			{
+				$driver = $originalDriver;
+			}
+		}
+		catch(DBALException $e) {
+			if( !isset($ping) )
+			{
+				$ping = false;
+			}
+		}
 
 		$body .= "<h3>Database</h3>";
-		$body .= "<p><strong>Driver:</strong> " . ($db["driver"] ?? "mysql") . "<br>";
-		$body .= "<strong>Charset:</strong> " . ($db["charset"] ?? "-");
-		if( ! empty($db["collation"]) ) $body .= "<br><strong>Collation:</strong> " . $db["collation"];
-		if( ! empty($db["prefix"]) ) $body .= "<br><strong>Prefix:</strong> " . $db["prefix"];
+		$body .= "<p><strong>Driver:</strong> " . $driver . "<br>";
+		$body .= "<strong>Charset:</strong> " . ($db["charset"] ?? "-") . "<br>";
+		if( ! empty($db["collation"]) ) $body .= "<strong>Collation:</strong> " . $db["collation"] . "<br>";
+		if( ! empty($db["prefix"]) ) $body .= "<strong>Prefix:</strong> " . $db["prefix"] . "<br>";
+		$body .= "<strong>Ping:</strong> " . ($ping ? "true" : "false");
 		$body .= "</p>";
 
 		$body .= "<h3>Modules</h3>";

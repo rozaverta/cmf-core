@@ -27,46 +27,11 @@ class TemplatePackages_SchemeDesigner extends ModuleSchemeDesigner
 	public function getName(): string { return $this->items["name"]; }
 
 	/**
-	 * Package title.
-	 *
-	 * @return string
-	 */
-	public function getDescription(): string { return $this->items["description"]; }
-
-	/**
 	 * Package version.
 	 *
 	 * @return string
 	 */
 	public function getVersion(): string { return $this->items["version"]; }
-
-	/**
-	 * Package author
-	 *
-	 * @return string
-	 */
-	public function getAuthor(): string { return $this->items["author"]; }
-
-	/**
-	 * Package url link
-	 *
-	 * @return string
-	 */
-	public function getLink(): string { return $this->items["link"]; }
-
-	/**
-	 * Package readme.md data text.
-	 *
-	 * @return string
-	 */
-	public function getReadme(): string { return $this->items["readme"]; }
-
-	/**
-	 * Package license.
-	 *
-	 * @return string
-	 */
-	public function getLicense(): string { return $this->items["license"]; }
 
 	/**
 	 * @param array $items
@@ -100,7 +65,7 @@ class TemplatePackages_SchemeDesigner extends ModuleSchemeDesigner
 	{
 		return [
 			"select" => [
-				"id", "module_id", "name", "description", "version", "author", "link", "readme", "license"
+				"id", "module_id", "name", "version"
 			]
 		];
 	}

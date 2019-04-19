@@ -19,9 +19,6 @@ class TemplatePlugins_SchemeDesigner extends ModuleSchemeDesigner
 	/** @return string Plugin name */
 	public function getName(): string { return $this->items["name"]; }
 
-	/** @return string Plugin title */
-	public function getTitle(): string { return $this->items["title"]; }
-
 	/** @return bool */
 	public function isVisible(): bool { return $this->items["visible"]; }
 
@@ -69,7 +66,7 @@ class TemplatePlugins_SchemeDesigner extends ModuleSchemeDesigner
 	{
 		return [
 			"select" => [
-				"id", "module_id", "name", "title", "visible", "class_name"
+				"id", "module_id", "name", "visible", "class_name"
 			]
 		];
 	}

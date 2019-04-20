@@ -3,7 +3,9 @@
 namespace RozaVerta\CmfCore\Database\Query;
 
 use Closure;
+use Doctrine\DBAL\DBALException;
 use ReflectionClass;
+use ReflectionException;
 use RozaVerta\CmfCore\App;
 use RozaVerta\CmfCore\Database\Connection;
 use RozaVerta\CmfCore\Database\Scheme\SchemeDesigner;
@@ -16,7 +18,7 @@ use InvalidArgumentException;
 class Builder
 {
 	/**
-	 * @var \RozaVerta\CmfCore\Database\Connection
+	 * @var Connection
 	 */
 	protected $connection;
 
@@ -56,6 +58,11 @@ class Builder
 	protected $table = "";
 
 	/**
+	 * @var string
+	 */
+	protected $tableAlias = "";
+
+	/**
 	 * @var Table
 	 */
 	protected $tableSchema;
@@ -71,10 +78,15 @@ class Builder
 	protected $columns = [];
 
 	/**
+	 * @var array
+	 */
+	protected $columnsSelect = [];
+
+	/**
 	 * Create a new query builder instance.
 	 *
 	 * @param $table
-	 * @param \RozaVerta\CmfCore\Database\Connection $connection
+	 * @param Connection $connection
 	 */
 	public function __construct( $table, Connection $connection )
 	{
@@ -157,26 +169,41 @@ class Builder
 		return $this->tableSchema;
 	}
 
+	private function isTableDesigner( string $tableName, & $designer ): bool
+	{
+		if(strpos($tableName, '_SchemeDesigner') === false)
+		{
+			return false;
+		}
+
+		try {
+			$designer = new ReflectionClass( $tableName );
+		}
+		catch( ReflectionException $e ) {
+			$designer = null;
+			return false;
+		}
+
+		if(! $designer->isSubclassOf(SchemeDesigner::class))
+		{
+			throw new InvalidArgumentException("Invalid scheme designer class " . $designer->getName());
+		}
+
+		return true;
+	}
+
 	protected function table( string $tableName, ?string $tableAlias = null )
 	{
-		$loadDesigner = strpos($tableName, '_SchemeDesigner') !== false;
+		$loadDesigner = $this->isTableDesigner($tableName, $designer);
 		if( $loadDesigner )
 		{
-			$designer = new ReflectionClass($tableName);
-			if($designer->isSubclassOf(SchemeDesigner::class))
-			{
-				$this->designer = $designer;
-			}
-			else
-			{
-				throw new InvalidArgumentException("Invalid scheme designer class " . $designer->getName());
-			}
-
+			$this->designer = $designer;
 			$tableName = $this->designer->getMethod('getTableName')->invoke(null);
 		}
 
 		$fullTableName = strpos($tableName, "(") === false ? $this->connection->getTableName($tableName) : $tableName;
 		$this->table = $tableName;
+		$this->tableAlias = $tableAlias;
 
 		$this
 			->builder
@@ -211,11 +238,11 @@ class Builder
 			}
 			else if($tableAlias != $fullTableName)
 			{
-				$schema = $this->getTableSchema();
-				if($schema)
+				$ts = $this->getTableSchema();
+				if($ts)
 				{
 					$prefix = $tableAlias . ".";
-					foreach($schema->getColumnNames() as $name)
+					foreach($ts->getColumnNames() as $name)
 					{
 						$this->columns[$name] = $prefix . $name;
 					}
@@ -498,24 +525,24 @@ class Builder
 		return $this;
 	}
 
-	public function join($fromAlias, $join, $alias, $condition = null)
+	public function join($fromAlias, $join, $alias, $condition = null, array $rename = [])
 	{
-		return $this->addJoin('inner', $fromAlias, $join, $alias, $condition );
+		return $this->addJoin('inner', $fromAlias, $join, $alias, $condition, $rename );
 	}
 
-	public function innerJoin($fromAlias, $join, $alias, $condition = null)
+	public function innerJoin($fromAlias, $join, $alias, $condition = null, array $rename = [])
 	{
-		return $this->addJoin('inner', $fromAlias, $join, $alias, $condition );
+		return $this->addJoin('inner', $fromAlias, $join, $alias, $condition, $rename );
 	}
 
-	public function leftJoin($fromAlias, $join, $alias, $condition = null)
+	public function leftJoin($fromAlias, $join, $alias, $condition = null, array $rename = [])
 	{
-		return $this->addJoin('left', $fromAlias, $join, $alias, $condition );
+		return $this->addJoin('left', $fromAlias, $join, $alias, $condition, $rename );
 	}
 
-	public function rightJoin($fromAlias, $join, $alias, $condition = null)
+	public function rightJoin($fromAlias, $join, $alias, $condition = null, array $rename = [])
 	{
-		return $this->addJoin('right', $fromAlias, $join, $alias, $condition );
+		return $this->addJoin('right', $fromAlias, $join, $alias, $condition, $rename );
 	}
 
 	/**
@@ -529,8 +556,10 @@ class Builder
 		return new CriteriaBuilder( $this, $type );
 	}
 
-	protected function addJoin( $type, $fromAlias, $join, $alias, $condition = null )
+	protected function addJoin( $type, $fromAlias, $join, $alias, $condition = null, $rename = [] )
 	{
+		static $prevent = false;
+
 		if( $condition instanceof Closure )
 		{
 			$criteria = $this->newCriteria();
@@ -544,10 +573,41 @@ class Builder
 			$condition = $criteria->getSQL();
 		}
 
+		$joinTableName = $join;
+
+		$loadDesigner = $this->isTableDesigner($joinTableName, $designer);
+		if( $loadDesigner )
+		{
+			/** @var ReflectionClass $designer */
+			$joinTableName = $designer->getMethod('getTableName')->invoke(null);
+		}
+
+		if( ! $prevent && App::getInstance()->isInstall() )
+		{
+			$prevent = true;
+			$tableSchema = Table::table($joinTableName);
+			$prevent = false;
+
+			$prefix = $alias . ".";
+			foreach($tableSchema->getColumnNames() as $name)
+			{
+				$joinName = $rename[$name] ?? $name;
+				if( !isset($this->columns[$joinName]) )
+				{
+					$selectName = $prefix . $name;
+					$this->columns[$joinName] = $selectName;
+					if($joinName !== $name)
+					{
+						$this->columnsSelect[$joinName] = $selectName . " AS " . $joinName;
+					}
+				}
+			}
+		}
+
 		$part = [
 			$fromAlias => [
 				'joinType'      => $type,
-				'joinTable'     => $this->connection->getTableName($join),
+				'joinTable'     => $this->connection->getTableName($joinTableName),
 				'joinAlias'     => $alias,
 				'joinCondition' => $condition,
 			],
@@ -585,66 +645,31 @@ class Builder
 		return $sql;
 	}
 
-	/**
-	 * Sets a query parameter for the query being constructed.
-	 *
-	 * @param string          $name  The parameter position or name.
-	 * @param mixed           $value The parameter value.
-	 * @param string|int|null $type  One of the {@link \Doctrine\DBAL\ParameterType} constants.
-	 *
-	 * @return $this This Builder instance.
-	 */
-	public function setParameter(string $name, $value, $type = null)
+	protected function getSelectColumns($columns)
 	{
-		$this->builder->setParameter($name, $value, $type);
-		return $this;
-	}
+		if( ! is_array($columns) )
+		{
+			$columns = [$columns];
+		}
 
+		$map = [];
+		foreach($columns as $column)
+		{
+			if(isset($this->columnsSelect[$column]))
+			{
+				$map[] = $this->columnsSelect[$column];
+			}
+			else if(isset($this->columns[$column]))
+			{
+				$map[] = $this->columns[$column];
+			}
+			else
+			{
+				$map[] = $column;
+			}
+		}
 
-	/**
-	 * Sets a collection of query parameters for the query being constructed.
-	 *
-	 * @param mixed[]        $params The query parameters to set.
-	 * @param int[]|string[] $types  The query parameters types to set.
-	 *
-	 * @return $this This Builder instance.
-	 */
-	public function setParameters(array $params, array $types = [])
-	{
-		$this->builder->setParameters($params, $types);
-		return $this;
-	}
-
-	/**
-	 * Gets a (previously set) query parameter of the query being constructed.
-	 *
-	 * @param string $name The key of the bound parameter.
-	 *
-	 * @return mixed The value of the bound parameter.
-	 */
-	public function getParameter(string $name)
-	{
-		return $this->builder->getParameter($name);
-	}
-
-	/**
-	 * Gets all defined query parameters for the query being constructed indexed by parameter index or name.
-	 *
-	 * @return mixed[] The currently defined query parameters indexed by parameter index or name.
-	 */
-	public function getParameters(): array
-	{
-		return $this->builder->getParameters();
-	}
-
-	/**
-	 * Gets all defined query parameter types for the query being constructed indexed by parameter index or name.
-	 *
-	 * @return int[]|string[] The currently defined query parameter types indexed by parameter index or name.
-	 */
-	public function getParameterTypes(): array
-	{
-		return $this->builder->getParameterTypes();
+		return $map;
 	}
 
 	/**
@@ -655,7 +680,7 @@ class Builder
 	 */
 	public function select($columns = ['*'])
 	{
-		$this->builder->select($columns);
+		$this->builder->select($this->getSelectColumns($columns));
 		return $this;
 	}
 
@@ -681,7 +706,7 @@ class Builder
 	 */
 	public function addSelect($select)
 	{
-		$this->builder->addSelect($select);
+		$this->builder->addSelect($this->getSelectColumns($select));
 		return $this;
 	}
 
@@ -702,6 +727,11 @@ class Builder
 		}
 	}
 
+	/**
+	 * @param string|null $column
+	 * @return false|mixed
+	 * @throws DBALException
+	 */
 	public function value(?string $column = null)
 	{
 		$this->checkTableExists();
@@ -726,6 +756,7 @@ class Builder
 
 	/**
 	 * @return bool|object|SchemeDesigner
+	 * @throws DBALException
 	 */
 	public function first()
 	{
@@ -755,6 +786,11 @@ class Builder
 		});
 	}
 
+	/**
+	 * @param Closure $closure
+	 * @param string|null $keyName
+	 * @return Collection
+	 */
 	public function project(Closure $closure, ?string $keyName = null)
 	{
 		$this->checkTableExists();
@@ -793,12 +829,14 @@ class Builder
 	{
 		$this->checkTableExists();
 
+		$builder = $this->builder;
+
 		return $this
 			->getConnection()
 			->executeWritable(
 				$this->getUpdateSql( $data ),
-				$this->getParameters(),
-				$this->getParameterTypes()
+				$builder->getParameters(),
+				$builder->getParameterTypes()
 			);
 	}
 
@@ -806,12 +844,14 @@ class Builder
 	{
 		$this->checkTableExists();
 
+		$builder = $this->builder;
+
 		return $this
 			->getConnection()
 			->executeWritable(
 				$this->getInsertSql( $data ),
-				$this->getParameters(),
-				$this->getParameterTypes()
+				$builder->getParameters(),
+				$builder->getParameterTypes()
 			);
 	}
 
@@ -824,12 +864,14 @@ class Builder
 	{
 		$this->checkTableExists();
 
+		$builder = $this->builder;
+
 		return $this
 			->getDbalConnection()
 			->executeUpdate(
 				$this->getDeleteSql(),
-				$this->getParameters(),
-				$this->getParameterTypes()
+				$builder->getParameters(),
+				$builder->getParameterTypes()
 			);
 	}
 
@@ -934,7 +976,7 @@ class Builder
 	 *
 	 * @return int
 	 *
-	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws DBALException
 	 */
 	public function count( ?string $column = null ): int
 	{
@@ -948,7 +990,7 @@ class Builder
 	 *
 	 * @return mixed
 	 *
-	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws DBALException
 	 */
 	public function min( ?string $column = null ): int
 	{
@@ -962,7 +1004,7 @@ class Builder
 	 *
 	 * @return mixed
 	 *
-	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws DBALException
 	 */
 	public function max( ?string $column = null ): int
 	{
@@ -976,7 +1018,7 @@ class Builder
 	 *
 	 * @return mixed
 	 *
-	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws DBALException
 	 */
 	public function sum( ?string $column = null ): int
 	{
@@ -990,7 +1032,7 @@ class Builder
 	 *
 	 * @return mixed
 	 *
-	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws DBALException
 	 */
 	public function avg( ?string $column = null ): int
 	{
@@ -1005,7 +1047,7 @@ class Builder
 	 *
 	 * @return int
 	 *
-	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws DBALException
 	 */
 	protected function aggregate($function, $column): int
 	{
@@ -1018,11 +1060,22 @@ class Builder
 
 		$builder = clone $this->builder;
 
+		$fast = empty( $builder->getQueryPart('groupBy') ) && empty( $builder->getQueryPart('having') );
+		if($fast)
+		{
+			$builder
+				->resetQueryParts(['from', 'orderBy'])
+				->from(
+					$this->getConnection()->getTableName($this->table), $this->tableAlias
+				);
+		}
+		else
+		{
+			$builder
+				->resetQueryParts(['orderBy']);
+		}
+
 		$builder
-			->resetQueryParts(['from', 'orderBy'])
-			->from(
-				$this->getConnection()->getTableName($this->table)
-			)
 			->setMaxResults(null)
 			->setFirstResult(null);
 

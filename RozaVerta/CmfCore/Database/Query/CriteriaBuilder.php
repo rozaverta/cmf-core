@@ -27,6 +27,21 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	public const GT  = DBALExpressionBuilder::GT  ;
 	public const GTE = DBALExpressionBuilder::GTE ;
 
+	private static $operators = [
+		'not' => self::NEQ,
+		'neq' => self::NEQ,
+		'!='  => self::NEQ,
+		'!==' => self::NEQ,
+		'eq'  => self::EQ,
+		'=='  => self::EQ,
+		'lt'  => self::LT,
+		'gt'  => self::GT,
+		'lte' => self::LTE,
+		'gte' => self::GTE,
+		'le'  => self::LTE,
+		'ge'  => self::GTE,
+	];
+
 	protected $parts = [];
 
 	/**
@@ -216,7 +231,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 *
 	 * @param string $x The field in string format to be restricted by IS NULL.
 	 *
-	 * @return string
+	 * @return $this
 	 */
 	public function isNull($x)
 	{
@@ -230,7 +245,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 *
 	 * @param string $x The field in string format to be restricted by IS NOT NULL.
 	 *
-	 * @return string
+	 * @return $this
 	 */
 	public function isNotNull($x)
 	{
@@ -246,7 +261,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 * @param mixed  $value Argument to be used in LIKE() comparison.
 	 * @param null   $bindName
 	 * @param array  $more
-	 * 
+	 *
 	 * @return CriteriaBuilder
 	 *
 	 */
@@ -279,7 +294,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 * @param string $name The field name
 	 * @param mixed $value The right expression value
 	 * @param null $bindName
-	 * 
+	 *
 	 * @return CriteriaBuilder
 	 */
 	public function in($name, $value, & $bindName = null)
@@ -294,7 +309,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 * @param string $name The field name
 	 * @param mixed $value The right expression value
 	 * @param null $bindName
-	 * 
+	 *
 	 * @return CriteriaBuilder
 	 */
 	public function notIn($name, $value, & $bindName = null)
@@ -493,6 +508,12 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 
 	protected function operator( $operator ): string
 	{
-		return empty($operator) ? self::EQ : str_replace(" ", "", strtolower($operator));
+		if(empty($operator))
+		{
+			return self::EQ;
+		}
+
+		$operator = str_replace(" ", "", strtolower($operator));
+		return self::$operators[$operator] ?? $operator;
 	}
 }

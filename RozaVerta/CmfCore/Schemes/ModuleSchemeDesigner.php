@@ -33,7 +33,6 @@ abstract class ModuleSchemeDesigner extends SchemeDesigner implements ModuleGett
 	}
 
 	/**
-	 * @throws \ReflectionException
 	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceNotFoundException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException

@@ -8,6 +8,9 @@
 
 namespace RozaVerta\CmfCore\Schemes;
 
+use Doctrine\DBAL\Platforms\AbstractPlatform;
+use Doctrine\DBAL\Types\Type;
+
 class SchemeTables_SchemeDesigner extends ModuleSchemeDesigner
 {
 	/** @return int */
@@ -24,6 +27,20 @@ class SchemeTables_SchemeDesigner extends ModuleSchemeDesigner
 
 	/** @return string */
 	public function getVersion(): string { return $this->items["version"]; }
+
+	/**
+	 * @param array $items
+	 * @param AbstractPlatform $platform
+	 * @return array
+	 * @throws \Doctrine\DBAL\DBALException
+	 */
+	public function format( array $items, AbstractPlatform $platform ): array
+	{
+		$items = parent::format($items, $platform);
+		$items["id"] = (int) $items["id"];
+		if( !is_bool($items["addon"]) ) $items["addon"] = Type::getType(Type::BOOLEAN)->convertToPHPValue($items["addon"], $platform);
+		return $items;
+	}
 
 	/**
 	 * Get table name

@@ -21,6 +21,11 @@
 			"type": "integer"
 		},
 		{
+			"name": "addon",
+			"type": "boolean",
+			"default": false
+		},
+		{
 			"name": "version"
 		}
 	],

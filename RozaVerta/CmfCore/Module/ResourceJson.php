@@ -59,6 +59,10 @@ class ResourceJson implements Interfaces\ResourceInterface
 		else
 		{
 			$file = Path::module( $module, $file, "resources" );
+			if( !file_exists($file))
+			{
+				$file = Path::addons($module->getKey() . "/resources/" . $file );
+			}
 		}
 
 		$filePath = $file;

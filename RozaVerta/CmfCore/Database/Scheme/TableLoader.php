@@ -56,7 +56,7 @@ class TableLoader
 	 * @param string|null $cacheVersion
 	 *
 	 * @throws NotFoundException
-	 * @throws \ReflectionException
+	 * @throws \Doctrine\DBAL\DBALException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceNotFoundException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
 	 */

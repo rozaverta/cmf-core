@@ -26,7 +26,6 @@ use RozaVerta\CmfCore\Schemes\SchemeTables_SchemeDesigner;
 use RozaVerta\CmfCore\Support\Collection;
 use RozaVerta\CmfCore\Support\Workshop;
 use RozaVerta\CmfCore\Support\Text;
-use function Sodium\version_string;
 
 class Database extends Workshop
 {
@@ -408,14 +407,22 @@ class Database extends Workshop
 	}
 
 	/**
+	 * @param null|bool $addon
 	 * @return Collection
 	 */
-	public function getTablesVersionList(): Collection
+	public function getTablesVersionList( ?bool $addon = null ): Collection
 	{
-		return $this
+		$builder = $this
 			->db
 			->table(SchemeTables_SchemeDesigner::getTableName())
-			->where("module_id", $this->getModuleId())
+			->where("module_id", $this->getModuleId());
+
+		if( !is_null($addon) )
+		{
+			$builder->where("addon", $addon);
+		}
+
+		return $builder
 			->orderBy("name")
 			->select(["name", "version"])
 			->project(function($row) { return $row["version"]; }, "name");

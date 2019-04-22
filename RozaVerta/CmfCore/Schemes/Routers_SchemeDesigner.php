@@ -19,6 +19,9 @@ class Routers_SchemeDesigner extends ModuleSchemeDesigner
 	/** @return string Router path */
 	public function getPath(): string { return $this->items["path"]; }
 
+	/** @return string Router unique name */
+	public function getName(): string { return $this->items["name"]; }
+
 	/** @return int Router position */
 	public function getPosition(): int { return $this->items["position"]; }
 
@@ -59,7 +62,7 @@ class Routers_SchemeDesigner extends ModuleSchemeDesigner
 	{
 		return [
 			"select" => [
-				"tr.id", "tr.module_id", "tr.path", "tr.position", "tr.properties"
+				"tr.id", "tr.name", "tr.module_id", "tr.path", "tr.position", "tr.properties"
 			],
 			"alias" => "tr",
 			"joins" => [
@@ -78,6 +81,7 @@ class Routers_SchemeDesigner extends ModuleSchemeDesigner
 			"groupBy" => "id",
 			"columns" => [
 				"id" => "tr.id",
+				"name" => "tr.name",
 				"module_id" => "tr.module_id",
 				"type" => "tr.type",
 				"rule" => "tr.rule",

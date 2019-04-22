@@ -8,7 +8,7 @@
 
 namespace RozaVerta\CmfCore\Route;
 
-use RozaVerta\CmfCore\Context\Context;
+use RozaVerta\CmfCore\Route\Context;
 use RozaVerta\CmfCore\Host\Host;
 use RozaVerta\CmfCore\Interfaces\CreateInstanceInterface;
 use RozaVerta\CmfCore\Support\Prop;

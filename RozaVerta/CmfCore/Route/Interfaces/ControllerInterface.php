@@ -10,11 +10,10 @@ namespace RozaVerta\CmfCore\Route\Interfaces;
 
 use RozaVerta\CmfCore\Module\Interfaces\ModuleGetterInterface;
 use RozaVerta\CmfCore\Module\Interfaces\ModuleInterface;
-use RozaVerta\CmfCore\Route\MountPoint;
 
 interface ControllerInterface extends ModuleGetterInterface
 {
-	public function __construct( MountPoint $point, array $data = [] );
+	public function __construct( MountPointInterface $point, array $data = [] );
 
 	/**
 	 * Ready (initial) page data
@@ -47,9 +46,14 @@ interface ControllerInterface extends ModuleGetterInterface
 	/**
 	 * Complete. Load all data for page
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function complete();
+
+	/**
+	 * @return MountPointInterface
+	 */
+	public function getMountPoint(): MountPointInterface;
 
 	/**
 	 * Get page property item

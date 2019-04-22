@@ -13,8 +13,8 @@ use ReflectionMethod;
 use ReflectionException;
 use RozaVerta\CmfCore\Cache\CacheManager;
 use RozaVerta\CmfCore\Cli\Terminal;
-use RozaVerta\CmfCore\Context\Context;
-use RozaVerta\CmfCore\Context\ContextLoader;
+use RozaVerta\CmfCore\Route\Context;
+use RozaVerta\CmfCore\Route\ContextLoader;
 use RozaVerta\CmfCore\Route\Interfaces\ControllerContentOutputInterface;
 use RozaVerta\CmfCore\Route\Interfaces\ControllerInterface;
 use RozaVerta\CmfCore\Controllers\Welcome;
@@ -38,6 +38,7 @@ use RozaVerta\CmfCore\Language\LanguageManager;
 use RozaVerta\CmfCore\Log\LogManager;
 use RozaVerta\CmfCore\Helper\PhpExport;
 use RozaVerta\CmfCore\Route\Exceptions\PageNotFoundException;
+use RozaVerta\CmfCore\Route\Interfaces\MountPointInterface;
 use RozaVerta\CmfCore\Route\Interfaces\RouterInterface;
 use RozaVerta\CmfCore\Route\MountPoint;
 use RozaVerta\CmfCore\Route\Url;
@@ -67,7 +68,7 @@ use Symfony\Component\Console\Application;
  * @property \RozaVerta\CmfCore\Database\DatabaseManager $database
  * @property \RozaVerta\CmfCore\Database\Connection $db
  * @property \RozaVerta\CmfCore\Route\Interfaces\ControllerInterface $controller
- * @property \RozaVerta\CmfCore\Context\Context $context
+ * @property \RozaVerta\CmfCore\Route\Context $context
  * @property \RozaVerta\CmfCore\Http\Response $response
  * @property \RozaVerta\CmfCore\Http\Request $request
  * @property \RozaVerta\CmfCore\Host\HostManager $host
@@ -585,7 +586,7 @@ final class App
 			foreach( $routers as $mountPoint )
 			{
 				// if context not use this module
-				if( !$context->hasModuleId($mountPoint->getModuleId()) )
+				if( !$context->hasMountPoint($mountPoint) )
 				{
 					continue;
 				}
@@ -1072,7 +1073,7 @@ final class App
 		return $system;
 	}
 
-	private function readyController( MountPoint $mountPoint )
+	private function readyController( MountPointInterface $mountPoint )
 	{
 		$className = $mountPoint->getModule()->getNamespaceName() . 'Router';
 

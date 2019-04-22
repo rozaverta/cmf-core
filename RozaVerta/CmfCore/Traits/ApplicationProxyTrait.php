@@ -21,7 +21,7 @@ namespace RozaVerta\CmfCore\Traits;
  * @property \RozaVerta\CmfCore\Database\DatabaseManager $database
  * @property \RozaVerta\CmfCore\Database\Connection $db
  * @property \RozaVerta\CmfCore\Controller\Controller $controller
- * @property \RozaVerta\CmfCore\Context\Context $context
+ * @property \RozaVerta\CmfCore\Route\Context $context
  * @property \RozaVerta\CmfCore\Http\Response $response
  * @property \RozaVerta\CmfCore\Http\Request $request
  * @property \RozaVerta\CmfCore\Host\HostManager $host
@@ -31,7 +31,7 @@ namespace RozaVerta\CmfCore\Traits;
  * @method string run()
  * @method \RozaVerta\CmfCore\Controller\Controller changeController( \RozaVerta\CmfCore\Controller\Controller $controller )
  * @method bool loadIs( string $name, bool $auto_load = false )
- * @method \RozaVerta\CmfCore\Context\Context loadContext()
+ * @method \RozaVerta\CmfCore\Route\Context loadContext()
  * @method object load( string $name )
  * @method \RozaVerta\CmfCore\App singleton( string $name, $object )
  * @method close()

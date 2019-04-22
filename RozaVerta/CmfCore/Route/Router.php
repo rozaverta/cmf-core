@@ -12,6 +12,7 @@ use RozaVerta\CmfCore\Controllers\Redirect;
 use RozaVerta\CmfCore\Module\Exceptions\ExpectedModuleException;
 use RozaVerta\CmfCore\Route\Exceptions\PageNotFoundException;
 use RozaVerta\CmfCore\Route\Interfaces\ControllerInterface;
+use RozaVerta\CmfCore\Route\Interfaces\MountPointInterface;
 use RozaVerta\CmfCore\Route\Interfaces\RouterInterface;
 use RozaVerta\CmfCore\Traits\ApplicationTrait;
 use RozaVerta\CmfCore\Module\Traits\ModuleGetterTrait;
@@ -25,7 +26,7 @@ abstract class Router implements RouterInterface
 
 	protected $mountPoint;
 
-	public function __construct( MountPoint $mountPoint )
+	public function __construct( MountPointInterface $mountPoint )
 	{
 		$module = $mountPoint->getModule();
 		$name = get_class($this);
@@ -40,9 +41,9 @@ abstract class Router implements RouterInterface
 	}
 
 	/**
-	 * @return MountPoint
+	 * @return MountPointInterface
 	 */
-	public function getMountPoint(): MountPoint
+	public function getMountPoint(): MountPointInterface
 	{
 		return $this->mountPoint;
 	}

@@ -6,9 +6,10 @@
  * Time: 14:16
  */
 
-namespace RozaVerta\CmfCore\Context;
+namespace RozaVerta\CmfCore\Route;
 
-use RozaVerta\CmfCore\Schemes\ContextModuleLinks_SchemeDesigner;
+use RozaVerta\CmfCore\Route\Context;
+use RozaVerta\CmfCore\Schemes\ContextRouterLinks_SchemeDesigner;
 use RozaVerta\CmfCore\Cache\Cache;
 use RozaVerta\CmfCore\Database\DatabaseManager as DB;
 use RozaVerta\CmfCore\Host\Interfaces\HostInterface;
@@ -102,25 +103,25 @@ class ContextLoader
 		else
 		{
 			$ctx = [];
-			$modules = [];
+			$routers = [];
 
-			/** @var ContextModuleLinks_SchemeDesigner[] $links */
+			/** @var ContextRouterLinks_SchemeDesigner[] $links */
 			$links = DB
-				::table(ContextModuleLinks_SchemeDesigner::class)
+				::table(ContextRouterLinks_SchemeDesigner::class)
 				->get();
 
 			foreach($links as $link)
 			{
 				$contextId = $link->getContextId();
-				$moduleId = $link->getModuleId();
+				$routerId = $link->getRouterId();
 
-				if( !isset($modules[$contextId]) )
+				if( !isset($routers[$contextId]) )
 				{
-					$modules[$contextId] = [$moduleId];
+					$routers[$contextId] = [$routerId];
 				}
-				else if( !in_array($moduleId, $modules[$contextId], true) )
+				else if( !in_array($routerId, $routers[$contextId], true) )
 				{
-					$modules[$contextId][] = $moduleId;
+					$routers[$contextId][] = $routerId;
 				}
 			}
 
@@ -129,7 +130,7 @@ class ContextLoader
 
 			foreach($schemes as $scheme)
 			{
-				$ctx[$scheme->getName()] = new Context( $scheme, $modules[$scheme->getId()] ?? [] );
+				$ctx[$scheme->getName()] = new Context( $scheme, $routers[$scheme->getId()] ?? [] );
 			}
 
 			if( $cache && count($ctx) )

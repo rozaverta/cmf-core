@@ -13,7 +13,6 @@ use InvalidArgumentException;
 use RozaVerta\CmfCore\Cli\IO\ConfigOption;
 use RozaVerta\CmfCore\Cli\IO\Option;
 use RozaVerta\CmfCore\Database\DatabaseManager;
-use RozaVerta\CmfCore\Event\Dispatcher;
 use RozaVerta\CmfCore\Filesystem\Config;
 use RozaVerta\CmfCore\Log\Log;
 use RozaVerta\CmfCore\Log\Logger;
@@ -39,7 +38,6 @@ class Cmf extends AbstractScript
 	/**
 	 * @return ModuleCoreConfig
 	 *
-	 * @throws \ReflectionException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceNotFoundException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
 	 */
@@ -376,11 +374,9 @@ class Cmf extends AbstractScript
 	 *
 	 * @return ModuleComponent
 	 *
-	 * @throws \Doctrine\DBAL\Exception\TableNotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Filesystem\Exceptions\FileAccessException
-	 * @throws \RozaVerta\CmfCore\Filesystem\Exceptions\FileNotFoundException
-	 * @throws \RozaVerta\CmfCore\Filesystem\Exceptions\FileReadException
+	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ModuleNotFoundException
+	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceNotFoundException
+	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
 	 */
 	private function getWmp( bool $install = false ): ModuleComponent
 	{
@@ -526,9 +522,9 @@ class Cmf extends AbstractScript
 		return $this
 			->getIO()
 			->askConfig([
-				new ConfigOption("site_name", "Enter site name", ["title" => "Site name"]),
+				new ConfigOption("siteName", "Enter site name", ["title" => "Site name"]),
 				new ConfigOption("debug", "Debug global [<info>%s</info>]", ["default" => true, "type" => "boolean", "title" => "Debug"]),
-				new ConfigOption("debug_level", "Debug level", ["ignore_empty" => true, "enum" => [
+				new ConfigOption("debugLevel", "Debug level", ["ignore_empty" => true, "enum" => [
 					"all",
 					"info",
 					"debug",
@@ -554,23 +550,30 @@ class Cmf extends AbstractScript
 
 	private function installConfigDb( $load = [] )
 	{
-		return $this
+		$def = $this
 			->getIO()
 			->askConfig([
 				new ConfigOption("driver", "Driver [<info>%s</info>]", [
 					"title" => "Database driver",
-					"default" => "mysql",
+					"default" => "pdo_mysql",
 					"enum" => [
-						"mysql"
+						"pdo_mysql", "pdo_pgsql"
 					]]),
 				new ConfigOption("host", "Enter host name [<info>%s</info>]", ["default" => "localhost", "title" => "Database host name"]),
 				new ConfigOption("port", "Enter port", ["title" => "Database port", "type" => "number"]),
-				new ConfigOption("database", "Enter base name", ["default" => true, "title" => "Database name"]),
+				new ConfigOption("dbname", "Enter base name", ["default" => true, "title" => "Database name"]),
 				new ConfigOption("prefix", "Enter table prefix", ["title" => "Database table prefix"]),
 				new ConfigOption("charset", "Enter charset [<info>%s</info>]", ["title" => "Database charset", "default" => "utf8"]),
 				new ConfigOption("collation", "Enter charset collation [<info>%s</info>]", ["title" => "Database collation", "default" => "{charset}_general_ci"]),
-				new ConfigOption("username", "Enter user name [<info>%s</info>]", ["title" => "Database user", "default" => "root"]),
+				new ConfigOption("user", "Enter user name [<info>%s</info>]", ["title" => "Database user", "default" => "root"]),
 				new ConfigOption("password", "Enter password", ["title" => "Database password"]),
 			], "Database info (default connection)", $load);
+
+		if(isset($def["port"] ) && $def["port"] < 1)
+		{
+			unset($def["port"]);
+		}
+
+		return ["default" => $def];
 	}
 }

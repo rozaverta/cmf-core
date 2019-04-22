@@ -11,6 +11,7 @@ namespace RozaVerta\CmfCore\Route;
 use RozaVerta\CmfCore\Module\Exceptions\ExpectedModuleException;
 use RozaVerta\CmfCore\Route\Interfaces\ControllerInterface;
 use RozaVerta\CmfCore\Module\Interfaces\ModuleInterface;
+use RozaVerta\CmfCore\Route\Interfaces\MountPointInterface;
 use RozaVerta\CmfCore\Support\Prop;
 use RozaVerta\CmfCore\Traits\ApplicationTrait;
 use RozaVerta\CmfCore\Traits\GetIdentifierTrait;
@@ -56,7 +57,13 @@ abstract class Controller implements ControllerInterface
 	 */
 	protected $pageData = [];
 
-	public function __construct( MountPoint $mountPoint, array $data = [] )
+	/**
+	 * Controller constructor.
+	 *
+	 * @param MountPointInterface $mountPoint
+	 * @param array $data
+	 */
+	public function __construct( MountPointInterface $mountPoint, array $data = [] )
 	{
 		$module = $mountPoint->getModule();
 		$name = get_class($this);
@@ -110,6 +117,14 @@ abstract class Controller implements ControllerInterface
 	public function isCacheable(): bool
 	{
 		return $this->cacheable;
+	}
+
+	/**
+	 * @return MountPointInterface
+	 */
+	public function getMountPoint(): MountPointInterface
+	{
+		return $this->mountPoint;
 	}
 
 	/**

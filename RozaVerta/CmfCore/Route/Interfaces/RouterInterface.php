@@ -9,22 +9,22 @@
 namespace RozaVerta\CmfCore\Route\Interfaces;
 
 use RozaVerta\CmfCore\Module\Interfaces\ModuleGetterInterface;
-use RozaVerta\CmfCore\Route\MountPoint;
+use RozaVerta\CmfCore\Route\MountLink;
 
 interface RouterInterface extends ModuleGetterInterface
 {
-	public function __construct( MountPoint $mountPoint );
+	public function __construct( MountPointInterface $mountPoint );
 
 	public function ready(): bool;
 
 	/**
-	 * @return MountPoint
+	 * @return MountPointInterface
 	 */
-	public function getMountPoint(): MountPoint;
+	public function getMountPoint(): MountPointInterface;
 
 	public function getController(): ? ControllerInterface;
 
-	static public function exists( string $controller, int $id ): bool;
+	static public function exists( MountLink $mountLink ): bool;
 
-	static public function makeUrl( string $controller, int $id, string $context = null ): string;
+	static public function makeUrl( MountLink $mountLink ): string;
 }

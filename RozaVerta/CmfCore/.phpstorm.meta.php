@@ -14,7 +14,7 @@ namespace PHPSTORM_META {
 			"database" => \RozaVerta\CmfCore\Database\DatabaseManager::class,
 			"db" => \RozaVerta\CmfCore\Database\Connection::class,
 			"controller" => \RozaVerta\CmfCore\Route\Interfaces\ControllerInterface::class,
-			"context" => \RozaVerta\CmfCore\Context\Context::class,
+			"context" => \RozaVerta\CmfCore\Route\Context::class,
 			"response" => \RozaVerta\CmfCore\Http\Response::class,
 			"request" => \RozaVerta\CmfCore\Http\Request::class,
 			"host" => \RozaVerta\CmfCore\Host\HostManager::class,

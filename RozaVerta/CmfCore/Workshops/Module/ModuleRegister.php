@@ -126,7 +126,7 @@ class ModuleRegister extends Workshop
 	 * @return $this
 	 *
 	 * @throws NotFoundException
-	 * @throws \ReflectionException
+	 * @throws \Doctrine\DBAL\DBALException
 	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ModuleNotFoundException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceNotFoundException

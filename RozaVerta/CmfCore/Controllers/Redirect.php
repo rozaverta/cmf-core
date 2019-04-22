@@ -8,10 +8,9 @@
 
 namespace RozaVerta\CmfCore\Controllers;
 
-use RozaVerta\CmfCore\Module\Interfaces\ModuleInterface;
 use RozaVerta\CmfCore\Route\Controller;
 use RozaVerta\CmfCore\Route\Interfaces\ControllerContentOutputInterface;
-use RozaVerta\CmfCore\Route\MountPoint;
+use RozaVerta\CmfCore\Route\Interfaces\MountPointInterface;
 use RozaVerta\CmfCore\Support\Prop;
 
 final class Redirect extends Controller implements ControllerContentOutputInterface
@@ -20,13 +19,12 @@ final class Redirect extends Controller implements ControllerContentOutputInterf
 	 *
 	 * Redirect constructor.
 	 *
-	 * @param ModuleInterface $module
-	 * @param MountPoint $mountPoint
+	 * @param MountPointInterface $mountPoint
 	 * @param array $data
 	 */
-	public function __construct( ModuleInterface $module, MountPoint $mountPoint, array $data = [] )
+	public function __construct( MountPointInterface $mountPoint, array $data = [] )
 	{
-		$this->module = $module;
+		$this->module = $mountPoint->getModule();
 		$this->mountPoint = $mountPoint;
 		$this->items = $data;
 		$this->properties = new Prop($data);

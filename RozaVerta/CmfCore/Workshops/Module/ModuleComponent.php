@@ -149,10 +149,10 @@ class ModuleComponent extends Workshop
 
 	/**
 	 * @param Dispatcher $dispatcher
-	 * @param $action
+	 * @param string $action
+	 * @param string $debugText
 	 *
 	 * @throws DBALException
-	 * @throws ReflectionException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ModuleNotFoundException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceNotFoundException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
@@ -265,13 +265,12 @@ class ModuleComponent extends Workshop
 
 		// 1. database tables
 
-		$rec = $manifest->getArray("databaseTables");
-		$tables = array_keys($rec);
-		if(count($rec))
+		$tables = $manifest->getArray("databaseTables");
+		if(count($tables))
 		{
 			$drv = new Database($module);
 			$drv->addLogTransport($this);
-			foreach($rec as $tableName)
+			foreach($tables as $tableName)
 			{
 				$drv->createTable($tableName);
 			}
@@ -292,6 +291,8 @@ class ModuleComponent extends Workshop
 				}
 			}
 		}
+
+		unset($tables);
 
 		// 3. events
 
@@ -461,7 +462,7 @@ class ModuleComponent extends Workshop
 		$drv = new Database($module);
 		$drv->addLogTransport($this);
 
-		$tableVersion = $drv->getTablesVersionList();
+		$tableVersion = $drv->getTablesVersionList(false);
 		$tables = $tableVersion->keys()->toArray();
 		$renameVersion = $manifest->getArray("databaseRenameTables");
 		$oldest = [];
@@ -548,8 +549,7 @@ class ModuleComponent extends Workshop
 	 * @param $type
 	 * @param string $key
 	 * @return array|mixed
-	 * @throws \RozaVerta\CmfCore\Filesystem\Exceptions\FileAccessException
-	 * @throws \RozaVerta\CmfCore\Filesystem\Exceptions\FileReadException
+	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
 	 */
 	protected function getResourceData( $name, $type, $key = "items" )
 	{

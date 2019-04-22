@@ -2,7 +2,7 @@
 	"type": "#/module",
 	"name": "Core",
 	"title": "Elastic CMF (Anaconda)",
-	"version": "0.0.3-beta2",
+	"version": "0.0.3-beta3",
 	"databaseTables": [
 		"scheme_tables",
 		"modules",
@@ -12,7 +12,7 @@
 		"template_packages",
 		"template_plugins",
 		"context",
-		"context_module_links",
+		"context_router_links",
 		"routers"
 	],
 	"databaseRenameTables": [
@@ -25,6 +25,11 @@
 			"from": "event_callback_links",
 			"to": "event_handler_links",
 			"version": "0.0.1-dev2"
+		},
+		{
+			"from": "context_module_links",
+			"to": "context_router_links",
+			"version": "0.0.3-beta3"
 		}
 	],
 	"packages": [

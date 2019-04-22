@@ -8,13 +8,13 @@
 
 namespace RozaVerta\CmfCore\Events;
 
-use RozaVerta\CmfCore\Context\Context;
+use RozaVerta\CmfCore\Route\Context;
 use RozaVerta\CmfCore\Support\Collection;
 
 /**
  * Class ContextEvent
  *
- * @property Context context
+ * @property \RozaVerta\CmfCore\Route\Context context
  * @property Collection collection
  *
  * @package RozaVerta\CmfCore\Events

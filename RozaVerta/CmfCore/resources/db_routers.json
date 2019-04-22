@@ -8,6 +8,9 @@
 			"autoIncrement": true
 		},
 		{
+			"name": "name"
+		},
+		{
 			"name": "module_id",
 			"type": "integer"
 		},
@@ -30,6 +33,13 @@
 			"name": "index__module_id",
 			"columns": [
 				"module_id"
+			]
+		},
+		{
+			"name": "index__name",
+			"tpe": "unique",
+			"columns": [
+				"name"
 			]
 		}
 	]

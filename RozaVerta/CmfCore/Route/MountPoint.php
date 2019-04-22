@@ -8,15 +8,14 @@
 
 namespace RozaVerta\CmfCore\Route;
 
-use Countable;
 use RozaVerta\CmfCore\Interfaces\VarExportInterface;
-use RozaVerta\CmfCore\Module\Interfaces\ModuleGetterInterface;
 use RozaVerta\CmfCore\Module\Module;
 use RozaVerta\CmfCore\Module\Traits\ModuleGetterTrait;
+use RozaVerta\CmfCore\Route\Interfaces\MountPointInterface;
 use RozaVerta\CmfCore\Traits\GetIdentifierTrait;
 use RozaVerta\CmfCore\Traits\GetTrait;
 
-class MountPoint implements Countable, ModuleGetterInterface, VarExportInterface
+class MountPoint implements MountPointInterface, VarExportInterface
 {
 	use ModuleGetterTrait {
 		getModuleId as private getModuleNativeId;
@@ -32,7 +31,7 @@ class MountPoint implements Countable, ModuleGetterInterface, VarExportInterface
 
 	protected $basePath = false;
 
-	protected $name = "mount_point";
+	protected $pathName = "mount_point";
 
 	protected $items;
 
@@ -55,7 +54,7 @@ class MountPoint implements Countable, ModuleGetterInterface, VarExportInterface
 			else if($path === "404") $this->is404 = true;
 			else
 			{
-				if(strlen($path)) $this->name = $path;
+				if(strlen($path)) $this->pathName = $path;
 				$this->basePath = true;
 				$this->close = true;
 			}
@@ -115,9 +114,9 @@ class MountPoint implements Countable, ModuleGetterInterface, VarExportInterface
 	/**
 	 * @return string
 	 */
-	public function getName(): string
+	public function getPathName(): string
 	{
-		return $this->name;
+		return $this->pathName;
 	}
 
 	/**
@@ -197,7 +196,7 @@ class MountPoint implements Countable, ModuleGetterInterface, VarExportInterface
 		$path = $this->path;
 		if($this->homePage) $path = "@homePage";
 		else if($this->is404) $path = "@404";
-		else if($this->name !== "mount_point") $path = "@" . $this->name;
+		else if($this->pathName !== "mount_point") $path = "@" . $this->pathName;
 
 		return [
 			"id" => $this->getId(),

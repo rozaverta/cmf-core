@@ -6,10 +6,10 @@
  * Time: 16:27
  */
 
-namespace RozaVerta\CmfCore\Context;
+namespace RozaVerta\CmfCore\Route;
 
 use RozaVerta\CmfCore\Interfaces\VarExportInterface;
-use RozaVerta\CmfCore\Module\Module;
+use RozaVerta\CmfCore\Route\Interfaces\MountPointInterface;
 use RozaVerta\CmfCore\Schemes\Context_SchemeDesigner;
 use RozaVerta\CmfCore\Interfaces\Arrayable;
 use RozaVerta\CmfCore\Traits\GetIdentifierTrait;
@@ -26,7 +26,7 @@ class Context implements Arrayable, VarExportInterface
 	/**
 	 * @var int[]
 	 */
-	private $moduleIds;
+	private $routerIds;
 
 	private $host = false;
 
@@ -56,12 +56,12 @@ class Context implements Arrayable, VarExportInterface
 	 * Context constructor.
 	 *
 	 * @param Context_SchemeDesigner $contextSchemeDesigner
-	 * @param int[] $moduleIds
+	 * @param int[] $routerIds
 	 */
-	public function __construct( Context_SchemeDesigner $contextSchemeDesigner, array $moduleIds = [] )
+	public function __construct( Context_SchemeDesigner $contextSchemeDesigner, array $routerIds = [] )
 	{
 		$this->schemeDesigner = $contextSchemeDesigner;
-		$this->moduleIds = $moduleIds;
+		$this->routerIds = $routerIds;
 
 		$this->id = $contextSchemeDesigner->getId();
 		$this->name = $contextSchemeDesigner->getName();
@@ -123,27 +123,27 @@ class Context implements Arrayable, VarExportInterface
 	/**
 	 * @return int[]
 	 */
-	public function getModuleIds(): array
+	public function getRouterIds(): array
 	{
-		return $this->moduleIds;
+		return $this->routerIds;
 	}
 
 	/**
-	 * @param Module $module
+	 * @param MountPointInterface $point
 	 * @return bool
 	 */
-	public function hasModule( Module $module ): bool
+	public function hasMountPoint( MountPointInterface $point ): bool
 	{
-		return $this->hasModuleId( $module->getId() );
+		return $this->hasMountPointId( $point->getId() );
 	}
 
 	/**
 	 * @param int $id
 	 * @return bool
 	 */
-	public function hasModuleId( int $id ): bool
+	public function hasMountPointId( int $id ): bool
 	{
-		return in_array($id, $this->moduleIds, true);
+		return in_array($id, $this->routerIds, true);
 	}
 
 	/**
@@ -234,7 +234,7 @@ class Context implements Arrayable, VarExportInterface
 	public function toArray(): array
 	{
 		$all = $this->schemeDesigner->toArray();
-		$all["module_ids"] = $this->getModuleIds();
+		$all["router_ids"] = $this->getRouterIds();
 		return $all;
 	}
 
@@ -242,12 +242,12 @@ class Context implements Arrayable, VarExportInterface
 	{
 		return [
 			"schemeDesigner" => $this->schemeDesigner,
-			"moduleIds" => $this->moduleIds
+			"routerIds" => $this->routerIds
 		];
 	}
 
 	static public function __set_state( $data )
 	{
-		return new Context($data["schemeDesigner"], $data["moduleIds"]);
+		return new Context($data["schemeDesigner"], $data["routerIds"]);
 	}
 }

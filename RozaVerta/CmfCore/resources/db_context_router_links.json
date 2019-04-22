@@ -1,6 +1,6 @@
 {
 	"type": "#/database_table",
-	"name": "context_module_links",
+	"name": "context_router_links",
 	"columns": [
 		{
 			"name": "id",
@@ -12,7 +12,7 @@
 			"type": "integer"
 		},
 		{
-			"name": "module_id",
+			"name": "router_id",
 			"type": "integer"
 		}
 	],
@@ -22,7 +22,7 @@
 			"name": "index__context_id_module_id",
 			"columns": [
 				"context_id",
-				"module_id"
+				"router_id"
 			]
 		}
 	]

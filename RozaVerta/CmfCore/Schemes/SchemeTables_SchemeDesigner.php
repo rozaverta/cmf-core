@@ -25,6 +25,9 @@ class SchemeTables_SchemeDesigner extends ModuleSchemeDesigner
 	/** @return string */
 	public function getDescription(): string { return $this->items["description"]; }
 
+	/** @return bool */
+	public function isAddon(): bool { return $this->items["addon"]; }
+
 	/** @return string */
 	public function getVersion(): string { return $this->items["version"]; }
 
@@ -60,7 +63,7 @@ class SchemeTables_SchemeDesigner extends ModuleSchemeDesigner
 	public static function getSchemaBuilder(): array
 	{
 		return [
-			"select" => [ "id", "name", "title", "description", "module_id", "version" ]
+			"select" => [ "id", "name", "title", "description", "module_id", "addon", "version" ]
 		];
 	}
 }

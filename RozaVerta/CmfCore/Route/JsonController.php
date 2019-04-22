@@ -10,20 +10,20 @@ namespace RozaVerta\CmfCore\Route;
 
 use Doctrine\DBAL\DBALException;
 use RozaVerta\CmfCore\Interfaces\ThrowableInterface;
-use RozaVerta\CmfCore\Module\Interfaces\ModuleInterface;
 use RozaVerta\CmfCore\Route\Interfaces\ControllerContentOutputInterface;
 use RozaVerta\CmfCore\Events\ThrowableEvent;
+use RozaVerta\CmfCore\Route\Interfaces\MountPointInterface;
 
 abstract class JsonController extends Controller implements ControllerContentOutputInterface
 {
 	/**
 	 * JsonController constructor.
-	 * @param MountPoint $mountPoint
+	 * @param MountPointInterface $mountPoint
 	 * @param array $prop
 	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
 	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
 	 */
-	public function __construct( MountPoint $mountPoint, array $prop = [] )
+	public function __construct( MountPointInterface $mountPoint, array $prop = [] )
 	{
 		parent::__construct($mountPoint, $prop);
 

@@ -875,44 +875,61 @@ class Builder
 			);
 	}
 
-	public function getInsertSql( $data = null )
+	public function getInsertState(): StateInsertBuilder
 	{
 		if( ! isset($this->insert) )
 		{
 			$this->insert = new StateInsertBuilder($this);
 		}
 
+		return $this->insert;
+	}
+
+	public function getInsertSql( $data = null )
+	{
+		$insert = $this->getInsertState();
+
 		if( is_array($data) )
 		{
-			$this->insert->values($data);
+			$insert->values($data);
 		}
 		else if( $data instanceof Closure )
 		{
-			$data($this->insert);
+			$data($insert);
 		}
 
-		$this->insert->complete();
+		$insert->complete();
 
 		return $this->builder->insert($this->getFullTableWritableName())->getSQL();
 	}
 
-	public function getUpdateSql( $data = null )
+	/**
+	 * @return StateUpdateBuilder
+	 */
+	public function getUpdateState(): ?StateUpdateBuilder
 	{
 		if( ! isset($this->update) )
 		{
 			$this->update = new StateUpdateBuilder($this);
 		}
 
+		return $this->update;
+	}
+
+	public function getUpdateSql( $data = null )
+	{
+		$update = $this->getUpdateState();
+
 		if( is_array($data) )
 		{
-			$this->update->values($data);
+			$update->values($data);
 		}
 		else if( $data instanceof Closure )
 		{
-			$data($this->update);
+			$data($update);
 		}
 
-		$this->update->complete();
+		$update->complete();
 
 		return $this->builder->update($this->getFullTableWritableName())->getSQL();
 	}

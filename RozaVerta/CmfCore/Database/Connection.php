@@ -176,7 +176,6 @@ class Connection
 			case "getPort":
 			case "getUsername":
 			case "getPassword":
-			case "getServerVersion":
 			case "isAutoCommit":
 			case "isConnected":
 			case "connect":

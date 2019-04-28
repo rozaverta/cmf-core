@@ -17,6 +17,11 @@
 		{
 			"name": "version",
 			"default": "1.0"
+		},
+		{
+			"name": "addon",
+			"type": "boolean",
+			"default": false
 		}
 	],
 	"primaryKey": "id",

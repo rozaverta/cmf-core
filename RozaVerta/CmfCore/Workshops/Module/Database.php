@@ -31,8 +31,6 @@ class Database extends Workshop
 {
 	use Traits\ResourceBackupTrait;
 
-	protected $table_prefix = null;
-
 	public function getModuleVersion()
 	{
 		return $this->getModule()->getVersion();

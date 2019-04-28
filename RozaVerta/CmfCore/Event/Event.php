@@ -151,6 +151,7 @@ abstract class Event implements EventInterface
 	 *
 	 * @param $name
 	 * @param $value
+	 * @throws Exceptions\AccessException
 	 */
 	public function __set($name, $value)
 	{

@@ -9,9 +9,10 @@
 namespace RozaVerta\CmfCore\Database\Scheme;
 
 use RozaVerta\CmfCore\Cache\CacheManager;
+use RozaVerta\CmfCore\Interfaces\VarExportInterface;
 use RozaVerta\CmfCore\Support\Prop;
 
-class Table
+class Table implements VarExportInterface
 {
 	use ExtraTrait;
 
@@ -161,5 +162,20 @@ class Table
 		}
 
 		return static::$tables[$name];
+	}
+
+	public function getArrayForVarExport(): array
+	{
+		return [
+			"name" => $this->name,
+			"columns" => $this->columns,
+			"extra" => $this->extra
+		];
+	}
+
+	static public function __set_state( $data )
+	{
+		$name = $data["name"];
+		return isset(self::$tables[$name]) ? self::$tables[$name] : new Table( $name, $data["columns"], $data["extra"] );
 	}
 }

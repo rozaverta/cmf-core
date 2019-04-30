@@ -13,9 +13,10 @@ use JsonSerializable;
 use RozaVerta\CmfCore\Helper\Json;
 use RozaVerta\CmfCore\Interfaces\Arrayable;
 use RozaVerta\CmfCore\Interfaces\Jsonable;
+use RozaVerta\CmfCore\Interfaces\VarExportInterface;
 use RozaVerta\CmfCore\Support\Prop;
 
-class Column implements Arrayable, Jsonable, JsonSerializable
+class Column implements Arrayable, Jsonable, JsonSerializable, VarExportInterface
 {
 	use ExtraTrait;
 
@@ -255,5 +256,15 @@ class Column implements Arrayable, Jsonable, JsonSerializable
 	public function jsonSerialize()
 	{
 		return $this->toArray();
+	}
+
+	public function getArrayForVarExport(): array
+	{
+		return $this->toArray();
+	}
+
+	static public function __set_state( $data )
+	{
+		return new Column($data["name"], $data);
 	}
 }

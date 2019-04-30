@@ -9,7 +9,7 @@
 		}
 	],
 	"license": "MIT",
-	"version": "0.0.3-beta4",
+	"version": "0.0.3-beta5",
 	"databaseTables": [
 		"scheme_tables",
 		"modules",

@@ -26,7 +26,7 @@ trait GetIdentifierTrait
 	 * @param int $id
 	 * @return $this
 	 */
-	public function setId( int $id )
+	protected function setId( int $id )
 	{
 		$this->id = $id;
 		return $this;

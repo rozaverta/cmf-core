@@ -2,7 +2,14 @@
 	"type": "#/module",
 	"name": "Core",
 	"title": "Elastic CMF (Anaconda)",
-	"version": "0.0.3-beta3",
+	"authors": [
+		{
+			"name": "GoshaV Maniako",
+			"email": "gosha@rozaverta.com"
+		}
+	],
+	"license": "MIT",
+	"version": "0.0.3-beta4",
 	"databaseTables": [
 		"scheme_tables",
 		"modules",

@@ -13,14 +13,19 @@ use InvalidArgumentException;
 use RozaVerta\CmfCore\Cli\IO\ConfigOption;
 use RozaVerta\CmfCore\Cli\IO\Option;
 use RozaVerta\CmfCore\Database\DatabaseManager;
+use RozaVerta\CmfCore\Event\EventManager;
 use RozaVerta\CmfCore\Filesystem\Config;
 use RozaVerta\CmfCore\Log\Log;
 use RozaVerta\CmfCore\Log\Logger;
+use RozaVerta\CmfCore\Module\Interfaces\ModuleInterface;
 use RozaVerta\CmfCore\Module\ModuleHelper;
 use RozaVerta\CmfCore\Module\WorkshopModuleProcessor;
 use RozaVerta\CmfCore\Manifest as ModuleCoreConfig;
 use RozaVerta\CmfCore\Helper\PhpExport;
+use RozaVerta\CmfCore\Schemes\TemplatePackages_SchemeDesigner;
 use RozaVerta\CmfCore\Support\Prop;
+use RozaVerta\CmfCore\Workshops\Module\Events\InstallModuleEvent;
+use RozaVerta\CmfCore\Workshops\Module\Events\ModuleEvent;
 use RozaVerta\CmfCore\Workshops\Module\ModuleComponent;
 use RuntimeException;
 
@@ -142,6 +147,30 @@ class Cmf extends AbstractScript
 
 		if( $io->confirm("<info>$</info> The basic setting was successful. Do you want to run the installation (y/n)? ") )
 		{
+			// set main package as addon, so that the next update will not overwrite the package
+
+			$io->confirm("<info>$</info> Do you want to use the main package as an addon (y/n)? ") &&
+			EventManager::getInstance()
+				->listen(ModuleEvent::eventName(), function (ModuleEvent $event) {
+					if($event instanceof InstallModuleEvent && $event->getProcessor()->getModuleId() === 1)
+					{
+						return function(string $action, ? ModuleInterface $module) {
+							if($action === "install")
+							{
+								DatabaseManager::connection()
+									->table(TemplatePackages_SchemeDesigner::getTableName())
+									->where("name", "main")
+									->where("module_id", $module->getId())
+									->update([
+										"addon" => true
+									]);
+							}
+						};
+					}
+
+					return null;
+				});
+
 			$this->reloadSystemConfig(["status" => "install-progress"]);
 			$this->getWmp(true)->install();
 			$this->reloadSystemConfig(["status" => "install", "install" => true], true);

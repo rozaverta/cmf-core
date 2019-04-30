@@ -274,25 +274,3 @@ EOT;
 
 	exit;
 });
-
-// detect hosts
-
-$host = HostManager::getInstance();
-
-if( $host->reload() )
-{
-	if( $host->isRedirect() )
-	{
-		SERVER_CLI_MODE || exit;
-	}
-	else
-	{
-		$host->define();
-	}
-}
-else if( ! SERVER_CLI_MODE )
-{
-	headers_sent() || header("Content-Type: text/plain; charset=utf-8");
-	echo "The selected domain is not installed or the configuration file is not specified host ID";
-	exit;
-}

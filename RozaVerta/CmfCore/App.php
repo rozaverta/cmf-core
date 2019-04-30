@@ -131,10 +131,9 @@ final class App
 			require __DIR__ . DIRECTORY_SEPARATOR . "boot.inc.php";
 		}
 
-		if( ! $this->host->isLoaded() && $this->host->reload() )
-		{
-			$this->host->define();
-		}
+		$host = $this->host;
+		$host->isLoaded() || $host->reload();
+		$host->isLoaded() && ! $host->isDefined() && $host->define();
 
 		$this->system = $this->loadSystem();
 
@@ -456,7 +455,26 @@ final class App
 
 		if( ! $this->isInstall() )
 		{
-			throw new Exceptions\RuntimeException("System is not install for this domain");
+			$host = $this->host;
+
+			if($host->isRedirect())
+			{
+				// redirect to host
+				$this
+					->response
+					->redirect( $host->getRedirectUrl() )
+					->send();
+
+				return 'redirect';
+			}
+			else if($host->isDefined())
+			{
+				throw new Exceptions\RuntimeException("System is not install for this domain");
+			}
+			else
+			{
+				throw new Exceptions\RuntimeException("The selected domain is not installed or the configuration file is not specified hostname");
+			}
 		}
 
 		// load manifest data

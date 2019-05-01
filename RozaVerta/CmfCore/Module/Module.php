@@ -11,7 +11,6 @@ namespace RozaVerta\CmfCore\Module;
 use Doctrine\DBAL\Exception\TableNotFoundException;
 use RozaVerta\CmfCore\Database\DatabaseManager as DB;
 use RozaVerta\CmfCore\Cache\Cache;
-use RozaVerta\CmfCore\Exceptions\NotFoundException;
 use RozaVerta\CmfCore\Interfaces\VarExportInterface;
 use RozaVerta\CmfCore\Module\Exceptions\ModuleConflictVersionException;
 use RozaVerta\CmfCore\Module\Exceptions\ModuleNotFoundException;
@@ -71,6 +70,8 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 	}
 
 	/**
+	 * Get Manifest module object from local cache
+	 *
 	 * @return ModuleManifestInterface
 	 */
 	public function getManifest(): ModuleManifestInterface
@@ -78,21 +79,30 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 		$id = $this->getId();
 		if( ! isset(self::$manifests[$id]) )
 		{
-			self::$manifests[$id] = $this->createConfig();
+			self::$manifests[$id] = $this->createManifest();
 		}
 		return self::$manifests[$id];
 	}
 
-	protected function createConfig(): ModuleManifestInterface
+	/**
+	 * Create Manifest module object
+	 *
+	 * @return ModuleManifestInterface
+	 */
+	protected function createManifest(): ModuleManifestInterface
 	{
 		$className = $this->getNamespaceName() . "Manifest";
 		return new $className();
 	}
 
 	/**
+	 * Create new ResourceJson module object from resources/{$name}.json file
+	 *
 	 * @param string $name
 	 * @param null|string $cacheVersion
+	 *
 	 * @return ResourceJson
+	 *
 	 * @throws Exceptions\ResourceNotFoundException
 	 * @throws Exceptions\ResourceReadException
 	 */
@@ -101,6 +111,11 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 		return new ResourceJson( $name, $this, $cacheVersion );
 	}
 
+	/**
+	 * Converting module master data to an array
+	 *
+	 * @return array
+	 */
 	public function toArray(): array
 	{
 		$array = parent::toArray();
@@ -110,11 +125,16 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 	}
 
 	/**
+	 * Get Module object from local cache
+	 *
 	 * @param int $id
+	 *
 	 * @return Module
+	 *
 	 * @throws Exceptions\ResourceNotFoundException
 	 * @throws Exceptions\ResourceReadException
-	 * @throws NotFoundException
+	 * @throws ModuleNotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
 	 */
 	static public function module( int $id ): ModuleInterface
 	{
@@ -146,6 +166,7 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 	 * @throws Exceptions\ResourceNotFoundException
 	 * @throws Exceptions\ResourceReadException
 	 * @throws ModuleNotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
 	 */
 	static protected function load( int $id, bool $install = true )
 	{
@@ -221,10 +242,13 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 	/**
 	 * @param int $id
 	 * @param bool $install
+	 *
 	 * @return Module
+	 *
 	 * @throws Exceptions\ResourceNotFoundException
 	 * @throws Exceptions\ResourceReadException
 	 * @throws ModuleNotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
 	 */
 	static protected function create( int $id, bool $install = true )
 	{

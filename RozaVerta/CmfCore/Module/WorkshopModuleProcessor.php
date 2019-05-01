@@ -19,21 +19,26 @@ use RozaVerta\CmfCore\Module\Interfaces\ModuleManifestInterface;
 final class WorkshopModuleProcessor extends Module
 {
 	/**
+	 * Get new Manifest module object
+	 *
 	 * @return ModuleManifest
 	 */
 	public function getManifest(): ModuleManifestInterface
 	{
-		return $this->createConfig();
+		return $this->createManifest();
 	}
 
 	/**
+	 * Get new WorkshopModuleProcessor object
+	 *
 	 * @param int $id
 	 *
-	 * @return Module
+	 * @return WorkshopModuleProcessor
 	 *
 	 * @throws Exceptions\ModuleNotFoundException
 	 * @throws Exceptions\ResourceNotFoundException
 	 * @throws Exceptions\ResourceReadException
+	 * @throws \Doctrine\DBAL\DBALException
 	 */
 	static public function module( int $id ): ModuleInterface
 	{

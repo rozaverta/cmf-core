@@ -87,6 +87,8 @@ class Builder
 	 *
 	 * @param $table
 	 * @param Connection $connection
+	 * @throws ReflectionException
+	 * @throws \Throwable
 	 */
 	public function __construct( $table, Connection $connection )
 	{
@@ -145,7 +147,11 @@ class Builder
 	}
 
 	/**
+	 * Get Table schema for base query table
+	 *
 	 * @return Table|null
+	 *
+	 * @throws \Throwable
 	 */
 	public function getTableSchema(): ?Table
 	{
@@ -169,6 +175,13 @@ class Builder
 		return $this->tableSchema;
 	}
 
+	/**
+	 * Test table name as SchemeDesigner class name
+	 *
+	 * @param string $tableName
+	 * @param $designer
+	 * @return bool
+	 */
 	private function isTableDesigner( string $tableName, & $designer ): bool
 	{
 		if(strpos($tableName, '_SchemeDesigner') === false)
@@ -192,6 +205,15 @@ class Builder
 		return true;
 	}
 
+	/**
+	 * Set base query table
+	 *
+	 * @param string $tableName
+	 * @param string|null $tableAlias
+	 * @return $this
+	 * @throws ReflectionException
+	 * @throws \Throwable
+	 */
 	protected function table( string $tableName, ?string $tableAlias = null )
 	{
 		$loadDesigner = $this->isTableDesigner($tableName, $designer);
@@ -324,11 +346,27 @@ class Builder
 		return $this;
 	}
 
+	/**
+	 * Get full column name
+	 *
+	 * @param string $name
+	 * @return string
+	 */
 	public function getColumn(string $name): string
 	{
 		return $this->columns[$name] ?? $name;
 	}
 
+	/**
+	 * Add a basic where clause to the query.
+	 *
+	 * @param string|array|\Closure|CriteriaBuilder $name
+	 * @param null $operator
+	 * @param null $value
+	 * @param null $bindName
+	 *
+	 * @return $this
+	 */
 	public function where($name, $operator = null, $value = null, & $bindName = null )
 	{
 		return $this->criteria('where', $name, $operator, $value, $bindName);
@@ -340,6 +378,7 @@ class Builder
 	 * @param $value
 	 * @param string $column
 	 * @param null $bindName
+	 *
 	 * @return $this
 	 */
 	public function whereId($value, $column = 'id', & $bindName = null)
@@ -349,11 +388,29 @@ class Builder
 			->where($column, CriteriaBuilder::EQ, (int) $value, $bindName);
 	}
 
+	/**
+	 * Add a "having" clause to the query.
+	 *
+	 * @param string|array|\Closure|CriteriaBuilder $name
+	 * @param null $operator
+	 * @param null $value
+	 * @param null $bindName
+	 *
+	 * @return $this
+	 */
 	public function having($name, $operator = null, $value = null, & $bindName = null )
 	{
 		return $this->criteria('having', $name, $operator, $value, $bindName);
 	}
 
+	/**
+	 * @param $type
+	 * @param $name
+	 * @param $operator
+	 * @param $value
+	 * @param null $bindName
+	 * @return $this
+	 */
 	protected function criteria( $type, $name, $operator, $value, & $bindName = null )
 	{
 		if( $name instanceof CriteriaBuilder )
@@ -756,6 +813,7 @@ class Builder
 
 	/**
 	 * @return bool|object|SchemeDesigner
+	 *
 	 * @throws DBALException
 	 */
 	public function first()
@@ -777,7 +835,11 @@ class Builder
 	}
 
 	/**
+	 * Get collection object as SchemeDesigner items
+	 *
 	 * @return Collection|SchemeDesigner[]
+	 *
+	 * @throws DBALException
 	 */
 	public function get()
 	{
@@ -787,9 +849,14 @@ class Builder
 	}
 
 	/**
+	 * Get custom collection result query
+	 *
 	 * @param Closure $closure
 	 * @param string|null $keyName
+	 *
 	 * @return Collection
+	 *
+	 * @throws DBALException
 	 */
 	public function project(Closure $closure, ?string $keyName = null)
 	{
@@ -825,6 +892,15 @@ class Builder
 		return new Collection($rows);
 	}
 
+	/**
+	 * Update a record in the database.
+	 *
+	 * @param null|array|Closure $data
+	 *
+	 * @return int
+	 *
+	 * @throws DBALException
+	 */
 	public function update( $data = null )
 	{
 		$this->checkTableExists();
@@ -840,7 +916,16 @@ class Builder
 			);
 	}
 
-	public function insert( $data = null )
+	/**
+	 * Insert a new record into the database.
+	 *
+	 * @param null|array|Closure $data
+	 *
+	 * @return int
+	 *
+	 * @throws DBALException
+	 */
+	public function insert($data = null)
 	{
 		$this->checkTableExists();
 
@@ -855,11 +940,41 @@ class Builder
 			);
 	}
 
-	public function lastInsertId($seqName = null)
+	/**
+	 * Insert a new record and get the value of the primary key
+	 *
+	 * @param null|array|Closure $data
+	 * @param null $seqName
+	 *
+	 * @return string
+	 *
+	 * @throws DBALException
+	 */
+	public function insertGetId($data = null, $seqName = null)
 	{
-		return $this->getDbalConnection()->lastInsertId($seqName);
+		$this->insert($data);
+		return $this->lastInsertId($seqName);
 	}
 
+	/**
+	 * Get the value of the primary key
+	 *
+	 * @param null $seqName
+	 *
+	 * @return string
+	 */
+	public function lastInsertId($seqName = null)
+	{
+		return $this->getConnection()->lastInsertId($seqName);
+	}
+
+	/**
+	 * Delete a record from the database.
+	 *
+	 * @return int
+	 *
+	 * @throws DBALException
+	 */
 	public function delete()
 	{
 		$this->checkTableExists();
@@ -867,14 +982,19 @@ class Builder
 		$builder = $this->builder;
 
 		return $this
-			->getDbalConnection()
-			->executeUpdate(
+			->getConnection()
+			->executeWritable(
 				$this->getDeleteSql(),
 				$builder->getParameters(),
 				$builder->getParameterTypes()
 			);
 	}
 
+	/**
+	 * Get StateInsertBuilder object
+	 *
+	 * @return StateInsertBuilder
+	 */
 	public function getInsertState(): StateInsertBuilder
 	{
 		if( ! isset($this->insert) )
@@ -885,7 +1005,13 @@ class Builder
 		return $this->insert;
 	}
 
-	public function getInsertSql( $data = null )
+	/**
+	 * Get insert statement query string
+	 *
+	 * @param null $data
+	 * @return string
+	 */
+	public function getInsertSql( $data = null ): string
 	{
 		$insert = $this->getInsertState();
 
@@ -904,9 +1030,11 @@ class Builder
 	}
 
 	/**
+	 * Get StateUpdateBuilder object
+	 *
 	 * @return StateUpdateBuilder
 	 */
-	public function getUpdateState(): ?StateUpdateBuilder
+	public function getUpdateState(): StateUpdateBuilder
 	{
 		if( ! isset($this->update) )
 		{
@@ -916,7 +1044,13 @@ class Builder
 		return $this->update;
 	}
 
-	public function getUpdateSql( $data = null )
+	/**
+	 * Get update statement query string
+	 *
+	 * @param null $data
+	 * @return string
+	 */
+	public function getUpdateSql( $data = null ): string
 	{
 		$update = $this->getUpdateState();
 
@@ -934,12 +1068,20 @@ class Builder
 		return $this->builder->update($this->getFullTableWritableName())->getSQL();
 	}
 
-	public function getDeleteSql()
+	/**
+	 * Get delete statement query string
+	 *
+	 * @return string
+	 */
+	public function getDeleteSql(): string
 	{
 		return $this->builder->delete($this->getFullTableWritableName())->getSQL();
 	}
 
-	protected function getFullTableWritableName()
+	/**
+	 * @return string
+	 */
+	protected function getFullTableWritableName(): string
 	{
 		$table = $this->table;
 		if(strpos($table, "(") !== false)
@@ -1138,7 +1280,9 @@ class Builder
 			}
 		}
 
-		$value = $this->getDbalConnection()->fetchColumn($sql, $bindings, 0, $types);
+		$value = $this
+			->getConnection()
+			->fetchColumn($sql, $bindings, 0, $types);
 
 		return $value ? (int) $value : 0;
 	}

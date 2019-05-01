@@ -48,11 +48,16 @@ use Throwable;
  * @method \Doctrine\DBAL\Driver\ResultStatement executeQuery(string $query, array $params = [], $types = []) Executes an, optionally parametrized, SQL query.
  * @method \Doctrine\DBAL\Driver\ResultStatement executeCacheQuery(string $query, array $params = [], $types = [], ?\Doctrine\DBAL\Cache\QueryCacheProfile $qcp = null) Executes a caching query.
  * @method string|int lastInsertId(string $seqName = null) Returns the ID of the last inserted row, or the last value from a sequence object, depending on the underlying driver.
+ * @method mixed[]|false fetchAssoc(string $statement, array $params = [], array $types = []) Prepares and executes an SQL query and returns the first row of the result as an associative array.
+ * @method mixed[]|false fetchArray(string $statement, array $params = [], array $types = []) Prepares and executes an SQL query and returns the first row of the result as a numerically indexed array.
+ * @method mixed|false fetchColumn(string $statement, array $params = [], int $column = 0, array $types = []) Prepares and executes an SQL query and returns the value of a single column of the first row of the result.
  *
  * @package RozaVerta\CmfCore\Database
  */
 class Connection
 {
+	use DetectsLostConnections;
+
 	/**
 	 * @var string
 	 */
@@ -68,7 +73,14 @@ class Connection
 	 */
 	protected $prefix = "";
 
-	public function __construct( array $params = [], string $name )
+	/**
+	 * Connection constructor.
+	 *
+	 * @param array $params
+	 * @param string $name
+	 * @throws DBALException
+	 */
+	public function __construct( array $params = [], string $name = "default" )
 	{
 		$this->conn = DriverManager::getConnection($params);
 		$this->conn->setFetchMode( FetchMode::ASSOCIATIVE );
@@ -78,6 +90,8 @@ class Connection
 	}
 
 	/**
+	 * Get connection configuration name.
+	 *
 	 * @return string
 	 */
 	public function getName(): string
@@ -86,6 +100,8 @@ class Connection
 	}
 
 	/**
+	 * Get DBAL Connection.
+	 *
 	 * @return DBALConnection
 	 */
 	public function getDbalConnection(): DBALConnection
@@ -93,12 +109,21 @@ class Connection
 		return $this->conn;
 	}
 
+	/**
+	 * Get DBAL Platform.
+	 *
+	 * @return AbstractPlatform
+	 *
+	 * @throws DBALException
+	 */
 	public function getDbalDatabasePlatform(): AbstractPlatform
 	{
 		return $this->conn->getDatabasePlatform();
 	}
 
 	/**
+	 * Get the full table name with the table prefix.
+	 *
 	 * @param string $table
 	 * @return string
 	 */
@@ -108,6 +133,8 @@ class Connection
 	}
 
 	/**
+	 * Get table prefix.
+	 *
 	 * @return string
 	 */
 	public function getTablePrefix(): string
@@ -115,6 +142,17 @@ class Connection
 		return $this->prefix;
 	}
 
+	/**
+	 * Create new query builder.
+	 *
+	 * @param string $name
+	 * @param string|null $alias
+	 *
+	 * @return Builder
+	 *
+	 * @throws Throwable
+	 * @throws \ReflectionException
+	 */
 	public function table(string $name, string $alias = null): Builder
 	{
 		return new Builder([$name, $alias], $this);
@@ -143,7 +181,7 @@ class Connection
 			$this->conn->commit();
 			return $res;
 		}
-		catch ( Throwable $e) {
+		catch ( Throwable $e ) {
 			$this->conn->rollBack();
 			throw $e;
 		}
@@ -168,6 +206,56 @@ class Connection
 		return $this->conn->executeUpdate($query, $params, $types);
 	}
 
+	/**
+	 * Exec query from DBAL connection.
+	 *
+	 * @param string $method
+	 * @param array $args
+	 *
+	 * @return mixed
+	 *
+	 * @throws DBALException
+	 */
+	protected function execProxy(string $method, array $args = [])
+	{
+		try {
+			$result = $this->conn->{$method}( ... $args );
+		}
+		catch(DBALException $e) {
+			$result = $this->tryAgainIfCausedByLostConnection($e, $method, $args);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Handle a query exception that occurred during query execution.
+	 *
+	 * @param DBALException $e
+	 * @param $method
+	 * @param array $args
+	 * @return mixed
+	 * @throws DBALException
+	 */
+	protected function tryAgainIfCausedByLostConnection(DBALException $e, $method, array $args = [])
+	{
+		if ($this->causedByLostConnection($e))
+		{
+			$this->conn->isConnected() && $this->conn->close();
+			$this->conn->connect();
+			return $this->conn->{$method}( ... $args );
+		}
+		throw $e;
+	}
+
+	/**
+	 * @param $name
+	 * @param $arguments
+	 *
+	 * @return mixed
+	 *
+	 * @throws DBALException
+	 */
 	public function __call( $name, $arguments )
 	{
 		switch($name) {
@@ -188,8 +276,6 @@ class Connection
 			case "rollBack":
 			case "setRollbackOnly":
 			case "isRollbackOnly":
-				return $this->conn->{$name}();
-
 			case "createSavepoint":
 			case "releaseSavepoint":
 			case "rollbackSavepoint":
@@ -200,7 +286,10 @@ class Connection
 			case "executeQuery":
 			case "executeCacheQuery":
 			case "lastInsertId":
-				return $this->conn->{$name}( ... $arguments );
+			case "fetchAssoc":
+			case "fetchArray":
+			case "fetchColumn":
+				return $this->execProxy($name, $arguments);
 		}
 
 		throw new BadMethodCallException("Call to undefined method " . __CLASS__ . "::{$name}()");

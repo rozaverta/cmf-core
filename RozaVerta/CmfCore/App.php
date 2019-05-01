@@ -13,6 +13,7 @@ use ReflectionMethod;
 use ReflectionException;
 use RozaVerta\CmfCore\Cache\CacheManager;
 use RozaVerta\CmfCore\Cli\Terminal;
+use RozaVerta\CmfCore\Exceptions\RuntimeException;
 use RozaVerta\CmfCore\Route\Context;
 use RozaVerta\CmfCore\Route\ContextLoader;
 use RozaVerta\CmfCore\Route\Interfaces\ControllerContentOutputInterface;
@@ -22,7 +23,6 @@ use RozaVerta\CmfCore\Database\DatabaseManager;
 use RozaVerta\CmfCore\Event\EventManager;
 use RozaVerta\CmfCore\Exceptions\InvalidArgumentException;
 use RozaVerta\CmfCore\Exceptions\NotFoundException;
-use RozaVerta\CmfCore\Exceptions\ProxyException;
 use RozaVerta\CmfCore\Exceptions\Exception;
 use RozaVerta\CmfCore\Filesystem\Filesystem;
 use RozaVerta\CmfCore\Helper\Callback;
@@ -81,6 +81,8 @@ final class App
 {
 	use SingletonInstanceTrait;
 
+	private $hostDefined = false;
+
 	private $ci = [];
 
 	private $singletons = [
@@ -101,8 +103,29 @@ final class App
 		"install" => false,
 	];
 
+	/**
+	 * Get system config value
+	 *
+	 * @param string $name
+	 * @param null $default
+	 * @return mixed
+	 *
+	 * @throws \Throwable
+	 */
 	public function system(string $name, $default = null)
 	{
+		if( ! $this->hostDefined )
+		{
+			if( ! $this->loaded("host") )
+			{
+				$this->init();
+			}
+			else if( $this->host->isDefined() )
+			{
+				$this->loadSystem();
+			}
+		}
+
 		return $this->system[$name] ?? $default;
 	}
 
@@ -112,8 +135,8 @@ final class App
 	 * @return $this
 	 *
 	 * @throws Exceptions\WriteException
+	 * @throws Module\Exceptions\ResourceReadException
 	 * @throws NotFoundException
-	 * @throws ProxyException
 	 */
 	public function init()
 	{
@@ -131,23 +154,23 @@ final class App
 			require __DIR__ . DIRECTORY_SEPARATOR . "boot.inc.php";
 		}
 
-		$host = $this->host;
+		$this->ci['host'] = HostManager::getInstance();
+		$this->host = $this->ci['host'];
+		$host = $this->ci['host'];
 		$host->isLoaded() || $host->reload();
 		$host->isLoaded() && ! $host->isDefined() && $host->define();
 
-		$this->system = $this->loadSystem();
+		$this->loadSystem();
 
 		$this->ci['log'] = LogManager::getInstance();
 		$this->ci['event'] = EventManager::getInstance();
 		$this->ci['response'] = new Response();
 		$this->ci['request'] = Request::createFromGlobals();
-		$this->ci['host'] = HostManager::getInstance();
 
 		$this->log = $this->ci['log'];
 		$this->event = $this->ci['event'];
 		$this->response = $this->ci['response'];
 		$this->request = $this->ci['request'];
-		$this->host = $this->ci['host'];
 
 		$this->singletons['db'] = function() {
 			return DatabaseManager::getInstance()->getConnection();
@@ -197,9 +220,10 @@ final class App
 	 *
 	 * @param string $name
 	 * @return object
+	 * @throws Exceptions\ClassNotFoundException
 	 * @throws Exceptions\WriteException
-	 * @throws Exceptions\NotFoundException
-	 * @throws Exceptions\ProxyException
+	 * @throws Module\Exceptions\ResourceReadException
+	 * @throws NotFoundException
 	 */
 	public function load( string $name )
 	{
@@ -262,7 +286,7 @@ final class App
 	 * @param bool $autoLoad
 	 * @return bool
 	 * @throws Exceptions\WriteException
-	 * @throws ProxyException
+	 * @throws Module\Exceptions\ResourceReadException
 	 */
 	public function loaded( string $name, bool $autoLoad = false ): bool
 	{
@@ -292,8 +316,8 @@ final class App
 	 *
 	 * @return Context
 	 * @throws Exceptions\WriteException
+	 * @throws Module\Exceptions\ResourceReadException
 	 * @throws NotFoundException
-	 * @throws ProxyException
 	 */
 	public function loadContext(): Context
 	{
@@ -333,9 +357,16 @@ final class App
 		return $this->ci["context"];
 	}
 
+	/**
+	 * Check if the system has been installed
+	 *
+	 * @return bool
+	 *
+	 * @throws \Throwable
+	 */
 	public function isInstall(): bool
 	{
-		return (bool) $this->init()->system["install"];
+		return (bool) $this->system("install", false);
 	}
 
 	public function run(): string
@@ -961,8 +992,8 @@ final class App
 
 	/**
 	 * @throws Exceptions\WriteException
+	 * @throws Module\Exceptions\ResourceReadException
 	 * @throws NotFoundException
-	 * @throws ProxyException
 	 */
 	public function close(): void
 	{
@@ -1018,8 +1049,8 @@ final class App
 	 * @param $object
 	 * @return $this
 	 * @throws Exceptions\WriteException
+	 * @throws Module\Exceptions\ResourceReadException
 	 * @throws NotFoundException
-	 * @throws ProxyException
 	 */
 	public function singleton( string $name, $object )
 	{
@@ -1051,13 +1082,14 @@ final class App
 	// private
 
 	/**
-	 * @return array
-	 * @throws ProxyException
+	 * @throws Module\Exceptions\ResourceReadException
+	 * @throws RuntimeException
 	 */
-	private function loadSystem(): array
+	private function loadSystem()
 	{
 		if( $this->host->isDefined() )
 		{
+			$this->hostDefined = true;
 			$system = Prop::file("system");
 		}
 		else
@@ -1081,14 +1113,14 @@ final class App
 				$manifest = new Manifest();
 			}
 			catch( Exception $e ) {
-				throw new ProxyException("System load failure", $e);
+				throw new RuntimeException("System load failure", $e);
 			}
 
 			$system["name"] = $manifest->getTitle();
 			$system["version"] = $manifest->getVersion();
 		}
 
-		return $system;
+		$this->system = $system;
 	}
 
 	private function readyController( MountPointInterface $mountPoint )

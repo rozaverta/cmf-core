@@ -11,20 +11,20 @@ namespace RozaVerta\CmfCore\CliCommands;
 use RozaVerta\CmfCore\Cli\AbstractCliCommand;
 
 /**
- * Cmf update and remove system
+ * Module register, install, update methods
  *
- * Class Cmf
+ * Class Module
  *
  * @package RozaVerta\CmfCore\CliCommands
  */
-class Cmf extends AbstractCliCommand
+class Module extends AbstractCliCommand
 {
 	/**
 	 * @throws \Throwable
 	 */
 	protected function exec()
 	{
-		$script = new Scripts\Cmf($this->getIO());
+		$script = new Scripts\Module($this->getIO());
 		$script->menu();
 	}
 }

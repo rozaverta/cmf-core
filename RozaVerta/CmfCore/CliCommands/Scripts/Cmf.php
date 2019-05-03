@@ -20,7 +20,7 @@ use RozaVerta\CmfCore\Log\Logger;
 use RozaVerta\CmfCore\Module\Interfaces\ModuleInterface;
 use RozaVerta\CmfCore\Module\ModuleHelper;
 use RozaVerta\CmfCore\Module\WorkshopModuleProcessor;
-use RozaVerta\CmfCore\Manifest as ModuleCoreConfig;
+use RozaVerta\CmfCore\Manifest as ModuleCoreManifest;
 use RozaVerta\CmfCore\Helper\PhpExport;
 use RozaVerta\CmfCore\Schemes\TemplatePackages_SchemeDesigner;
 use RozaVerta\CmfCore\Support\Prop;
@@ -29,34 +29,44 @@ use RozaVerta\CmfCore\Workshops\Module\Events\ModuleEvent;
 use RozaVerta\CmfCore\Workshops\Module\ModuleComponent;
 use RuntimeException;
 
+/**
+ * Class Cmf
+ *
+ * @package RozaVerta\CmfCore\CliCommands\Scripts
+ */
 class Cmf extends AbstractScript
 {
 	use ScriptUserTrait;
 
+	/**
+	 * @var Config
+	 */
 	private $systemConfig;
 
 	/**
-	 * @var ModuleCoreConfig
+	 * @var ModuleCoreManifest
 	 */
 	private $moduleConfig;
 
 	/**
-	 * @return ModuleCoreConfig
+	 * @return ModuleCoreManifest
 	 *
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceNotFoundException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
 	 */
-	public function getModuleConfig(): ModuleCoreConfig
+	public function getCoreManifest(): ModuleCoreManifest
 	{
 		if( ! isset($this->moduleConfig) )
 		{
-			$this->moduleConfig = new ModuleCoreConfig();
+			$this->moduleConfig = new ModuleCoreManifest();
 		}
 
 		return $this->moduleConfig;
 	}
 
 	/**
+	 * Run install
+	 *
 	 * @throws \Throwable
 	 */
 	public function install()
@@ -182,6 +192,13 @@ class Cmf extends AbstractScript
 		}
 	}
 
+	/**
+	 * Run update
+	 *
+	 * @param bool $force
+	 *
+	 * @throws \Throwable
+	 */
 	public function update( bool $force = false )
 	{
 		$this->getHost();
@@ -204,6 +221,11 @@ class Cmf extends AbstractScript
 		$this->goodBy();
 	}
 
+	/**
+	 * Run uninstall
+	 *
+	 * @throws \Throwable
+	 */
 	public function uninstall()
 	{
 		$io = $this->getIO();
@@ -231,6 +253,11 @@ class Cmf extends AbstractScript
 		}
 	}
 
+	/**
+	 * Show default menu
+	 *
+	 * @throws \Throwable
+	 */
 	public function menu()
 	{
 		if( $this->isHost() )
@@ -253,6 +280,11 @@ class Cmf extends AbstractScript
 		}
 	}
 
+	/**
+	 * Show host menu
+	 *
+	 * @throws \Throwable
+	 */
 	public function hostMenu()
 	{
 		$this->getHost();
@@ -288,13 +320,13 @@ class Cmf extends AbstractScript
 	}
 
 	/**
-	 * @throws \RozaVerta\CmfCore\Filesystem\Exceptions\FileAccessException
-	 * @throws \RozaVerta\CmfCore\Filesystem\Exceptions\FileNotFoundException
-	 * @throws \RozaVerta\CmfCore\Filesystem\Exceptions\FileReadException
+	 * Show about info
+	 *
+	 * @throws \Throwable
 	 */
 	public function about()
 	{
-		$conf = $this->getModuleConfig();
+		$conf = $this->getCoreManifest();
 		$manifest = new Prop($conf->getManifestData());
 		$io = $this->getIO();
 
@@ -337,15 +369,11 @@ class Cmf extends AbstractScript
 
 	// private
 
-	private function goodBy( string $message = "" )
-	{
-		if( !$message )
-		{
-			$message = "Good by! o_<";
-		}
-		$this->getIO()->write("<info>\$</info> {$message}");
-	}
-
+	/**
+	 * @param $author
+	 *
+	 * @return string
+	 */
 	private function getAuthor($author): string
 	{
 		if( is_object($author) )
@@ -372,6 +400,9 @@ class Cmf extends AbstractScript
 		return $at;
 	}
 
+	/**
+	 * @return Config
+	 */
 	private function getSystemConfig()
 	{
 		if( ! isset($this->systemConfig) )
@@ -383,16 +414,21 @@ class Cmf extends AbstractScript
 		return $this->systemConfig;
 	}
 
+	/**
+	 * @param array $data
+	 * @param bool $final
+	 *
+	 * @throws \Throwable
+	 */
 	private function reloadSystemConfig(array $data, bool $final = false)
 	{
 		$conf = $this->getSystemConfig();
 
 		if($final)
 		{
-			$moduleConfig = $this->getModuleConfig();
-			$conf
-				->set("name", $moduleConfig->getTitle())
-				->set("version", $moduleConfig->getVersion());
+			$moduleConfig = $this->getCoreManifest();
+			$data["name"] = $moduleConfig->getTitle();
+			$data["version"] = $moduleConfig->getVersion();
 		}
 
 		$this->writeConfig($conf, $data, $final);
@@ -403,13 +439,11 @@ class Cmf extends AbstractScript
 	 *
 	 * @return ModuleComponent
 	 *
-	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ModuleNotFoundException
-	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceNotFoundException
-	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
+	 * @throws \Throwable
 	 */
 	private function getWmp( bool $install = false ): ModuleComponent
 	{
-		$conf = $this->getModuleConfig();
+		$conf = $this->getCoreManifest();
 
 		if( ModuleHelper::exists($conf->getName(), $moduleId) )
 		{
@@ -445,6 +479,13 @@ class Cmf extends AbstractScript
 		return $wmp;
 	}
 
+	/**
+	 * @param Config $config
+	 * @param array $data
+	 * @param bool $debug
+	 *
+	 * @throws \Throwable
+	 */
 	private function writeConfig(Config $config, array $data = [], bool $debug = true)
 	{
 		$exists = $config->fileExists();
@@ -463,6 +504,13 @@ class Cmf extends AbstractScript
 		}
 	}
 
+	/**
+	 * @param string $file
+	 * @param $content
+	 * @param bool $www_data
+	 *
+	 * @throws \Throwable
+	 */
 	private function writePhpFile(string $file, $content, bool $www_data = false)
 	{
 		$text = '<?php defined("CMF_CORE") || exit;' . "\n";
@@ -510,6 +558,9 @@ class Cmf extends AbstractScript
 		throw new InvalidArgumentException("<error>Error:</error> cannot create the config file {$file}");
 	}
 
+	/**
+	 * @param string $file
+	 */
 	private function chownUserData(string $file)
 	{
 		$user  = $this->getScriptUser();
@@ -529,6 +580,13 @@ class Cmf extends AbstractScript
 		}
 	}
 
+	/**
+	 * @param string $dir
+	 * @param string $type
+	 * @param bool $www_data
+	 *
+	 * @throws \Throwable
+	 */
 	private function checkDir(string $dir, string $type, bool $www_data = false)
 	{
 		$dir = rtrim( $dir, DIRECTORY_SEPARATOR );
@@ -546,6 +604,9 @@ class Cmf extends AbstractScript
 		}
 	}
 
+	/**
+	 * @return mixed
+	 */
 	private function installConfigSystem()
 	{
 		return $this
@@ -562,6 +623,9 @@ class Cmf extends AbstractScript
 			], "System config");
 	}
 
+	/**
+	 * @return mixed
+	 */
 	private function installConfigUrl()
 	{
 		return $this
@@ -577,6 +641,10 @@ class Cmf extends AbstractScript
 			], "Url config");
 	}
 
+	/**
+	 * @param array $load
+	 * @return array
+	 */
 	private function installConfigDb( $load = [] )
 	{
 		$def = $this

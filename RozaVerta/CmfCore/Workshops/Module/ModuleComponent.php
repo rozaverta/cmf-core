@@ -29,8 +29,19 @@ use RozaVerta\CmfCore\Workshops\Event\EventProcessor;
 use RozaVerta\CmfCore\Workshops\Event\HandlerProcessor;
 use RozaVerta\CmfCore\Workshops\Event\Interfaces\EventProcessorExceptionInterface;
 
+/**
+ * Class ModuleComponent
+ *
+ * @package RozaVerta\CmfCore\Workshops\Module
+ */
 class ModuleComponent extends Workshop
 {
+	public const UNINSTALL_ASSETS = 1;
+	public const UNINSTALL_ADDONS = 2;
+	public const UNINSTALL_CONFIG = 4;
+	public const UNINSTALL_VERSIONS_HISTORY = 8;
+	public const UNINSTALL_PACKAGES = 16;
+
 	use Traits\ResourceBackupTrait;
 
 	protected $moduleData = [];

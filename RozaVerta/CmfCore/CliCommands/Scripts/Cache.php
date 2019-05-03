@@ -12,6 +12,11 @@ use RozaVerta\CmfCore\Cache\Properties\Property;
 use RozaVerta\CmfCore\Cache\Properties\PropertyMemory;
 use RozaVerta\CmfCore\Cli\IO\Option;
 
+/**
+ * Class Cache
+ *
+ * @package RozaVerta\CmfCore\CliCommands\Scripts
+ */
 class Cache extends AbstractScript
 {
 	protected function init()

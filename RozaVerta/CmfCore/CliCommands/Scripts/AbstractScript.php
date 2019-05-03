@@ -12,6 +12,11 @@ use RozaVerta\CmfCore\Cli\Traits\SystemHostTrait;
 use RozaVerta\CmfCore\Cli\IO\InputOutputInterface;
 use RozaVerta\CmfCore\Traits\ApplicationTrait;
 
+/**
+ * Class AbstractScript
+ *
+ * @package RozaVerta\CmfCore\CliCommands\Scripts
+ */
 abstract class AbstractScript
 {
 	use SystemHostTrait;
@@ -25,4 +30,18 @@ abstract class AbstractScript
 	}
 
 	protected function init() {}
+
+	protected function goodBy( string $message = "" )
+	{
+		if( !$message )
+		{
+			$message = "Good by! o_<";
+		}
+		$this->getIO()->write("<info>\$</info> {$message}");
+	}
+
+	protected function isContinue()
+	{
+		return $this->getIO()->confirm("Continue (<info>y</info>/n)? ");
+	}
 }

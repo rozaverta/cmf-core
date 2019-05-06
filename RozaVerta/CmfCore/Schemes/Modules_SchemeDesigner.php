@@ -57,7 +57,7 @@ class Modules_SchemeDesigner extends SchemeDesigner
 	{
 		$items = parent::format($items, $platform);
 		$items["id"] = (int) $items["id"];
-		if( ! is_bool($items["install"]) ) $items["install"] = (bool) Type::getType("boolean")->convertToPHPValue($items["install"], $platform);
+		if( ! is_bool($items["install"]) ) $items["install"] = (bool) Type::getType(Type::BOOLEAN)->convertToPHPValue($items["install"], $platform);
 
 		$manifestClassName = trim($items["namespace_name"], '\\') . '\Manifest';
 		if( ! class_exists($manifestClassName, true) )

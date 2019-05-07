@@ -8,44 +8,38 @@
 
 namespace RozaVerta\CmfCore\Route;
 
-use RozaVerta\CmfCore\Route\Context;
 use RozaVerta\CmfCore\Host\Host;
 use RozaVerta\CmfCore\Interfaces\CreateInstanceInterface;
 use RozaVerta\CmfCore\Support\Prop;
 use RozaVerta\CmfCore\Support\Regexp;
 use RozaVerta\CmfCore\Helper\Str;
-use RozaVerta\CmfCore\Traits\SingletonInstanceTrait;
 
 /**
  * Class Url
- *
- * @method static Url getInstance()
  *
  * @package RozaVerta\CmfCore\Route
  */
 class Url implements \Countable, CreateInstanceInterface
 {
-	use SingletonInstanceTrait;
-
 	protected $url          = "";
 	protected $base         = "/";
 	protected $host         = "localhost";
 	protected $port         = 80;
 	protected $path         = "/";
-	protected $is_dir       = true;
+	protected $isDir        = true;
 	protected $ext          = "";
-	protected $lower_ext    = false;
+	protected $lowerExt     = false;
 	protected $segments     = [];
 	protected $length       = 0;
-	protected $dir_length   = 0;
+	protected $dirLength    = 0;
 	protected $context      = "/";
 	protected $protocol     = "http";
 
 	private $lower          = false;
 	private $last           = false;
 	private $mode           = 'get';
-	private $base_path      = 'auto';
-	private $base_prefix    = "";
+	private $basePath       = 'auto';
+	private $basePrefix     = "";
 	private $ready          = false;
 
 	/**
@@ -53,16 +47,24 @@ class Url implements \Countable, CreateInstanceInterface
 	 */
 	private $config;
 
-	protected function __construct( ? array $prop = null )
+	/**
+	 * Url constructor.
+	 *
+	 * @param Prop|array|string $prop
+	 */
+	public function __construct( $prop = null )
 	{
-		$prop = is_array($prop) ? new Prop($prop) : Prop::prop('url');
+		if( ! $prop instanceof Prop )
+		{
+			$prop = new Prop(is_null($prop) ? [] : $prop);
+		}
 
 		if( $prop->getIs("directory") )
 		{
 			$prefix = trim( $prop["directory"], " \t/" );
 			if( strlen($prefix) )
 			{
-				$this->base_prefix = "/" . $prefix . "/";
+				$this->basePrefix = "/" . $prefix . "/";
 			}
 		}
 
@@ -78,13 +80,15 @@ class Url implements \Countable, CreateInstanceInterface
 
 		if( $prop->getIs("base") )
 		{
-			$this->base_path = Str::lower(trim($prop->get("base")));
+			$this->basePath = Str::lower(trim($prop->get("base")));
 		}
 
 		$this->config = $prop;
 	}
 
 	/**
+	 * Create new object instance
+	 *
 	 * @param array ...$args
 	 * @return Url
 	 */
@@ -119,6 +123,12 @@ class Url implements \Countable, CreateInstanceInterface
 		return $instance;
 	}
 
+	/**
+	 * Reload data from Host object
+	 *
+	 * @param Host $host
+	 * @return $this
+	 */
 	public function reloadRequest( Host $host )
 	{
 		// host
@@ -174,16 +184,22 @@ class Url implements \Countable, CreateInstanceInterface
 		return $this;
 	}
 
+	/**
+	 * Reload data from URL path string
+	 *
+	 * @param string $path
+	 * @return $this
+	 */
 	public function reload( string $path )
 	{
 		// clean data
 
 		$this->context    = "/";
 		$this->ext        = "";
-		$this->lower_ext  = "";
+		$this->lowerExt   = "";
 		$this->segments   = [];
 		$this->length     = 0;
-		$this->dir_length = 0;
+		$this->dirLength  = 0;
 		$this->last       = "";
 
 		// set mode
@@ -229,7 +245,7 @@ class Url implements \Countable, CreateInstanceInterface
 
 		}
 
-		$len = strlen($this->base_prefix);
+		$len = strlen($this->basePrefix);
 		$parse = parse_url( $path );
 		if( ! $parse )
 		{
@@ -245,27 +261,27 @@ class Url implements \Countable, CreateInstanceInterface
 		$this->protocol = $parse["scheme"] ?? $host_protocol;
 		$this->path = $parse["path"] ?? "/";
 		$this->url = $this->protocol . "://" . $this->host;
-		$this->base = $this->base_path == "full" ? $this->url : "";
+		$this->base = $this->basePath == "full" ? $this->url : "";
 
 		if( ! strlen($this->path) || $this->path[0] !== "/" )
 		{
 			$this->path = "/" . $this->path;
 		}
 
-		$this->is_dir = strrpos( $this->path, "/" ) === strlen( $this->path ) - 1;
+		$this->isDir = strrpos( $this->path, "/" ) === strlen( $this->path ) - 1;
 
 		if( $len > 0 )
 		{
-			$this->url  .= $this->base_prefix;
-			$this->base .= $this->base_prefix;
+			$this->url  .= $this->basePrefix;
+			$this->base .= $this->basePrefix;
 
 			$path = $this->path;
-			if( ! $this->is_dir )
+			if( ! $this->isDir )
 			{
 				$path .= "/";
 			}
 
-			if( substr($path, 0, $len) === $this->base_prefix )
+			if( substr($path, 0, $len) === $this->basePrefix )
 			{
 				$this->path = $len < strlen($this->path) ? substr($this->path, $len) : "/";
 			}
@@ -288,7 +304,7 @@ class Url implements \Countable, CreateInstanceInterface
 			$this->length  = count( $this->segments );
 			$this->url .= $path;
 
-			if( $this->is_dir )
+			if( $this->isDir )
 			{
 				$this->url .= "/";
 			}
@@ -296,7 +312,7 @@ class Url implements \Countable, CreateInstanceInterface
 			{
 				$ext = "." . $m[1];
 				$this->ext = $ext;
-				$this->lower_ext = strtolower($ext);
+				$this->lowerExt = strtolower($ext);
 
 				$last = $this->segments[$this->length-1];
 				$this->last = substr( $last, 0, strlen($last) - strlen($ext) );
@@ -307,13 +323,15 @@ class Url implements \Countable, CreateInstanceInterface
 			}
 		}
 
-		$this->dir_length = $this->length;
-		$this->is_dir || -- $this->dir_length;
+		$this->dirLength = $this->length;
+		$this->isDir || -- $this->dirLength;
 
 		return $this;
 	}
 
 	/**
+	 * Get URL string
+	 *
 	 * @return string
 	 */
 	public function getUrl(): string
@@ -322,6 +340,8 @@ class Url implements \Countable, CreateInstanceInterface
 	}
 
 	/**
+	 * Get base path
+	 *
 	 * @return string
 	 */
 	public function getBase(): string
@@ -330,16 +350,20 @@ class Url implements \Countable, CreateInstanceInterface
 	}
 
 	/**
+	 * Get URL Prefix - Protocol, Domain and Base Path
+	 *
 	 * @return string
 	 */
 	public function getPrefix(): string
 	{
 		$prefix  = $this->protocol . "://" . $this->host;
-		$prefix .= $this->isBasePrefix() ? $this->base_prefix : "/";
+		$prefix .= $this->isBasePrefix() ? $this->basePrefix : "/";
 		return $prefix;
 	}
 
 	/**
+	 * Get domain name
+	 *
 	 * @return string
 	 */
 	public function getHost(): string
@@ -348,6 +372,8 @@ class Url implements \Countable, CreateInstanceInterface
 	}
 
 	/**
+	 * Get port
+	 *
 	 * @return int
 	 */
 	public function getPort(): int
@@ -356,6 +382,8 @@ class Url implements \Countable, CreateInstanceInterface
 	}
 
 	/**
+	 * Get full path
+	 *
 	 * @param bool $context
 	 * @return string
 	 */
@@ -372,27 +400,38 @@ class Url implements \Countable, CreateInstanceInterface
 	}
 
 	/**
+	 * Get offset path
+	 *
 	 * @param int $offset
 	 * @return string
 	 */
 	public function getOffsetPath( int $offset ): string
 	{
-		if( $offset < $this->length ) {
+		if( $offset < $this->length )
+		{
 			$path = "";
-			for( $i = $offset; $i < $this->length; $i++ ) {
+
+			for( $i = $offset; $i < $this->length; $i++ )
+			{
 				$path .= "/" . $this->segments[$i];
 			}
-			if($this->isDir()) {
+
+			if($this->isDir)
+			{
 				$path .= "/";
 			}
+
 			return $path;
 		}
-		else {
+		else
+		{
 			return $this->isDir() ? "/" : "";
 		}
 	}
 
 	/**
+	 * Get the last specified segments
+	 *
 	 * @param int $offset
 	 * @return array
 	 */
@@ -402,6 +441,8 @@ class Url implements \Countable, CreateInstanceInterface
 	}
 
 	/**
+	 * Get context path
+	 *
 	 * @return string
 	 */
 	public function getContext(): string
@@ -410,6 +451,8 @@ class Url implements \Countable, CreateInstanceInterface
 	}
 
 	/**
+	 * Context used URL path, the self::shift method was previously called.
+	 *
 	 * @return bool
 	 */
 	public function isContext(): bool
@@ -418,14 +461,18 @@ class Url implements \Countable, CreateInstanceInterface
 	}
 
 	/**
+	 * URL path was closed
+	 *
 	 * @return bool
 	 */
 	public function isDir(): bool
 	{
-		return $this->is_dir;
+		return $this->isDir;
 	}
 
 	/**
+	 * Get URL extension
+	 *
 	 * @return string
 	 */
 	public function getExt(): string
@@ -434,14 +481,18 @@ class Url implements \Countable, CreateInstanceInterface
 	}
 
 	/**
+	 * Get lowercase URL extension
+	 *
 	 * @return string
 	 */
 	public function getLowerExt(): string
 	{
-		return $this->lower_ext;
+		return $this->lowerExt;
 	}
 
 	/**
+	 * Get URL protocol scheme, http or https
+	 *
 	 * @return string
 	 */
 	public function getProtocol(): string
@@ -450,6 +501,8 @@ class Url implements \Countable, CreateInstanceInterface
 	}
 
 	/**
+	 * Is SSL used?
+	 *
 	 * @return bool
 	 */
 	public function isSsl(): bool
@@ -458,6 +511,8 @@ class Url implements \Countable, CreateInstanceInterface
 	}
 
 	/**
+	 * Check segment existence
+	 *
 	 * @param int $number
 	 * @return bool
 	 */
@@ -467,6 +522,8 @@ class Url implements \Countable, CreateInstanceInterface
 	}
 
 	/**
+	 * Get a specific segment
+	 *
 	 * @param int $number
 	 * @return string
 	 */
@@ -485,6 +542,8 @@ class Url implements \Countable, CreateInstanceInterface
 	}
 
 	/**
+	 * Get all segments
+	 *
 	 * @return array
 	 */
 	public function getSegments(): array
@@ -493,14 +552,18 @@ class Url implements \Countable, CreateInstanceInterface
 	}
 
 	/**
+	 * Count segments without last open segment
+	 *
 	 * @return int
 	 */
 	public function getDirLength(): int
 	{
-		return $this->dir_length;
+		return $this->dirLength;
 	}
 
 	/**
+	 * Url mode, 'get' or 'rewrite'
+	 *
 	 * @return string
 	 */
 	public function getMode(): string
@@ -509,6 +572,8 @@ class Url implements \Countable, CreateInstanceInterface
 	}
 
 	/**
+	 * Get URL configuration
+	 *
 	 * @return \RozaVerta\CmfCore\Support\Prop
 	 */
 	public function getConfig(): Prop
@@ -522,6 +587,7 @@ class Url implements \Countable, CreateInstanceInterface
 	 * @param Context $context
 	 * @param string $path
 	 * @param array $query
+	 *
 	 * @return string
 	 */
 	public function makeContextUrl( Context $context, $path = '', array $query = [] ): string
@@ -535,7 +601,7 @@ class Url implements \Countable, CreateInstanceInterface
 			{
 				$url .= ":" . $port;
 			}
-			$url .= $this->isBasePrefix() ? $this->base_prefix : "/";
+			$url .= $this->isBasePrefix() ? $this->basePrefix : "/";
 		}
 		else
 		{
@@ -584,9 +650,10 @@ class Url implements \Countable, CreateInstanceInterface
 	 * @param array $query
 	 * @param bool $context
 	 * @param bool|null $full
+	 *
 	 * @return string
 	 */
-	public function makeUrl( $path = '', array $query = [], bool $context = false, bool $full = null ): string
+	public function makeUrl( $path = '', array $query = [], bool $context = false, ? bool $full = null ): string
 	{
 		if( is_null($full) )
 		{
@@ -598,7 +665,7 @@ class Url implements \Countable, CreateInstanceInterface
 		}
 		else
 		{
-			$url = $this->isBasePrefix() ? $this->base_prefix : "/";
+			$url = $this->isBasePrefix() ? $this->basePrefix : "/";
 		}
 
 		if( is_array($path) )
@@ -625,15 +692,22 @@ class Url implements \Countable, CreateInstanceInterface
 		return $this->getModeUrl($url, $path, $query);
 	}
 
+	/**
+	 * Create context path, shift segments
+	 *
+	 * @param int $delta
+	 *
+	 * @return $this
+	 */
 	public function shift( $delta = 1 )
 	{
 		$delta = (int) $delta;
 
-		if( $delta > 0 && $this->dir_length )
+		if( $delta > 0 && $this->dirLength )
 		{
-			if( $delta > $this->dir_length )
+			if( $delta > $this->dirLength )
 			{
-				$delta = $this->dir_length;
+				$delta = $this->dirLength;
 			}
 
 			if( $delta == 1 )
@@ -646,12 +720,12 @@ class Url implements \Countable, CreateInstanceInterface
 			}
 
 			$this->length -= $delta;
-			$this->dir_length -= $delta;
+			$this->dirLength -= $delta;
 			$this->path = "/";
 			if($this->length > 0)
 			{
 				$this->path .= implode("/", $this->segments);
-				if($this->is_dir)
+				if($this->isDir)
 				{
 					$this->path .= "/";
 				}
@@ -661,9 +735,16 @@ class Url implements \Countable, CreateInstanceInterface
 		return $this;
 	}
 
+	/**
+	 * Compare the URL extension with a string or array
+	 *
+	 * @param $ext
+	 *
+	 * @return bool
+	 */
 	public function equivExt( $ext ): bool
 	{
-		if( ! $this->lower_ext || ! $ext )
+		if( ! $this->lowerExt || ! $ext )
 		{
 			return false;
 		}
@@ -686,9 +767,17 @@ class Url implements \Countable, CreateInstanceInterface
 			$ext = "." . $ext;
 		}
 
-		return $this->lower_ext === $ext;
+		return $this->lowerExt === $ext;
 	}
 
+	/**
+	 * Compare specified URL segment
+	 *
+	 * @param string $test
+	 * @param int $number
+	 *
+	 * @return bool
+	 */
 	public function equivSegment( string $test, int $number = 0 ): bool
 	{
 		if( ! isset( $this->segments[$number] ) )
@@ -704,6 +793,13 @@ class Url implements \Countable, CreateInstanceInterface
 		return $this->segments[$number] === $test;
 	}
 
+	/**
+	 * Check if the URL segment is a number
+	 *
+	 * @param int $number
+	 *
+	 * @return bool
+	 */
 	public function equivNumeric( int $number = 0 ) : bool
 	{
 		if( ! isset( $this->segments[$number] ) )
@@ -717,10 +813,19 @@ class Url implements \Countable, CreateInstanceInterface
 		}
 	}
 
-	public function equivThen( array $segments, $is_dir = false )
+	/**
+	 * Check the URL scheme.
+	 * The first argument used is an array; the elements of the array can be a string, a Regexp object, or a Closure.
+	 *
+	 * @param array $segments
+	 * @param bool $isDir
+	 *
+	 * @return bool
+	 */
+	public function equivThen( array $segments, $isDir = false )
 	{
 		$length = count($segments);
-		if( $this->length !== $length || $is_dir !== $this->is_dir )
+		if( $this->length !== $length || $isDir !== $this->isDir )
 		{
 			return false;
 		}
@@ -743,6 +848,13 @@ class Url implements \Countable, CreateInstanceInterface
 		return true;
 	}
 
+	/**
+	 * Get last URL segment without extension (by default)
+	 *
+	 * @param bool $suffix
+	 *
+	 * @return string
+	 */
 	public function getLast( bool $suffix = false ): string
 	{
 		if( $this->last )
@@ -756,6 +868,8 @@ class Url implements \Countable, CreateInstanceInterface
 	}
 
 	/**
+	 * Matching URL segments is not case-sensitive.
+	 *
 	 * @return bool
 	 */
 	public function isLower(): bool
@@ -767,8 +881,7 @@ class Url implements \Countable, CreateInstanceInterface
 	 * Count elements of an object
 	 * @link http://php.net/manual/en/countable.count.php
 	 * @return int The custom count as an integer.
-	 * </p>
-	 * <p>
+	 *
 	 * The return value is cast to an integer.
 	 * @since 5.1.0
 	 */
@@ -779,6 +892,13 @@ class Url implements \Countable, CreateInstanceInterface
 
 	// protected
 
+	/**
+	 * Clean relative path
+	 *
+	 * @param $uri
+	 *
+	 * @return string
+	 */
 	protected function cleanRelative( $uri )
 	{
 		$uris = [];
@@ -798,11 +918,23 @@ class Url implements \Countable, CreateInstanceInterface
 		return count($uris) > 0 ? implode('/', $uris) . $end : "";
 	}
 
+	/**
+	 * Is base prefix
+	 *
+	 * @return bool
+	 */
 	protected function isBasePrefix(): bool
 	{
-		return strlen($this->base_prefix) > 0;
+		return strlen($this->basePrefix) > 0;
 	}
 
+	/**
+	 * Create a URL based on configuration mode
+	 * @param $url
+	 * @param $path
+	 * @param array $query
+	 * @return string
+	 */
 	protected function getModeUrl( $url, $path, array $query ): string
 	{
 		if( strlen($path) && $path !== "/" )

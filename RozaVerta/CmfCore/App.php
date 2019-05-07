@@ -90,7 +90,7 @@ final class App
 		'filesystem'    => Filesystem::class,
 	//	'view'          => View::class,
 		'lang'          => LanguageManager::class,
-		'url'           => Url::class,
+	//	'url'           => Url::class,
 		'phpExport'     => PhpExport::class,
 		'session'       => SessionManager::class,
 		'host'          => HostManager::class,
@@ -172,13 +172,13 @@ final class App
 		$this->response = $this->ci['response'];
 		$this->request = $this->ci['request'];
 
-		$this->singletons['db'] = function() {
+		$this->singletons['db'] = function(App $app) {
 			return DatabaseManager::getInstance()->getConnection();
 		};
 
-		$this->singletons['view'] = function() {
+		$this->singletons['view'] = function(App $app) {
 
-			$url = $this->url;
+			$url = $app->url;
 
 			$data = [];
 
@@ -198,6 +198,10 @@ final class App
 			];
 
 			return new View($data, array_keys($data));
+		};
+
+		$this->singletons['url'] = function(App $app) {
+			return new Url( Prop::prop('url') );
 		};
 
 		$this->completable['view'] = function(View $view) {
@@ -245,7 +249,7 @@ final class App
 
 			if( $object instanceof Closure )
 			{
-				$this->ci[$name] = $object();
+				$this->ci[$name] = $object($this);
 				if( ! is_object($this->ci[$name]) )
 				{
 					throw new Exceptions\RuntimeException("The result of the singleton '{$name}' callback is not an object");
@@ -793,6 +797,7 @@ final class App
 	 *
 	 * @throws Exceptions\WriteException
 	 * @throws NotFoundException
+	 * @throws \Throwable
 	 */
 	private function renderController(bool $beforeEvent, bool $cacheable = false, ?PageCache $pageCache = null): string
 	{
@@ -879,6 +884,7 @@ final class App
 	 *
 	 * @throws Exceptions\WriteException
 	 * @throws NotFoundException
+	 * @throws \Throwable
 	 */
 	private function renderCache(PageCache $pageCache): string
 	{

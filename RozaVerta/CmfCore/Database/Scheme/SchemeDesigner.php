@@ -8,11 +8,13 @@
 
 namespace RozaVerta\CmfCore\Database\Scheme;
 
+use BadMethodCallException;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use InvalidArgumentException;
 use JsonSerializable;
 use RozaVerta\CmfCore\Database\Connection;
 use RozaVerta\CmfCore\Database\DatabaseManager;
+use RozaVerta\CmfCore\Database\Interfaces\ProxySchemeDesignerInterface;
 use RozaVerta\CmfCore\Database\Interfaces\SchemeDesignerInterface;
 use RozaVerta\CmfCore\Database\Query\Builder;
 use RozaVerta\CmfCore\Interfaces\Arrayable;
@@ -34,6 +36,16 @@ class SchemeDesigner implements SchemeDesignerInterface, Arrayable, JsonSerializ
 	 */
 	protected $items = [];
 
+	/**
+	 * @var ProxySchemeDesignerInterface[]
+	 */
+	private $proxy = [];
+
+	/**
+	 * @var int
+	 */
+	private $proxies = 0;
+
 	public function __construct( array $items, ?Connection $connection = null )
 	{
 		$this->items = is_null($connection) ? $items : $this->format( $items, $connection->getDbalDatabasePlatform() );
@@ -42,6 +54,42 @@ class SchemeDesigner implements SchemeDesignerInterface, Arrayable, JsonSerializ
 	protected function format( array $items, AbstractPlatform $platform ): array
 	{
 		return $items;
+	}
+
+	/**
+	 * Add proxy object
+	 *
+	 * @param ProxySchemeDesignerInterface $object
+	 *
+	 * @return $this
+	 */
+	public function addProxy(ProxySchemeDesignerInterface $object)
+	{
+		$this->proxy[] = $object;
+		$this->proxies ++;
+		$this->items = array_merge($this->items, $object->toArray());
+		return $this;
+	}
+
+	public function __call( $name, $arguments )
+	{
+		if( $this->proxies == 1 )
+		{
+			return $this->proxy->{$name}( ...$arguments );
+		}
+
+		if( $this->proxies > 1 )
+		{
+			for($i = 0; $i < $this->proxies; $i++)
+			{
+				if(method_exists($this->proxy[$i], $name))
+				{
+					return $this->proxy[$i]->{$name}(... $arguments);
+				}
+			}
+		}
+
+		throw new BadMethodCallException("Call to undefined method " . __CLASS__ . "::{$name}()");
 	}
 
 	/**
@@ -59,13 +107,20 @@ class SchemeDesigner implements SchemeDesignerInterface, Arrayable, JsonSerializ
 	public function getArrayForVarExport(): array
 	{
 		return [
-			'items' => $this->items
+			'items' => $this->items,
+			'proxy' => $this->proxy
 		];
 	}
 
 	static public function __set_state( $data )
 	{
-		return new static( $data["items"] ?? [] );
+		$result = new static( $data["items"] ?? [] );
+		if( !empty($data["proxy"]) && is_array($data["proxy"]) )
+		{
+			$result->proxy = $data["proxy"];
+			$result->proxies = count($data["proxy"]);
+		}
+		return $result;
 	}
 
 	/**

@@ -73,11 +73,38 @@ class Prop implements ArrayAccess, Countable, Arrayable, IteratorAggregate
 
 	/**
 	 * @param array $an_array
+	 *
 	 * @return static
 	 */
 	public static function __set_state($an_array)
 	{
 		return new static($an_array["items"] ?? []);
+	}
+
+	/**
+	 * Get data item
+	 *
+	 * @param array $args
+	 *
+	 * @return mixed
+	 */
+	public function __invoke( ...$args )
+	{
+		$len = count($args);
+		if( ! $len )
+		{
+			return $this->toArray();
+		}
+
+		$choice = is_array($args[0]);
+		if( $len === 1 )
+		{
+			return $choice ? $this->choice($args[0]) : $this->get($args[0]);
+		}
+		else
+		{
+			return $choice ? $this->choice($args[0], $args[1]) : $this->getOr($args[0], $args[1]);
+		}
 	}
 
 	/**

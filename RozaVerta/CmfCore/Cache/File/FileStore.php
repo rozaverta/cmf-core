@@ -102,7 +102,7 @@ class FileStore extends Store
 		$bytes = 0;
 		$memories = [];
 
-		Iterator::createInstance($path)->each(
+		Iterator::iterator($path)->each(
 			function(\SplFileInfo $file, $depth, $base_path) use (& $memories, & $files, & $bytes)
 			{
 				$is_file = $file->isFile();

@@ -556,7 +556,7 @@ class Filesystem
 	public function deleteDirectories( string $directory )
 	{
 		try {
-			$allDirectories = Iterator::createInstance( $directory )->getDirectories();
+			$allDirectories = Iterator::iterator( $directory )->getDirectories();
 		}
 		catch( Exceptions\PathInvalidArgumentException $e ) { return false; }
 

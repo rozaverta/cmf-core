@@ -9,7 +9,6 @@
 namespace RozaVerta\CmfCore\Route;
 
 use RozaVerta\CmfCore\Host\Host;
-use RozaVerta\CmfCore\Interfaces\CreateInstanceInterface;
 use RozaVerta\CmfCore\Support\Prop;
 use RozaVerta\CmfCore\Support\Regexp;
 use RozaVerta\CmfCore\Helper\Str;
@@ -19,7 +18,7 @@ use RozaVerta\CmfCore\Helper\Str;
  *
  * @package RozaVerta\CmfCore\Route
  */
-class Url implements \Countable, CreateInstanceInterface
+class Url implements \Countable
 {
 	protected $url          = "";
 	protected $base         = "/";
@@ -84,43 +83,6 @@ class Url implements \Countable, CreateInstanceInterface
 		}
 
 		$this->config = $prop;
-	}
-
-	/**
-	 * Create new object instance
-	 *
-	 * @param array ...$args
-	 * @return Url
-	 */
-	public static function createInstance( ... $args )
-	{
-		$len  = count($args);
-		$prop = null;
-		$path = "";
-
-		if( $len > 0 )
-		{
-			if( is_array($args[0]) )
-			{
-				$prop = $args[0];
-				if( $len > 1 && is_string($args[1]) )
-				{
-					$path = $args[1];
-				}
-			}
-			else if( is_string($args[0]) )
-			{
-				$path = $args[0];
-			}
-		}
-
-		$instance = new self($prop);
-		if(strlen($path))
-		{
-			$instance->reload($path);
-		}
-
-		return $instance;
 	}
 
 	/**

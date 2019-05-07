@@ -8,11 +8,10 @@
 
 namespace RozaVerta\CmfCore\Filesystem;
 
-use RozaVerta\CmfCore\Interfaces\CreateInstanceInterface;
 use IteratorAggregate;
 use Traversable;
 
-class Iterator implements IteratorAggregate, CreateInstanceInterface
+class Iterator implements IteratorAggregate
 {
 	const TYPE_FILE = 1;
 	const TYPE_DIRECTORY = 2;
@@ -223,7 +222,7 @@ class Iterator implements IteratorAggregate, CreateInstanceInterface
 	 * @param array ...$args
 	 * @return Iterator
 	 */
-	public static function createInstance( ... $args )
+	public static function iterator( ... $args )
 	{
 		return new self( ... $args );
 	}

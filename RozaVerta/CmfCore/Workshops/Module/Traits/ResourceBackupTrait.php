@@ -46,7 +46,7 @@ trait ResourceBackupTrait
 		{
 			try {
 				/** @var \SplFileInfo $directory */
-				foreach( Iterator::createInstance($this->getResourcePath(true))->getDirectories() as $directory)
+				foreach( Iterator::iterator($this->getResourcePath(true))->getDirectories() as $directory)
 				{
 					$file = $directory->getRealPath() . DIRECTORY_SEPARATOR . $name;
 					if(file_exists($file) && is_file($file))

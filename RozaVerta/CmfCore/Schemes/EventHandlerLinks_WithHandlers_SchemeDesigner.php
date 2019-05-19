@@ -8,6 +8,7 @@
 
 namespace RozaVerta\CmfCore\Schemes;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
+use RozaVerta\CmfCore\Module\ModuleHelper;
 
 /**
  * Class EventHandlerLinks_WithHandlers_SchemeDesigner
@@ -26,11 +27,16 @@ class EventHandlerLinks_WithHandlers_SchemeDesigner extends ModuleSchemeDesigner
 	 * @param array $items
 	 * @param AbstractPlatform $platform
 	 * @return array
+	 * @throws \Doctrine\DBAL\DBALException
 	 */
 	public function format( array $items, AbstractPlatform $platform ): array
 	{
 		$items = parent::format($items, $platform);
 		$items["priority"] = (int) $items["priority"];
+		if( strpos($items["class_name"], "\\") === false )
+		{
+			$items["class_name"] = ModuleHelper::getNamespaceName($items["module_id"]) . "Handlers\\" . $items["class_name"];
+		}
 		return $items;
 	}
 

@@ -15,6 +15,11 @@ use RozaVerta\CmfCore\Exceptions\NotFoundException;
 use RozaVerta\CmfCore\Exceptions\WriteException;
 use RozaVerta\CmfCore\Traits\SingletonInstanceTrait;
 
+/**
+ * Class EventManager
+ *
+ * @package RozaVerta\CmfCore\Event
+ */
 final class EventManager
 {
 	use SingletonInstanceTrait;
@@ -33,6 +38,8 @@ final class EventManager
 	 *
 	 * @throws NotFoundException
 	 * @throws WriteException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function dispatcher(string $name): Dispatcher
 	{
@@ -59,7 +66,7 @@ final class EventManager
 					throw new NotFoundException("Event '{$name}' is not registered in system");
 				}
 
-				$data = $event->getContentData();
+				$data = $event->toArray();
 				if(! $cache->export($data))
 				{
 					throw new WriteException("Can't write cache data for the '{$name}' event");
@@ -68,7 +75,7 @@ final class EventManager
 		}
 		else
 		{
-			$data = (new EventProvider($name))->getContentData();
+			$data = (new EventProvider($name))->toArray();
 		}
 
 		$manager = new Dispatcher(
@@ -97,6 +104,8 @@ final class EventManager
 	 *
 	 * @throws NotFoundException
 	 * @throws WriteException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function listen(string $name, \Closure $callback, $priority = 0)
 	{
@@ -111,6 +120,8 @@ final class EventManager
 	 *
 	 * @throws NotFoundException
 	 * @throws WriteException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function dispatch(EventInterface $event, \Closure $callback = null)
 	{
@@ -124,6 +135,8 @@ final class EventManager
 	 *
 	 * @throws NotFoundException
 	 * @throws WriteException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function isRun(string $name): bool
 	{
@@ -137,6 +150,8 @@ final class EventManager
 	 *
 	 * @throws NotFoundException
 	 * @throws WriteException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function count(string $name): int
 	{

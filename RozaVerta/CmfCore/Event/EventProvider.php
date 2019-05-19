@@ -9,28 +9,45 @@
 namespace RozaVerta\CmfCore\Event;
 
 use ReflectionClass;
-use RozaVerta\CmfCore\Database\Query\CriteriaBuilder;
 use RozaVerta\CmfCore\Event\Interfaces\EventPrepareInterface;
 use RozaVerta\CmfCore\Http\Events\ResponseSendEvent;
-use RozaVerta\CmfCore\Module\Module;
+use RozaVerta\CmfCore\Interfaces\Arrayable;
 use RozaVerta\CmfCore\Schemes\EventHandlerLinks_WithHandlers_SchemeDesigner;
 use RozaVerta\CmfCore\Schemes\Events_SchemeDesigner;
 use RozaVerta\CmfCore\Traits\ApplicationTrait;
+use RozaVerta\CmfCore\Traits\GetIdentifierTrait;
 use RozaVerta\CmfCore\Workshops\Event\Events\AbstractEvent;
 use RozaVerta\CmfCore\Workshops\Module\Events\DatabaseTableEvent;
 use RozaVerta\CmfCore\Workshops\Module\Events\ModuleEvent;
 use RozaVerta\CmfCore\Workshops\Module\Events\SaveConfigFileEvent;
 
-final class EventProvider
+/**
+ * Class EventProvider
+ *
+ * @package RozaVerta\CmfCore\Event
+ */
+final class EventProvider implements Arrayable
 {
 	use ApplicationTrait;
+	use GetIdentifierTrait;
 
-	private $id = 0;
 	private $name = '';
+
 	private $completable = false;
+
 	private $classes = [];
 
-	public function __construct( $name, $completable = null )
+	/**
+	 * EventProvider constructor.
+	 *
+	 * @param string $name
+	 * @param bool|null $completable
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \ReflectionException
+	 * @throws \Throwable
+	 */
+	public function __construct( string $name, ? bool $completable = null )
 	{
 		$this->appInit();
 
@@ -54,7 +71,7 @@ final class EventProvider
 			/** @var Events_SchemeDesigner $row */
 			if( $row )
 			{
-				$this->id = $row->getId();
+				$this->setId($row->getId());
 				$this->completable = $row->isCompletable();
 			}
 		}
@@ -70,30 +87,33 @@ final class EventProvider
 		}
 	}
 
-	public function load()
+	/**
+	 * Load event handlers
+	 *
+	 * @return int handlers count
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
+	 */
+	public function load(): int
 	{
-		if( !$this->id )
+		$id = $this->getId();
+		if( !$id )
 		{
-			return false;
+			return 0;
 		}
 
 		$rows = $this
 			->app
 			->db
 			->table(EventHandlerLinks_WithHandlers_SchemeDesigner::class)
-			->where('event_id', $this->id)
+			->where('event_id', $id)
 			->get();
 
 		/** @var EventHandlerLinks_WithHandlers_SchemeDesigner $row */
 		foreach( $rows as $row )
 		{
 			$className = $row->getClassName();
-
-			if( strpos($className, "\\") === false )
-			{
-				$className = $row->getModule()->getNamespaceName() . "Handlers\\" . $className;
-			}
-
 			try {
 				$ref = new ReflectionClass($className);
 			}
@@ -115,11 +135,46 @@ final class EventProvider
 		return count($this->classes);
 	}
 
-	public function getContentData()
+	/**
+	 * Event name
+	 *
+	 * @return string
+	 */
+	public function getName(): string
+	{
+		return $this->name;
+	}
+
+	/**
+	 * Event is completable
+	 *
+	 * @return bool
+	 */
+	public function isCompletable(): bool
+	{
+		return $this->completable;
+	}
+
+	/**
+	 * Get event handlers, classes list
+	 *
+	 * @return string[]
+	 */
+	public function getHandlers(): array
+	{
+		return $this->classes;
+	}
+
+	/**
+	 * Get the instance as an array.
+	 *
+	 * @return array
+	 */
+	public function toArray(): array
 	{
 		return
 			[
-				"id" => $this->id,
+				"id" => $this->getId(),
 				"name" => $this->name,
 				"completable" => $this->completable,
 				"classes" => $this->classes

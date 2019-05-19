@@ -138,7 +138,7 @@ class Cmf extends AbstractScript
 		$file->reload();
 		if( ! $file->getIs("default") || $io->confirm("Override database config (y/n)? ") )
 		{
-			$this->writeConfig($file, $this->installConfigDb( $data["default"] ?? [] ));
+			$this->writeConfig($file, $this->installConfigDb( $file->toArray() ));
 		}
 
 		// Check database connection
@@ -645,7 +645,7 @@ class Cmf extends AbstractScript
 	 * @param array $load
 	 * @return array
 	 */
-	private function installConfigDb( $load = [] )
+	private function installConfigDb( array $load = [] )
 	{
 		$def = $this
 			->getIO()
@@ -664,13 +664,15 @@ class Cmf extends AbstractScript
 				new ConfigOption("collation", "Enter charset collation [<info>%s</info>]", ["title" => "Database collation", "default" => "{charset}_general_ci"]),
 				new ConfigOption("user", "Enter user name [<info>%s</info>]", ["title" => "Database user", "default" => "root"]),
 				new ConfigOption("password", "Enter password", ["title" => "Database password"]),
-			], "Database info (default connection)", $load);
+			], "Database info (default connection)", $load["default"] ?? []);
 
 		if(isset($def["port"] ) && $def["port"] < 1)
 		{
 			unset($def["port"]);
 		}
 
-		return ["default" => $def];
+		$load["default"] = $def;
+
+		return $load;
 	}
 }

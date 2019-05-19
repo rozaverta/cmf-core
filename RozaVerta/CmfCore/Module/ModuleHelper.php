@@ -14,9 +14,13 @@ use RozaVerta\CmfCore\Exceptions\RuntimeException;
 use RozaVerta\CmfCore\Module\Exceptions\ModuleNotFoundException;
 use RozaVerta\CmfCore\Schemes\Modules_SchemeDesigner;
 use RozaVerta\CmfCore\Database\DatabaseManager as DB;
-use RozaVerta\CmfCore\Exceptions\NotFoundException;
 use RozaVerta\CmfCore\Helper\Str;
 
+/**
+ * Class ModuleHelper
+ *
+ * @package RozaVerta\CmfCore\Module
+ */
 final class ModuleHelper
 {
 	private function __construct() {}
@@ -25,6 +29,7 @@ final class ModuleHelper
 	 * Validate the module name
 	 *
 	 * @param string $name
+	 *
 	 * @return bool
 	 */
 	static public function validName(string $name): bool
@@ -40,6 +45,7 @@ final class ModuleHelper
 	 * Validate the module key (short name)
 	 *
 	 * @param string $key
+	 *
 	 * @return bool
 	 */
 	static public function validKey(string $key): bool
@@ -68,6 +74,7 @@ final class ModuleHelper
 	 * Format and validate module name
 	 *
 	 * @param string $name
+	 *
 	 * @return null|string
 	 */
 	static public function toNameStrict( string $name ): ?string
@@ -101,6 +108,7 @@ final class ModuleHelper
 	 * Convert key to module name
 	 *
 	 * @param string $name
+	 *
 	 * @return string
 	 */
 	static public function toKey(string $name): string
@@ -112,6 +120,7 @@ final class ModuleHelper
 	 * Convert module name to key
 	 *
 	 * @param string $key
+	 *
 	 * @return string
 	 */
 	static public function toName(string $key): string
@@ -124,8 +133,10 @@ final class ModuleHelper
 	 *
 	 * @param string $name
 	 * @param null $moduleId
+	 *
 	 * @return bool
-	 * @internal param bool $result_id
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
 	 */
 	static public function installed( string $name, & $moduleId = null ): bool
 	{
@@ -142,6 +153,8 @@ final class ModuleHelper
 	 * Check the selected modules are installed and throw new RuntimeException if not yet
 	 *
 	 * @param array $modules
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
 	 */
 	static public function dependenceStrict( array $modules )
 	{
@@ -160,7 +173,10 @@ final class ModuleHelper
 	 *
 	 * @param string $name
 	 * @param null $moduleId
+	 *
 	 * @return bool
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
 	 */
 	static public function exists( string $name, & $moduleId = null ): bool
 	{
@@ -195,7 +211,10 @@ final class ModuleHelper
 	 * Get module id from name or key
 	 *
 	 * @param string $name
+	 *
 	 * @return int|null
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
 	 */
 	static public function getId( string $name ): ?int
 	{
@@ -204,7 +223,7 @@ final class ModuleHelper
 	}
 
 	/**
-	 * Get workshop module processor
+	 * Get workshop module processor. Read data from database
 	 *
 	 * @param string|int $name
 	 *
@@ -213,6 +232,7 @@ final class ModuleHelper
 	 * @throws Exceptions\ResourceNotFoundException
 	 * @throws Exceptions\ResourceReadException
 	 * @throws ModuleNotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
 	 */
 	static public function workshop( $name ): WorkshopModuleProcessor
 	{
@@ -244,14 +264,16 @@ final class ModuleHelper
 	}
 
 	/**
-	 * Get module
+	 * Get module. Cached. Only installed module
 	 *
 	 * @param string|int $name
+	 *
 	 * @return Module
+	 *
 	 * @throws Exceptions\ResourceNotFoundException
 	 * @throws Exceptions\ResourceReadException
 	 * @throws ModuleNotFoundException
-	 * @throws NotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
 	 */
 	static public function module( $name ): Module
 	{
@@ -266,11 +288,55 @@ final class ModuleHelper
 	}
 
 	/**
+	 * Get module namespace name. Cached. Only installed module
+	 *
+	 * @param int|string $name
+	 *
+	 * @return string|null
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 */
+	static public function getNamespaceName( $name ): ?string
+	{
+		return self::idv( $name, "ns" );
+	}
+
+	/**
+	 * Get module name by ID. Cached. Only installed module
+	 *
+	 * @param int $id
+	 *
+	 * @return string|null
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 */
+	static public function getName( int $id )
+	{
+		return self::idv( $id, "name" );
+	}
+
+	/**
+	 * Get module key by ID. Cached. Only installed module
+	 *
+	 * @param int $id
+	 *
+	 * @return string|null
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 */
+	static public function getKey( int $id )
+	{
+		return self::idv( $id, "key" );
+	}
+
+	/**
 	 * Get module scheme designer database record
 	 *
 	 * @param $name
+	 *
 	 * @return Modules_SchemeDesigner
 	 * @throws ModuleNotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
 	 */
 	static public function getSchemeDesigner( $name ): Modules_SchemeDesigner
 	{
@@ -295,6 +361,73 @@ final class ModuleHelper
 		return $row;
 	}
 
+	/**
+	 * Get module property by ID from cache
+	 *
+	 * @param $name
+	 * @param string $property
+	 *
+	 * @return string|null
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 */
+	static protected function idv( $name, string $property ): ?string
+	{
+		static $store;
+
+		if( ! is_int($name) )
+		{
+			$id = self::idn($name);
+			if( $id < 1 )
+			{
+				return null;
+			}
+		}
+
+		if( ! isset($store) )
+		{
+			$cache = CacheManager::getInstance()->newCache("ns", "modules");
+			if($cache->ready())
+			{
+				$store = $cache->import();
+			}
+			else
+			{
+				/** @var Modules_SchemeDesigner[] $all */
+				$all = DB::table(Modules_SchemeDesigner::class)
+					->where("install", true)
+					->get();
+
+				$store = [];
+
+				foreach($all as $item)
+				{
+					$store[$item->getId()] = [
+						"ns"   => $item->getNamespaceName(),
+						"name" => $item->getName(),
+						"key"  => $item->getKey()
+					];
+				}
+
+				if(count($store))
+				{
+					$cache->export($store);
+				}
+			}
+		}
+
+		return isset($store[$id]) ? $store[$id][$property] : null;
+	}
+
+	/**
+	 * Get module id from cache
+	 *
+	 * @param $name
+	 *
+	 * @return int
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 */
 	static protected function idn( $name ): int
 	{
 		static $idn;

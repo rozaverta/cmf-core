@@ -170,15 +170,27 @@ class ModuleComponent extends Workshop
 	 */
 	protected function complete( Dispatcher $dispatcher, string $action, string $debugText ): void
 	{
+		$uninstall = $action === "uninstall";
+		if($uninstall)
+		{
+			$row = [
+				"install" => false
+			];
+		}
+		else
+		{
+			$row = [
+				"version" => $this->getModule()->getManifest()->getVersion(),
+				"install" => true
+			];
+		}
+
 		$this
 			->db
 			->getDbalConnection()
 			->update(
 				$this->db->getTableName(Modules_SchemeDesigner::getTableName()),
-				[
-					"version" => $this->getModule()->getVersion(),
-					"install" => $action !== "uninstall"
-				],
+				$row,
 				[
 					"id" => $this->getModuleId()
 				],
@@ -188,7 +200,6 @@ class ModuleComponent extends Workshop
 				]
 			);
 
-		$uninstall = $action === "uninstall";
 		$moduleName = $this->getModule()->getName();
 		$this->setModule(
 			$uninstall ? null : ModuleHelper::workshop( $this->getModuleId() )

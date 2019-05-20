@@ -100,7 +100,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 			{
 				if(count($value) === 3 && $value[2] === null)
 				{
-					$value[1] === self::NEQ ? $this->isNotNull($value[0]) : $this->isNull($value[0]);
+					$this->operator($value[1]) === self::NEQ ? $this->isNotNull($value[0]) : $this->isNull($value[0]);
 				}
 				else
 				{

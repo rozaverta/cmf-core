@@ -83,6 +83,16 @@ class Builder
 	protected $columnsSelect = [];
 
 	/**
+	 * @var bool
+	 */
+	protected $withoutTableSchema = false;
+
+	/**
+	 * @var string[]
+	 */
+	static protected $tablePrevented = [];
+
+	/**
 	 * Create a new query builder instance.
 	 *
 	 * @param $table
@@ -155,24 +165,38 @@ class Builder
 	 */
 	public function getTableSchema(): ?Table
 	{
-		static $prevent = false;
-
 		if( isset($this->tableSchema) )
 		{
 			return $this->tableSchema;
 		}
 
 		$table = $this->table;
-		if( $prevent || strpos($table, "(") !== false || ! App::getInstance()->isInstall() )
+		if( $this->withoutTableSchema || self::isTablePrevent($table) || strpos($table, "(") !== false || ! App::getInstance()->isInstall() )
 		{
 			return null;
 		}
 
-		$prevent = true;
+		self::addTablePrevent($table);
 		$this->tableSchema = Table::table($this->table);
-		$prevent = false;
+		self::removeTablePrevent($table);
 
 		return $this->tableSchema;
+	}
+
+	/**
+	 * Do not load table data
+	 *
+	 * @param bool $without
+	 * @return $this
+	 */
+	public function withoutTableSchema(bool $without = true)
+	{
+		if(isset($this->tableSchema))
+		{
+			$without = false;
+		}
+		$this->withoutTableSchema = $without;
+		return $this;
 	}
 
 	/**
@@ -253,8 +277,10 @@ class Builder
 				$tableAlias = $fullTableName;
 			}
 
+			$isColumns = isset($schema['columns']) && is_array($schema['columns']);
+
 			// add rename columns
-			if( isset($schema['columns']) && is_array($schema['columns']) )
+			if( $isColumns )
 			{
 				$this->columns = $schema['columns'];
 			}
@@ -291,7 +317,7 @@ class Builder
 					$joinTableName = $join["tableName"];
 					$criteria = $join["criteria"] ?? ($tableAlias . '.id = ' . $prefix . '.id');
 
-					$this->addJoin($type, $tableAlias, $joinTableName, $prefix, $criteria);
+					$this->addJoin($type, $tableAlias, $joinTableName, $prefix, $criteria, [], ! $isColumns);
 				}
 			}
 
@@ -613,10 +639,8 @@ class Builder
 		return new CriteriaBuilder( $this, $type );
 	}
 
-	protected function addJoin( $type, $fromAlias, $join, $alias, $condition = null, $rename = [] )
+	protected function addJoin( $type, $fromAlias, $join, $alias, $condition = null, $rename = [], bool $autoLoad = true )
 	{
-		static $prevent = false;
-
 		if( $condition instanceof Closure )
 		{
 			$criteria = $this->newCriteria();
@@ -639,11 +663,11 @@ class Builder
 			$joinTableName = $designer->getMethod('getTableName')->invoke(null);
 		}
 
-		if( ! $prevent && App::getInstance()->isInstall() )
+		if( ! $this->withoutTableSchema && $autoLoad && ! self::isTablePrevent($joinTableName) && App::getInstance()->isInstall() )
 		{
-			$prevent = true;
+			self::addTablePrevent($joinTableName);
 			$tableSchema = Table::table($joinTableName);
-			$prevent = false;
+			self::removeTablePrevent($joinTableName);
 
 			$prefix = $alias . ".";
 			foreach($tableSchema->getColumnNames() as $name)
@@ -1307,5 +1331,27 @@ class Builder
 	public function oldest($column = 'created_at')
 	{
 		return $this->orderBy($column, 'ASC');
+	}
+
+	static protected function addTablePrevent(string $table)
+	{
+		if( ! self::isTablePrevent($table) )
+		{
+			self::$tablePrevented[] = $table;
+		}
+	}
+
+	static protected function isTablePrevent(string $table): bool
+	{
+		return in_array($table, self::$tablePrevented, true);
+	}
+
+	static protected function removeTablePrevent(string $table)
+	{
+		$index = array_search($table, self::$tablePrevented, true);
+		if($index !== false)
+		{
+			array_splice(self::$tablePrevented, $index, 1);
+		}
 	}
 }

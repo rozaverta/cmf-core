@@ -13,6 +13,11 @@ use RozaVerta\CmfCore\Route\Interfaces\ControllerContentOutputInterface;
 use RozaVerta\CmfCore\Route\Interfaces\MountPointInterface;
 use RozaVerta\CmfCore\Support\Prop;
 
+/**
+ * Class Redirect
+ *
+ * @package RozaVerta\CmfCore\Controllers
+ */
 final class Redirect extends Controller implements ControllerContentOutputInterface
 {
 	/** @noinspection PhpMissingParentConstructorInspection
@@ -24,13 +29,18 @@ final class Redirect extends Controller implements ControllerContentOutputInterf
 	 */
 	public function __construct( MountPointInterface $mountPoint, array $data = [] )
 	{
-		$this->module = $mountPoint->getModule();
+		$this->setModule($mountPoint->getModule());
 		$this->mountPoint = $mountPoint;
 		$this->items = $data;
 		$this->properties = new Prop($data);
 		$this->appInit();
 	}
 
+	/**
+	 * Ready (initial) page data
+	 *
+	 * @return bool
+	 */
 	public function ready(): bool
 	{
 		if($this->properties->getIs("location"))
@@ -44,6 +54,13 @@ final class Redirect extends Controller implements ControllerContentOutputInterf
 		}
 	}
 
+	/**
+	 * Complete. Load all data for page
+	 *
+	 * @return void
+	 *
+	 * @throws \Throwable
+	 */
 	public function complete()
 	{
 		$this->app->response->redirect(
@@ -51,6 +68,8 @@ final class Redirect extends Controller implements ControllerContentOutputInterf
 			(bool) $this->properties->getOr("permanent", false),
 			(bool) $this->properties->getOr("refresh", false)
 		);
+
+		parent::complete();
 	}
 
 	/**
@@ -77,6 +96,11 @@ final class Redirect extends Controller implements ControllerContentOutputInterf
 		}
 	}
 
+	/**
+	 * Get content type
+	 *
+	 * @return string
+	 */
 	public function getContentType(): string
 	{
 		return "http/response";

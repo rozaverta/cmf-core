@@ -14,14 +14,20 @@ use RozaVerta\CmfCore\Route\Interfaces\ControllerContentOutputInterface;
 use RozaVerta\CmfCore\Events\ThrowableEvent;
 use RozaVerta\CmfCore\Route\Interfaces\MountPointInterface;
 
+/**
+ * Class JsonController
+ *
+ * @package RozaVerta\CmfCore\Route
+ */
 abstract class JsonController extends Controller implements ControllerContentOutputInterface
 {
 	/**
 	 * JsonController constructor.
+	 *
 	 * @param MountPointInterface $mountPoint
 	 * @param array $prop
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 *
+	 * @throws \Throwable
 	 */
 	public function __construct( MountPointInterface $mountPoint, array $prop = [] )
 	{
@@ -71,21 +77,28 @@ abstract class JsonController extends Controller implements ControllerContentOut
 				}, "controller.jsonThrowable");
 	}
 
+	/**
+	 * Render content is raw output.
+	 *
+	 * @return boolean
+	 */
 	public function isRaw(): bool
 	{
 		return true;
 	}
 
+	/**
+	 * Render content.
+	 *
+	 * @return void
+	 *
+	 * @throws \Throwable
+	 */
 	public function output()
 	{
 		if( ! isset( $this->pageData["status"] ) )
 		{
 			$this->pageData["status"] = "ok";
-		}
-
-		if( $this->app->system('debug') && ! isset($this->pageData['debug']) )
-		{
-			// todo $this->page_data['debug'] = DebugStats::toArray();
 		}
 
 		$this
@@ -94,6 +107,11 @@ abstract class JsonController extends Controller implements ControllerContentOut
 			->json($this->pageData);
 	}
 
+	/**
+	 * Get content type
+	 *
+	 * @return string
+	 */
 	public function getContentType(): string
 	{
 		return "application/json";

@@ -51,6 +51,8 @@ interface ControllerInterface extends ModuleGetterInterface
 	public function complete();
 
 	/**
+	 * Get page mount point
+	 *
 	 * @return MountPointInterface
 	 */
 	public function getMountPoint(): MountPointInterface;
@@ -60,6 +62,7 @@ interface ControllerInterface extends ModuleGetterInterface
 	 *
 	 * @param string $name
 	 * @param mixed $default
+	 *
 	 * @return mixed
 	 */
 	public function getProperty( string $name, $default = false );
@@ -83,9 +86,10 @@ interface ControllerInterface extends ModuleGetterInterface
 	 *
 	 * @param string | ModuleInterface $name
 	 * @param string $method
+	 *
 	 * @return bool
 	 */
-	public function supportPortalMethod( $name, $method ): bool;
+	public function supportPortalMethod( $name, string $method ): bool;
 
 	/**
 	 * Run this method before change page controller

@@ -30,6 +30,10 @@
 			"title": "Fatal error"
 		},
 		{
+			"name": "onControllerComplete",
+			"title": "Dispatch event after controller completion and page data loading"
+		},
+		{
 			"name": "onRender",
 			"title": "Render view events"
 		},

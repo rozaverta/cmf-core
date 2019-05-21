@@ -10,6 +10,11 @@ namespace RozaVerta\CmfCore\Route;
 
 use RozaVerta\CmfCore\Exceptions\InvalidArgumentException;
 
+/**
+ * Class MountLink
+ *
+ * @package RozaVerta\CmfCore\Route
+ */
 class MountLink
 {
 	private $contextName = null;
@@ -22,6 +27,7 @@ class MountLink
 
 	/**
 	 * MountLink constructor.
+	 *
 	 * Mount link use format
 	 * 1. context_name:mount_point_name@controller_name/controller_id
 	 * 2. mount_point_name@controller_name/controller_id
@@ -53,6 +59,8 @@ class MountLink
 	}
 
 	/**
+	 * Get context unique name
+	 *
 	 * @return string|null
 	 */
 	public function getContextName(): ?string
@@ -61,6 +69,8 @@ class MountLink
 	}
 
 	/**
+	 * Get mount point unique name
+	 *
 	 * @return string
 	 */
 	public function getMountPointName(): string
@@ -69,6 +79,8 @@ class MountLink
 	}
 
 	/**
+	 * Get controller name
+	 *
 	 * @return string
 	 */
 	public function getControllerName(): string
@@ -77,6 +89,8 @@ class MountLink
 	}
 
 	/**
+	 * Get controller ID
+	 *
 	 * @return int
 	 */
 	public function getControllerId(): int

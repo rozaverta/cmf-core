@@ -8,6 +8,7 @@
 
 namespace RozaVerta\CmfCore\Route;
 
+use RozaVerta\CmfCore\Events\ControllerCompleteEvent;
 use RozaVerta\CmfCore\Module\Exceptions\ExpectedModuleException;
 use RozaVerta\CmfCore\Route\Interfaces\ControllerInterface;
 use RozaVerta\CmfCore\Module\Interfaces\ModuleInterface;
@@ -19,6 +20,11 @@ use RozaVerta\CmfCore\Module\Traits\ModuleGetterTrait;
 use RozaVerta\CmfCore\Log\Traits\LoggableTrait;
 use RozaVerta\CmfCore\Traits\GetTrait;
 
+/**
+ * Class Controller
+ *
+ * @package RozaVerta\CmfCore\Route
+ */
 abstract class Controller implements ControllerInterface
 {
 	use LoggableTrait;
@@ -91,8 +97,6 @@ abstract class Controller implements ControllerInterface
 		$this->properties = new Prop();
 	}
 
-	abstract public function ready(): bool;
-
 	/**
 	 * Get controller name
 	 *
@@ -114,12 +118,19 @@ abstract class Controller implements ControllerInterface
 		return $this->name;
 	}
 
+	/**
+	 * Page is cacheable
+	 *
+	 * @return bool
+	 */
 	public function isCacheable(): bool
 	{
 		return $this->cacheable;
 	}
 
 	/**
+	 * Get page mount point
+	 *
 	 * @return MountPointInterface
 	 */
 	public function getMountPoint(): MountPointInterface
@@ -128,8 +139,11 @@ abstract class Controller implements ControllerInterface
 	}
 
 	/**
+	 * Get page property item
+	 *
 	 * @param string $name
 	 * @param mixed $default
+	 *
 	 * @return mixed
 	 */
 	public function getProperty( string $name, $default = false )
@@ -138,6 +152,8 @@ abstract class Controller implements ControllerInterface
 	}
 
 	/**
+	 * Get all page properties
+	 *
 	 * @return array
 	 */
 	public function getProperties(): array
@@ -146,6 +162,8 @@ abstract class Controller implements ControllerInterface
 	}
 
 	/**
+	 * Get page data
+	 *
 	 * @return array
 	 */
 	public function getPageData(): array
@@ -160,18 +178,38 @@ abstract class Controller implements ControllerInterface
 	 * @param string $method
 	 * @return bool
 	 */
-	public function supportPortalMethod( $name, $method ): bool
+	public function supportPortalMethod( $name, string $method ): bool
 	{
 		if( $name instanceof ModuleInterface )
 		{
 			$name = $name->getKey();
 		}
 
-		return $this->module->support($name) && method_exists($this, $method);
+		return $this->getModule()->support($name) && method_exists($this, $method);
 	}
 
+	/**
+	 * Run this method before change page controller
+	 *
+	 * @param ControllerInterface $controller
+	 * @return bool
+	 */
 	public function change( ControllerInterface $controller ): bool
 	{
 		return true;
+	}
+
+	/**
+	 * Complete. Load all data for page
+	 *
+	 * @return void
+	 *
+	 * @throws \Throwable
+	 */
+	public function complete()
+	{
+		$event = new ControllerCompleteEvent($this, $this->pageData);
+		$this->app->event->dispatch($event);
+		$this->pageData = $event->pageData;
 	}
 }

@@ -13,6 +13,11 @@ use RozaVerta\CmfCore\Route\Controller;
 use RozaVerta\CmfCore\Schemes\Modules_SchemeDesigner;
 use RozaVerta\CmfCore\Support\Prop;
 
+/**
+ * Class Welcome
+ *
+ * @package RozaVerta\CmfCore\Controllers
+ */
 class Welcome extends Controller
 {
 	protected $page;
@@ -45,6 +50,11 @@ class Welcome extends Controller
 		]
 	];
 
+	/**
+	 * Ready (initial) page data
+	 *
+	 * @return bool
+	 */
 	public function ready(): bool
 	{
 		$url = $this->app->url;
@@ -79,6 +89,13 @@ class Welcome extends Controller
 		return true;
 	}
 
+	/**
+	 * Complete. Load all data for page
+	 *
+	 * @return void
+	 *
+	 * @throws \Throwable
+	 */
 	public function complete()
 	{
 		$this->pageData["pageTitle"] = $this->page["title"];
@@ -96,8 +113,15 @@ class Welcome extends Controller
 			case "license": $this->loadContentLicense(); break;
 			default: $this->loadContent404(); break;
 		}
+
+		parent::complete();
 	}
 
+	/**
+	 * System about page
+	 *
+	 * @throws \Throwable
+	 */
 	protected function loadContentIndex()
 	{
 		$name = $this->app->system("name", "Elastic-CMF");
@@ -112,6 +136,13 @@ framework and a content management system (CMS).</p>
 <p>This is the default page. You did not specify mount points.</p>";
 	}
 
+	/**
+	 * System info page
+	 *
+	 * @throws DBALException
+	 * @throws \ReflectionException
+	 * @throws \Throwable
+	 */
 	protected function loadContentSystem()
 	{
 		$app = $this->app;
@@ -202,6 +233,9 @@ framework and a content management system (CMS).</p>
 		$this->pageData["content"] = $body;
 	}
 
+	/**
+	 * License page
+	 */
 	protected function loadContentLicense()
 	{
 		$this->pageData["content"] = '<h3>MIT License</h3>
@@ -227,6 +261,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.</p>';
 	}
 
+	/**
+	 * 404 page
+	 */
 	protected function loadContent404()
 	{
 		$this->pageData["content"] = '<h3>404</h3><p>' . $this->app->url->getUrl() . '</p><p>The page are you looking for cannot be found.</p>';

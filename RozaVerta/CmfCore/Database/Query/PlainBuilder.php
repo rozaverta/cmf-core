@@ -846,7 +846,7 @@ class PlainBuilder extends AbstractConnectionContainer
 			}
 			else
 			{
-				$param = $this->parameters->bindForColumn( $name, $value, $types[$name] ?? $this->grammar->valueType( $value ) );
+				$param = $this->parameters->bindForColumn( $name, $value, $types[$name] ?? Parameters::inferType( $value ) );
 				$values[] = $param;
 				$params[] = $param;
 			}
@@ -891,7 +891,7 @@ class PlainBuilder extends AbstractConnectionContainer
 			}
 			else
 			{
-				$param = $this->parameters->bindForColumn( $name, $value, $types[$name] ?? $this->grammar->valueType( $value ) );
+				$param = $this->parameters->bindForColumn( $name, $value, $types[$name] ?? Parameters::inferType( $value ) );
 				$parts[] = $this->grammar->wrap( $name ) . " = " . $param;
 				$params[] = $param;
 			}
@@ -1078,7 +1078,7 @@ class PlainBuilder extends AbstractConnectionContainer
 
 		foreach( $values as $key => $value )
 		{
-			$type = $types[$key] ?? $this->grammar->valueType( $value );
+			$type = $types[$key] ?? Parameters::inferType( $value );
 			if( is_string( $key ) && substr( $key, 0, 1 ) === ":" )
 			{
 				$part['params'][] = $this->parameters->bind( $key, $value, $type );
@@ -1092,7 +1092,7 @@ class PlainBuilder extends AbstractConnectionContainer
 			}
 		}
 
-		$part["query"] .= $autoConverter ? Str::replaceArray( "?", $params, $query ) : $query;
+		$part["query"] .= $autoConverter ? Str::replaceEscapeArray( "?", "?", $params, $query ) : $query;
 
 		return $this;
 	}

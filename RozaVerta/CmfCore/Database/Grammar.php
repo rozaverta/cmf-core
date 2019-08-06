@@ -8,9 +8,7 @@
 namespace RozaVerta\CmfCore\Database;
 
 use Doctrine\DBAL\DBALException;
-use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Doctrine\DBAL\Types\Type as DbalType;
 use RozaVerta\CmfCore\Database\Query\PlainBuilder;
 
 /**
@@ -322,24 +320,6 @@ class Grammar
 	public function getTablePrefix()
 	{
 		return $this->tablePrefix;
-	}
-
-	/**
-	 * Get parameter value type (auto detect)
-	 *
-	 * @param $value
-	 *
-	 * @return int|string
-	 */
-	public function valueType( $value )
-	{
-		if( is_int( $value ) ) $type = ParameterType::INTEGER;
-		else if( is_bool( $value ) ) $type = ParameterType::BOOLEAN;
-		else if( $value instanceof \DateTime ) $type = DbalType::DATETIME;
-		else if( !is_null( $value ) ) $type = ParameterType::NULL;
-		else $type = ParameterType::STRING;
-
-		return $type;
 	}
 
 	/**

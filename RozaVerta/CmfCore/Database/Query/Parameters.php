@@ -2,6 +2,8 @@
 
 namespace RozaVerta\CmfCore\Database\Query;
 
+use Doctrine\DBAL\ParameterType;
+use Doctrine\DBAL\Types\Type as DbalType;
 use RozaVerta\CmfCore\Database\Expression;
 
 /**
@@ -232,7 +234,7 @@ class Parameters
 		$this->parameters[$key] = $value;
 		if( $type !== null )
 		{
-			$this->types[$key] = $value;
+			$this->types[$key] = $type;
 		}
 		return $key;
 	}
@@ -240,5 +242,17 @@ class Parameters
 	private function updatePrefix()
 	{
 		$this->paramPrefix = ":param" . ( self::$paramKey++ ) . "_";
+	}
+
+	public static function inferType( $value )
+	{
+		if( is_int( $value ) ) $type = ParameterType::INTEGER;
+		else if( is_bool( $value ) ) $type = ParameterType::BOOLEAN;
+		else if( $value instanceof \DateTimeInterface ) $type = DbalType::DATETIME;
+		else if( $value instanceof \DateInterval ) $type = DbalType::DATEINTERVAL;
+		else if( is_null( $value ) ) $type = ParameterType::NULL;
+		else $type = ParameterType::STRING;
+
+		return $type;
 	}
 }

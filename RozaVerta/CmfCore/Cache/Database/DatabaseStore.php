@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 17.08.2018
  * Time: 20:17
  */
@@ -17,7 +16,7 @@ use RozaVerta\CmfCore\Cache\Properties\PropertyStats;
 use RozaVerta\CmfCore\Cache\Store;
 use RozaVerta\CmfCore\Database\Connection;
 use RozaVerta\CmfCore\Database\Query\Builder;
-use RozaVerta\CmfCore\Database\Query\ExpressionWrap;
+use RozaVerta\CmfCore\Database\Query\Criteria;
 
 class DatabaseStore extends Store
 {
@@ -31,24 +30,27 @@ class DatabaseStore extends Store
 
 	public function flush( string $prefix = null ): bool
 	{
-		$table = $this->table();
+		$builder = $this->builder();
 
-		if( is_null($prefix) )
+		if( is_null( $prefix ) )
 		{
-			return $this->fetch(function(Builder $table) {
-				$table->truncate();
-				return true;
-			}, $table);
+			return $this->fetch( function( Builder $builder ) {
+				return $builder->delete() !== false;
+			}, $builder );
 		}
 
-		$prefix = (new DatabaseHash("", $prefix))->keyPrefix();
-		$table
-			->where("prefix", '=', $prefix)
-			->orWhere("prefix", "like", addcslashes($prefix, "%_") . "%");
+		$prefix = ( new DatabaseHash( "", $prefix ) )->keyPrefix();
+		$builder
+			->setWhereType( Criteria::TYPE_OR )
+			->where( function( Criteria $criteria ) use ( $prefix ) {
+				$criteria
+					->eq( "prefix", $prefix )
+					->like( "prefix", addcslashes( $prefix, "%_" ) . "%" );
+			} );
 
-		return $this->fetch(function(Builder $table) {
-			return $table->delete() !== false;
-		}, $table);
+		return $this->fetch( function( Builder $builder ) {
+			return $builder->delete() !== false;
+		}, $builder );
 	}
 
 	public function info(): array
@@ -58,8 +60,8 @@ class DatabaseStore extends Store
 		$info[] = new Property("default_life", $this->life);
 
 		$con = $this->getConnection();
-		$info[] = new Property("database_driver", $con->getDriverName());
-		$info[] = new Property("database_name", $con->getDatabaseName());
+		$info[] = new Property( "database_driver", $con->getDbalDatabasePlatform()->getName() );
+		$info[] = new Property( "database_name", $con->getDatabase() );
 		$info[] = new Property("cache_table", $this->getTable());
 
 		return $info;
@@ -71,18 +73,21 @@ class DatabaseStore extends Store
 		$stats = [];
 		$memories = [];
 
-		$all = $this->fetch(function(Builder $table) {
+		$all = $this->fetch( function( Builder $builder ) {
 
-			return $table
+			$grammar = $builder->getGrammar();
+
+			return $builder
 				->groupBy("prefix")
-				->get([
+				->select( [
 					"name",
 					"prefix",
-					new ExpressionWrap('COUNT(%s) as %s', ['id', 'items']),
-					new ExpressionWrap('SUM(%s) as %s', ['size', 'sizes']),
-				]);
+					$grammar->newExpression( 'COUNT(%s) as %s', [ 'id', 'items' ] ),
+					$grammar->newExpression( 'SUM(%s) as %s', [ 'size', 'sizes' ] ),
+				] )
+				->get();
 
-		}, $this->table());
+		}, $this->builder() );
 
 		if( $all === false )
 		{
@@ -97,9 +102,9 @@ class DatabaseStore extends Store
 
 			foreach($all as $item)
 			{
-				$key = empty($item->prefix) ? $item->name : $item->prefix;
-				$items = (int) $item->items;
-				$sizes = (int) $item->sizes;
+				$key = empty( $item["prefix"] ) ? $item["name"] : $item["prefix"];
+				$items = (int) $item["items"];
+				$sizes = (int) $item["sizes"];
 
 				$pos = strpos($key, "/", 1);
 				if( $pos !== false )

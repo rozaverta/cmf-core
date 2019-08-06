@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 12.04.2018
  * Time: 2:49
  */
@@ -18,6 +17,7 @@ use RozaVerta\CmfCore\Event\Dispatcher;
 use RozaVerta\CmfCore\Event\Exceptions\EventAbortException;
 use RozaVerta\CmfCore\Event\Interfaces\EventPrepareInterface;
 use RozaVerta\CmfCore\Exceptions\NotFoundException;
+use RozaVerta\CmfCore\Filesystem\Exceptions\FileWriteException;
 use RozaVerta\CmfCore\Helper\Arr;
 use RozaVerta\CmfCore\Module\ModuleHelper;
 use RozaVerta\CmfCore\Module\WorkshopModuleProcessor;
@@ -105,8 +105,9 @@ class ModuleComponent extends Workshop
 		// check version
 		$old = $this
 			->db
-			->table(Modules_SchemeDesigner::getTableName())
-			->whereId($module->getId())
+			->plainBuilder()
+			->from( Modules_SchemeDesigner::getTableName() )
+			->where( "id", $module->getId() )
 			->value("version");
 
 		if( ! $old )
@@ -128,7 +129,9 @@ class ModuleComponent extends Workshop
 		$this->moduleData = [];
 
 		$event = new Events\UpdateModuleEvent($this, $force, $old);
-		$dispatcher = $this->event->dispatcher($event->getName());
+		$dispatcher = $this
+			->event
+			->dispatcher( $event->getName() );
 
 		$this->addManifestListeners($dispatcher);
 
@@ -376,8 +379,7 @@ class ModuleComponent extends Workshop
 				{
 					try {
 						$drv->link($eventName, $className);
-					}
-					catch(EventProcessorExceptionInterface $e)
+					} catch( EventAbortException | EventProcessorExceptionInterface $e )
 					{
 						$this->addError($e->getMessage());
 					}
@@ -443,7 +445,7 @@ class ModuleComponent extends Workshop
 			{
 				if( !is_array($data) )
 				{
-					$this->addError("Invalid config file data format");
+					$this->addError( "Invalid config file data format ({$name})" );
 					continue;
 				}
 
@@ -451,13 +453,18 @@ class ModuleComponent extends Workshop
 				if( $drv->fileExists() )
 				{
 					$this->addError(Text::text("Can not duplicate the %s config file of the %s module", $name, $module->getName()));
-					continue;
 				}
 				else
 				{
-					$drv->addLogTransport($this)
-						->merge($data)
-						->save();
+					try
+					{
+						$drv->addLogTransport( $this )
+							->merge( $data )
+							->save();
+					} catch( FileWriteException $e )
+					{
+						$this->addError( $e->getMessage() );
+					}
 				}
 
 				unset($drv);
@@ -469,6 +476,13 @@ class ModuleComponent extends Workshop
 		// todo add cache clean
 	}
 
+	/**
+	 * @param string $oldVersion
+	 * @param bool   $force
+	 *
+	 * @throws DBALException
+	 * @throws \Throwable
+	 */
 	protected function updateProcess( string $oldVersion, bool $force )
 	{
 		/** @var WorkshopModuleProcessor $module */
@@ -484,7 +498,7 @@ class ModuleComponent extends Workshop
 		$drv = new Database($module);
 		$drv->addLogTransport($this);
 
-		$tableVersion = $drv->getTablesVersionList(false);
+		$tableVersion = $drv->getTablesVersionList( Database::TABLE_SYSTEM );
 		$tables = $tableVersion->keys()->toArray();
 		$renameVersion = $manifest->getArray("databaseRenameTables");
 		$oldest = [];
@@ -559,6 +573,115 @@ class ModuleComponent extends Workshop
 			}
 		}
 
+		// 3. events
+
+		$rec = $this->getResourceData( "events", "#/event_collection" );
+		if( count( $rec ) )
+		{
+			$drv = new EventProcessor( $module );
+			$drv->addLogTransport( $this );
+			foreach( $rec as $event )
+			{
+				if( !is_array( $event ) )
+				{
+					$event = [ "name" => (string) $event ];
+				}
+
+				try
+				{
+					$drv->replace(
+						$event["name"],
+						$event["title"] ?? "",
+						(bool) ( $event["completable"] ?? false )
+					);
+				} catch( EventProcessorExceptionInterface $e )
+				{
+					$this->addError( Text::text( "Replace event %s error, %s", $event["name"], $e->getMessage() ) );
+				}
+			}
+			unset( $drv );
+		}
+
+		// update link
+
+		$rec = $manifest->getArray( "handlers" );
+		if( count( $rec ) )
+		{
+			$drv = new HandlerProcessor( $module );
+			$drv->addLogTransport( $this );
+			foreach( $rec as $className => $events )
+			{
+				if( is_int( $className ) && is_string( $events ) )
+				{
+					$className = $events;
+					$events = [];
+				}
+				else if( !is_array( $events ) )
+				{
+					$events = [ (string) $events ];
+				}
+
+				if( !$drv->registered( $className ) )
+				{
+					try
+					{
+						$drv->createHandler( $className );
+					} catch( EventProcessorExceptionInterface $e )
+					{
+						$this->addError( $e->getMessage() );
+						continue;
+					}
+				}
+
+				foreach( $events as $eventName )
+				{
+					try
+					{
+						$drv->link( $eventName, $className, null, true );
+					} catch( EventAbortException | EventProcessorExceptionInterface $e )
+					{
+						$this->addError( $e->getMessage() );
+					}
+				}
+			}
+			unset( $drv );
+		}
+
+		// 7. file configs
+
+		$rec = $this->getResourceData( "file_configs", "#/file_config_collection" );
+		if( count( $rec ) )
+		{
+			foreach( $rec as $name => $data )
+			{
+				if( !is_array( $data ) )
+				{
+					$this->addError( "Invalid config file data format ({$name})" );
+					continue;
+				}
+
+				$drv = new ConfigFile( $name, $module );
+				if( !$drv->fileExists() )
+				{
+					try
+					{
+						$drv->addLogTransport( $this )
+							->merge( $data )
+							->save();
+					} catch( FileWriteException $e )
+					{
+						$this->addError( $e->getMessage() );
+					}
+				}
+
+				unset( $drv );
+			}
+		}
+
+		if( $manifest->get( "version" ) !== $oldVersion )
+		{
+			//
+		}
 	}
 
 	protected function uninstallData()
@@ -654,7 +777,11 @@ class ModuleComponent extends Workshop
 
 	protected function databaseInsertValues(string $table, array $values)
 	{
-		$build = $this->db->table($table);
+		$build = $this
+			->db
+			->plainBuilder()
+			->from( $table );
+
 		if( Arr::associative($values) )
 		{
 			$values = [$values];
@@ -690,7 +817,11 @@ class ModuleComponent extends Workshop
 			}
 
 			try {
-				$builder = $this->db->table($tableName);
+				$builder = $this
+					->db
+					->plainBuilder()
+					->from( $tableName );
+
 				foreach($u as $name)
 				{
 					if( ! isset($insert[$name]))
@@ -709,7 +840,9 @@ class ModuleComponent extends Workshop
 				}
 				else
 				{
-					$this->db->table($tableName)->insert($insert);
+					$builder
+						->removePart( "where" )
+						->insert( $insert );
 				}
 			}
 			catch(DBALException $e)

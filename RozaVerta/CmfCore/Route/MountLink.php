@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 22.04.2019
  * Time: 10:32
  */

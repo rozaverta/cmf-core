@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 12.03.2019
  * Time: 13:20
  */
@@ -16,6 +15,11 @@ use RozaVerta\CmfCore\Module\Exceptions\ResourceReadException;
 use RozaVerta\CmfCore\Module\Interfaces\ModuleInterface;
 use RozaVerta\CmfCore\Traits\GetTrait;
 
+/**
+ * Class ResourceJson
+ *
+ * @package RozaVerta\CmfCore\Module
+ */
 class ResourceJson implements Interfaces\ResourceInterface
 {
 	use GetTrait;
@@ -27,6 +31,9 @@ class ResourceJson implements Interfaces\ResourceInterface
 	protected $name  = '';
 	protected $path  = '';
 	protected $raw   = '{}';
+
+	private $addon = false;
+	private $cacheVersion = null;
 
 	/**
 	 * Resource constructor.
@@ -55,6 +62,7 @@ class ResourceJson implements Interfaces\ResourceInterface
 		if($cacheVersion)
 		{
 			$file = Path::resources( $module->getId() . "/" . $cacheVersion . "/" . $file );
+			$this->cacheVersion = $cacheVersion;
 		}
 		else
 		{
@@ -62,6 +70,7 @@ class ResourceJson implements Interfaces\ResourceInterface
 			if( !file_exists($file))
 			{
 				$file = Path::addons($module->getKey() . "/resources/" . $file );
+				$this->addon = true;
 			}
 		}
 
@@ -99,6 +108,11 @@ class ResourceJson implements Interfaces\ResourceInterface
 		}
 
 		$this->items = $data;
+		if( $this->cacheVersion )
+		{
+			$this->addon = isset( $data["#/addon"] ) && $data["#/addon"] === true;
+			unset( $this->items["#/addon"] );
+		}
 	}
 
 	/**
@@ -109,6 +123,35 @@ class ResourceJson implements Interfaces\ResourceInterface
 	public function getType(): string
 	{
 		return $this->type;
+	}
+
+	/**
+	 * Resource location is addon
+	 *
+	 * @return bool
+	 */
+	public function isAddon(): bool
+	{
+		return $this->addon;
+	}
+
+	/**
+	 * Resource loaded from cache version
+	 *
+	 * @param null $cacheVersion
+	 * @return bool
+	 */
+	public function isCacheVersion( & $cacheVersion = null ): bool
+	{
+		if( is_null( $this->cacheVersion ) )
+		{
+			return false;
+		}
+		else
+		{
+			$cacheVersion = $this->cacheVersion;
+			return true;
+		}
 	}
 
 	/**

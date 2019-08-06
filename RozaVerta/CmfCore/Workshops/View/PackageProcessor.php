@@ -1,13 +1,13 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 24.03.2019
  * Time: 3:45
  */
 
 namespace RozaVerta\CmfCore\Workshops\View;
 
+use RozaVerta\CmfCore\Database\DatabaseManager;
 use RozaVerta\CmfCore\Module\ModuleHelper;
 use RozaVerta\CmfCore\Schemes\TemplatePackages_SchemeDesigner;
 use RozaVerta\CmfCore\Support\Workshop;
@@ -21,52 +21,53 @@ class PackageProcessor extends Workshop
 	 * @param string $packageName
 	 *
 	 * @throws PackageNotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ModuleNotFoundException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceNotFoundException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
+	 * @throws \Throwable
 	 */
 	public function __construct( string $packageName )
 	{
-		$moduleId = $this
-			->db
-			->table(TemplatePackages_SchemeDesigner::getTableName())
+		$moduleId = DatabaseManager::plainBuilder()
+			->from( TemplatePackages_SchemeDesigner::getTableName() )
 			->where("name", $packageName)
 			->value("module_id");
 
 		if( ! is_numeric($moduleId) )
 		{
-			throw new PackageNotFoundException("The '{$packageName}' template package not found");
+			throw new PackageNotFoundException( "The \"{$packageName}\" template package not found." );
 		}
 
 		parent::__construct( ModuleHelper::workshop($moduleId) );
 	}
 
-	public function update(array $manifest)
+	public function update( array $manifest)
 	{
 		//
 	}
 
-	public function addTemplate(string $templateName, string $content = "")
+	public function addTemplate( string $templateName, string $content = "")
 	{
 		//
 	}
 
-	public function removeTemplate(string $templateName)
+	public function removeTemplate( string $templateName)
 	{
 		//
 	}
 
-	public function getTemplate(string $templateName): TemplateProcessor
+	public function getTemplate( string $templateName): TemplateProcessor
 	{
 		//
 	}
 
-	public function uploadAssetsFile(string $fileName, $file)
+	public function uploadAssetsFile( string $fileName, $file)
 	{
 		//
 	}
 
-	public function removeAssetsFile(string $fileName)
+	public function removeAssetsFile( string $fileName)
 	{
 		//
 	}

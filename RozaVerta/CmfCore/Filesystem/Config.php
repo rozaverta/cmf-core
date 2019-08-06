@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 15.03.2019
  * Time: 17:53
  */
@@ -13,6 +12,7 @@ use RozaVerta\CmfCore\Filesystem\Exceptions\PathInvalidArgumentException;
 use RozaVerta\CmfCore\Filesystem\Traits\WriteFileTrait;
 use RozaVerta\CmfCore\Helper\Path;
 use RozaVerta\CmfCore\Traits\GetTrait;
+use RozaVerta\CmfCore\Traits\MergeTrait;
 use RozaVerta\CmfCore\Traits\SetTrait;
 
 class Config
@@ -20,6 +20,7 @@ class Config
 	use WriteFileTrait;
 	use SetTrait;
 	use GetTrait;
+	use MergeTrait;
 
 	protected $items = [];
 
@@ -66,35 +67,6 @@ class Config
 		{
 			$this->items = [];
 		}
-		return $this;
-	}
-
-	/**
-	 * @param array $items
-	 * @param bool $update
-	 * @return $this
-	 */
-	public function merge( array $items, $update = false )
-	{
-		if( ! count($this->items) )
-		{
-			$this->items = $items;
-		}
-		else if( $update )
-		{
-			$this->items = array_merge($this->items, $items);
-		}
-		else
-		{
-			foreach($items as $key => $value)
-			{
-				if( ! $this->offsetExists($key) )
-				{
-					$this->items[$key] = $value;
-				}
-			}
-		}
-
 		return $this;
 	}
 

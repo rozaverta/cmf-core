@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 21.09.2015
  * Time: 0:15
  */
@@ -34,12 +33,10 @@ abstract class JsonController extends Controller implements ControllerContentOut
 		parent::__construct($mountPoint, $prop);
 
 		$this
-			->app
 			->response
 			->header("Content-Type", "application/json; charset=utf-8");
 
 		$this
-			->app
 			->event
 			->dispatcher(ThrowableEvent::eventName())
 			->register(
@@ -102,7 +99,6 @@ abstract class JsonController extends Controller implements ControllerContentOut
 		}
 
 		$this
-			->app
 			->response
 			->json($this->pageData);
 	}

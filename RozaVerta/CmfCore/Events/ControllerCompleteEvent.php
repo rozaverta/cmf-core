@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 21.05.2019
  * Time: 13:22
  */
@@ -34,7 +33,7 @@ class ControllerCompleteEvent extends Event
 	}
 
 	/**
-	 * Get event name
+	 * Get event name.
 	 *
 	 * @return string
 	 */

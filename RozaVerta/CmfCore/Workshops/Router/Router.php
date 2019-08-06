@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 22.04.2019
  * Time: 21:17
  */
@@ -89,17 +88,15 @@ class Router extends Workshop
 
 				$table = Routers_SchemeDesigner::getTableName();
 				$positionHelper = new PositionCursor($table);
-				$connection
-					->table($table)
-					->insert([
+				$id = (int) $connection
+					->builder( $table )
+					->insertGetId( [
 						"name" => $name,
 						"path" => $event->path,
 						"position" => $event->position < 1 ? $positionHelper->getNextPosition() : 0,
 						"module_id" => $this->getModuleId(),
 						"properties" => []
 					]);
-
-				$id = $connection->lastInsertId();
 
 				if($event->position > 0)
 				{
@@ -156,12 +153,12 @@ class Router extends Workshop
 			->transactional(function (Connection $connection) use ($id) {
 
 				$connection
-					->table(Routers_SchemeDesigner::getTableName())
+					->builder( Routers_SchemeDesigner::getTableName() )
 					->whereId($id)
 					->delete();
 
 				$connection
-					->table(ContextRouterLinks_SchemeDesigner::getTableName())
+					->builder( ContextRouterLinks_SchemeDesigner::getTableName() )
 					->where("router_id", $id)
 					->delete();
 			});
@@ -241,7 +238,7 @@ class Router extends Workshop
 			{
 				$this
 					->db
-					->table($table)
+					->builder( $table )
 					->whereId($id)
 					->update($updateData);
 			}
@@ -275,23 +272,23 @@ class Router extends Workshop
 	 * Get point database scheme
 	 *
 	 * @param int $id
+	 *
 	 * @return Routers_SchemeDesigner
+	 *
 	 * @throws MountPointNotFoundException
-	 * @throws Exceptions\RouterValidateException
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	private function getScheme(int $id): Routers_SchemeDesigner
 	{
 		/** @var Routers_SchemeDesigner $row */
-		$row = $this
-			->db
-			->table(Routers_SchemeDesigner::class)
+		$row = Routers_SchemeDesigner::find()
 			->whereId($id)
 			->first();
 
 		if( ! $row )
 		{
-			throw new MountPointNotFoundException("The '{$id}' mount point not found");
+			throw new MountPointNotFoundException( "The \"{$id}\" mount point not found" );
 		}
 
 		if( $row->getModuleId() !== $this->getModuleId() )
@@ -308,6 +305,7 @@ class Router extends Workshop
 	 * @param int $id
 	 * @param array $old
 	 * @param array $new
+	 *
 	 * @throws \Throwable
 	 */
 	private function properties(int $id, array $old, array $new)
@@ -333,7 +331,7 @@ class Router extends Workshop
 
 		$this
 			->db
-			->table(Routers_SchemeDesigner::getTableName())
+			->builder( Routers_SchemeDesigner::getTableName() )
 			->whereId($id)
 			->update([
 				"properties" => $event->properties
@@ -346,10 +344,12 @@ class Router extends Workshop
 	 * Checks mount point name
 	 *
 	 * @param string $name
-	 * @param int $id
+	 * @param int    $id
+	 *
 	 * @return bool
-	 * @throws Exceptions\RouterValidateException
+	 *
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	private function verifyName( string & $name, int $id = 0 ): bool
 	{
@@ -366,7 +366,7 @@ class Router extends Workshop
 		}
 
 		$name = str_replace([" ", "-"], "_", $name);
-		$valid = ! preg_match('/[^a-z0-9_]/', $name) && ctype_alpha($name[0]) && strpos($name, "__") === 0 && ctype_alnum($name[$len-1]);
+		$valid = !preg_match( '/[^a-z0-9_]/', $name ) && ctype_alpha( $name[0] ) && strpos( $name, "__" ) === 0 && ctype_alnum( $name[$len - 1] );
 		if( !$valid )
 		{
 			throw new Exceptions\RouterValidateException("Invalid mount point name. Use a-z signs, numbers, and underscores.", "name");
@@ -374,7 +374,7 @@ class Router extends Workshop
 
 		$builder = $this
 			->db
-			->table(Routers_SchemeDesigner::getTableName())
+			->builder( Routers_SchemeDesigner::getTableName() )
 			->where("name", $name);
 
 		if($id)
@@ -384,7 +384,7 @@ class Router extends Workshop
 
 		if($builder->count('id') > 0)
 		{
-			throw new Exceptions\RouterValidateException("The specified mount point name '{$name}' is already in use.", "name");
+			throw new Exceptions\RouterValidateException( "The specified mount point name \"{$name}\" is already in use.", "name" );
 		}
 
 		return $valid;

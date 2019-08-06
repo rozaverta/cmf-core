@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 18.04.2017
  * Time: 2:21
  */
@@ -9,7 +8,8 @@
 namespace RozaVerta\CmfCore\Module;
 
 use Doctrine\DBAL\Exception\TableNotFoundException;
-use RozaVerta\CmfCore\Database\DatabaseManager as DB;
+use Doctrine\DBAL\ParameterType;
+use RozaVerta\CmfCore\Database\DatabaseManager;
 use RozaVerta\CmfCore\Cache\Cache;
 use RozaVerta\CmfCore\Interfaces\VarExportInterface;
 use RozaVerta\CmfCore\Module\Exceptions\ModuleConflictVersionException;
@@ -170,18 +170,27 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 	 */
 	static protected function load( int $id, bool $install = true )
 	{
-		$builder = DB
-			::table(Modules_SchemeDesigner::class)
-			->whereId($id);
+		$conn = DatabaseManager::connection();
+		$query = "SELECT * FROM " . $conn->getTableName( Modules_SchemeDesigner::getTableName() ) . " WHERE id = ?";
+		$where = [ $id ];
+		$types = [ ParameterType::INTEGER ];
 
 		if( $install )
 		{
-			$builder->where('install', true);
+			$query .= " AND install = ?";
+			$where[] = true;
+			$types[] = ParameterType::BOOLEAN;
 		}
 
 		/** @var Modules_SchemeDesigner $row */
 		try {
-			$row = $builder->first();
+			$row = $conn->fetchAssoc(
+				$conn->getGrammar()->modifyLimitQuery( $query, 1 ), $where, $types
+			);
+			if( $row )
+			{
+				$row = new Modules_SchemeDesigner( $row, $conn );
+			}
 		}
 		catch( TableNotFoundException $e ) {
 			$row = false;
@@ -205,7 +214,7 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 				"install" => false,
 				"namespace_name" => $manifest->getNamespaceName(),
 				"version" => $manifest->getVersion()
-			], DB::connection());
+			], $conn );
 		}
 
 		if( $install )

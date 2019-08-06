@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 27.08.2018
  * Time: 11:25
  */
@@ -36,6 +35,7 @@ abstract class ModuleSchemeDesigner extends SchemeDesigner implements ModuleGett
 	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceNotFoundException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
+	 * @throws \Doctrine\DBAL\DBALException
 	 */
 	protected function reloadModule()
 	{

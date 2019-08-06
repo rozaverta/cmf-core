@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 31.01.2015
  * Time: 15:59
  */
@@ -14,7 +13,7 @@ use RozaVerta\CmfCore\Language\Interfaces\TransliterationInterface;
 use RozaVerta\CmfCore\Language\Locale\Dumper;
 use RozaVerta\CmfCore\Support\Prop;
 use RozaVerta\CmfCore\Helper\Str;
-use RozaVerta\CmfCore\Traits\ApplicationTrait;
+use RozaVerta\CmfCore\Traits\ServiceTrait;
 use RozaVerta\CmfCore\Traits\SingletonInstanceTrait;
 use RozaVerta\CmfCore\Language\Events\ReadyLanguageEvent;
 use RozaVerta\CmfCore\Language\Events\SelectLanguageEvent;
@@ -28,7 +27,12 @@ use RozaVerta\CmfCore\Language\Events\SelectLanguageEvent;
 final class LanguageManager
 {
 	use SingletonInstanceTrait;
-	use ApplicationTrait;
+	use ServiceTrait;
+
+	/**
+	 * @var \RozaVerta\CmfCore\Event\EventManager
+	 */
+	protected $event;
 
 	/**
 	 * Current language
@@ -52,24 +56,34 @@ final class LanguageManager
 	 */
 	private $locale;
 
-	private $lang_transliteration = false;
-	private $lang_text = false;
-	private $lang_default = "en";
-	private $lang_is_default = true;
-	private $lang_init = false;
+	private $langTransliteration = false;
+	private $langText = false;
+	private $langDefault = "en";
+	private $langIsDefault = true;
+	private $langInit = false;
 
-	private $package_context = "default";
+	private $packageContext = "default";
 
+	/**
+	 * LanguageManager constructor.
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \RozaVerta\CmfCore\Exceptions\ClassNotFoundException
+	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
+	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
+	 * @throws \Throwable
+	 */
 	protected function __construct()
 	{
-		$this->appInit();
+		$this->thisServices( "event" );
 
 		// set default
-		$this->language = Prop::prop("system")->getOr("language", $this->lang_default);
-		$this->lang_default = $this->language;
+		$this->language = Prop::prop( "system" )->getOr( "language", $this->langDefault );
+		$this->langDefault = $this->language;
 
 		$event = new ReadyLanguageEvent($this);
-		$this->app->event->dispatch($event);
+		$this->event->dispatch( $event );
 
 		$this->reload($event->language);
 	}
@@ -91,7 +105,7 @@ final class LanguageManager
 	 */
 	public function getDefault(): string
 	{
-		return $this->lang_default;
+		return $this->langDefault;
 	}
 
 	/**
@@ -101,7 +115,7 @@ final class LanguageManager
 	 */
 	public function currentIsDefault(): bool
 	{
-		return $this->lang_is_default;
+		return $this->langIsDefault;
 	}
 
 	/**
@@ -137,7 +151,13 @@ final class LanguageManager
 	 * Set new language key and reload all packages
 	 *
 	 * @param string $language
+	 *
 	 * @return bool
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
+	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws \Throwable
 	 */
 	public function reload( string $language ): bool
 	{
@@ -147,7 +167,7 @@ final class LanguageManager
 			return false;
 		}
 
-		if( $this->language === $language && $this->lang_init )
+		if( $this->language === $language && $this->langInit )
 		{
 			return true;
 		}
@@ -157,11 +177,11 @@ final class LanguageManager
 		$this->locale = Dumper::getLocale($language);
 		$this->language = $language;
 		$this->lang = null;
-		$this->lang_init = true;
+		$this->langInit = true;
 		$this->proxy = [];
 
 		$event = new SelectLanguageEvent($this);
-		$this->app->event->dispatch(
+		$this->event->dispatch(
 			$event,
 			function( $result ) use($event) {
 				if( $result instanceof Language )
@@ -176,9 +196,9 @@ final class LanguageManager
 			$this->lang = new LanguageFiles($language);
 		}
 
-		$this->lang_transliteration = $this->lang instanceof TransliterationInterface;
-		$this->lang_text = $this->lang instanceof TextInterface;
-		$this->lang_is_default = $this->language === $this->lang_default;
+		$this->langTransliteration = $this->lang instanceof TransliterationInterface;
+		$this->langText = $this->lang instanceof TextInterface;
+		$this->langIsDefault = $this->language === $this->langDefault;
 
 		foreach($packages as $package)
 		{
@@ -196,7 +216,7 @@ final class LanguageManager
 	 */
 	public function then( string $context = "default" )
 	{
-		$this->package_context = $context;
+		$this->packageContext = $context;
 		return $this;
 	}
 
@@ -215,7 +235,7 @@ final class LanguageManager
 
 		if( !$this->lang->load($context) )
 		{
-			throw new \InvalidArgumentException("Cannot load the '{$context}' language package");
+			throw new \InvalidArgumentException( "Cannot load the \"{$context}\" language package." );
 		}
 
 		$this->proxy[$context] = new ThenProxy($this, $context);
@@ -223,7 +243,7 @@ final class LanguageManager
 	}
 
 	/**
-	 * Get item
+	 * Get item.
 	 *
 	 * @param string $name
 	 * @param string $default
@@ -235,7 +255,7 @@ final class LanguageManager
 	}
 
 	/**
-	 * Get line (convert item to string)
+	 * Get line (convert item to string).
 	 *
 	 * @param string $text
 	 * @return string
@@ -247,7 +267,7 @@ final class LanguageManager
 	}
 
 	/**
-	 * Get line and replace values
+	 * Get line and replace values.
 	 *
 	 * @param string $text
 	 * @param array ...$replace
@@ -255,7 +275,7 @@ final class LanguageManager
 	 */
 	public function replace( string $text, ... $replace ): string
 	{
-		$then = $this->package_context;
+		$then = $this->packageContext;
 		return $this->format(
 			$this->line($text),
 			$then,
@@ -263,6 +283,13 @@ final class LanguageManager
 		);
 	}
 
+	/**
+	 * @param int   $number
+	 * @param       $string
+	 * @param array $replace
+	 *
+	 * @return string
+	 */
 	public function choice( int $number, $string, array $replace = [] ): string
 	{
 		$then = $this->getThen();
@@ -304,7 +331,7 @@ final class LanguageManager
 	public function text( string $text ): string
 	{
 		$then = $this->getThen();
-		if( $this->lang_text )
+		if( $this->langText )
 		{
 			return $this->lang->text($text, $then);
 		}
@@ -315,7 +342,7 @@ final class LanguageManager
 	}
 
 	/**
-	 * Transliterate string
+	 * Transliterate string.
 	 *
 	 * @param string $word
 	 * @param bool $latinOnly
@@ -323,7 +350,7 @@ final class LanguageManager
 	 */
 	public function transliterate( string $word, $latinOnly = true ): string
 	{
-		if( $this->lang_transliteration )
+		if( $this->langTransliteration )
 		{
 			$word = $this->lang->transliterate($word);
 		}
@@ -342,7 +369,7 @@ final class LanguageManager
 	}
 
 	/**
-	 * Validate language key
+	 * Validate language key.
 	 *
 	 * @param string $language
 	 * @return bool
@@ -352,6 +379,15 @@ final class LanguageManager
 		return strlen($language) >= 2 && preg_match('/^[a-z]{2}(?:_[a-zA-Z]{2,5})?(?:\-[a-zA-Z0-9_]+)?$/', $language);
 	}
 
+	/**
+	 * Format language string.
+	 *
+	 * @param string $text
+	 * @param string $then
+	 * @param array  $replace
+	 *
+	 * @return string
+	 */
 	private function format( string $text, string $then, array $replace ): string
 	{
 		$new_text = "";
@@ -432,10 +468,15 @@ final class LanguageManager
 		return $new_text;
 	}
 
+	/**
+	 * Set the current package as "default", get the package cursor.
+	 *
+	 * @return string
+	 */
 	private function getThen()
 	{
-		$then = $this->package_context;
-		$this->package_context = "default";
+		$then = $this->packageContext;
+		$this->packageContext = "default";
 		return $then;
 	}
 }

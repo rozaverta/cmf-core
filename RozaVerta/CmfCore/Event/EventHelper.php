@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 10.09.2018
  * Time: 13:37
  */
@@ -12,6 +11,11 @@ use RozaVerta\CmfCore\Database\DatabaseManager as DB;
 use RozaVerta\CmfCore\Module\Interfaces\ModuleInterface;
 use RozaVerta\CmfCore\Schemes\Events_SchemeDesigner;
 
+/**
+ * Class EventHelper
+ *
+ * @package RozaVerta\CmfCore\Event
+ */
 final class EventHelper
 {
 	private function __construct() {}
@@ -20,6 +24,7 @@ final class EventHelper
 	 * Validate the event name
 	 *
 	 * @param string $name
+	 *
 	 * @return bool
 	 */
 	static public function validName(string $name): bool
@@ -37,6 +42,7 @@ final class EventHelper
 	 *
 	 * @param string $name
 	 * @param ModuleInterface $module
+	 *
 	 * @return bool
 	 */
 	static public function validModuleName( string $name, ModuleInterface $module): bool
@@ -60,9 +66,13 @@ final class EventHelper
 	 * Check event exists. If event exists set event ID and module ID link
 	 *
 	 * @param string $name
-	 * @param null $eventId
-	 * @param null $moduleId
+	 * @param null   $eventId
+	 * @param null   $moduleId
+	 *
 	 * @return bool
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
 	 */
 	static public function exists( string $name, & $eventId = null, & $moduleId = null ): bool
 	{
@@ -71,19 +81,18 @@ final class EventHelper
 			return false;
 		}
 
-		$row = DB
-			::table(Events_SchemeDesigner::getTableName())
+		$row = DB::plainBuilder()
+			->from( Events_SchemeDesigner::getTableName() )
 			->where("name", $name)
-			->select(["id", "module_id"])
-			->first();
+			->first( [ "id", "module_id" ] );
 
 		if( !$row )
 		{
 			return false;
 		}
 
-		$eventId = (int) $row->get("id");
-		$moduleId = (int) $row->get("module_id");
+		$eventId = (int) $row["id"];
+		$moduleId = (int) $row["module_id"];
 
 		return true;
 	}
@@ -94,6 +103,9 @@ final class EventHelper
 	 * @param string $name
 	 *
 	 * @return Events_SchemeDesigner|null
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	static public function getSchemeDesigner( string $name ): ?Events_SchemeDesigner
 	{
@@ -103,8 +115,7 @@ final class EventHelper
 		}
 
 		/** @var Events_SchemeDesigner $row */
-		$row = DB
-			::table(Events_SchemeDesigner::class)
+		$row = Events_SchemeDesigner::find()
 			->where("name", $name)
 			->first();
 

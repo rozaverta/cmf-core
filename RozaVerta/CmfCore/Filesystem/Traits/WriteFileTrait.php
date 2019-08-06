@@ -1,13 +1,14 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 18.08.2018
  * Time: 0:52
  */
 
 namespace RozaVerta\CmfCore\Filesystem\Traits;
 
+use RozaVerta\CmfCore\Exceptions\JsonParseException;
+use RozaVerta\CmfCore\Helper\Json;
 use RozaVerta\CmfCore\Helper\PhpExport;
 use RozaVerta\CmfCore\Filesystem\Exceptions\FileWriteException;
 use RozaVerta\CmfCore\Log\Interfaces\LoggableInterface;
@@ -21,7 +22,7 @@ trait WriteFileTrait
 	 *
 	 * @param string $file
 	 * @param string $data
-	 * @param bool $append
+	 * @param bool   $append
 	 * @return bool
 	 */
 	protected function writeFile( string $file, string $data, bool $append = false )
@@ -34,9 +35,9 @@ trait WriteFileTrait
 	/**
 	 * Write data process from the iteration callback
 	 *
-	 * @param string $file
+	 * @param string   $file
 	 * @param \Closure $data
-	 * @param bool $append
+	 * @param bool     $append
 	 * @return bool
 	 */
 	protected function writeFileProcess( string $file, \Closure $data, bool $append = false )
@@ -50,22 +51,43 @@ trait WriteFileTrait
 	 * Write data file as php value (export data)
 	 *
 	 * @param string $file
-	 * @param mixed $data
-	 * @param string $data_name
+	 * @param mixed  $data
+	 * @param string $dataName
+	 *
 	 * @return bool
 	 */
-	protected function writeFileExport( string $file, $data, string $data_name = 'data' )
+	protected function writeFileExport( string $file, $data, string $dataName = 'data' )
 	{
-		return $this->write(
-			$file,
+		$ext = pathinfo( $file, PATHINFO_EXTENSION );
+		$ext = strtolower( $ext );
 
-			'<'
-			. "?php defined('CMF_CORE') || exit('Not access'); \n"
-			. PhpExport::getInstance()->data($data, $data_name, true, true)
-			. "\nreturn \${$data_name};",
+		if( $ext === "json" )
+		{
+			try
+			{
+				$data = Json::stringify( $data );
+			} catch( JsonParseException $e )
+			{
+				if( $this instanceof LoggableInterface )
+				{
+					$this->addError( $e->getMessage() );
+				}
+				return false;
+			}
+		}
+		else if( $ext === "php" )
+		{
+			$data = '<'
+				. "?php defined('CMF_CORE') || exit('Not access'); \n"
+				. PhpExport::getInstance()->data( $data, $dataName, true, true )
+				. "\nreturn \${$dataName};";
+		}
+		else if( !is_string( $data ) )
+		{
+			$data = print_r( $data, true );
+		}
 
-			false
-		);
+		return $this->write( $file, $data, false );
 	}
 
 	/**
@@ -74,6 +96,7 @@ trait WriteFileTrait
 	 * @param string $file
 	 * @param $data
 	 * @param $append
+	 *
 	 * @return bool
 	 */
 	private function write( string $file, $data, $append ): bool
@@ -93,8 +116,7 @@ trait WriteFileTrait
 				{
 					throw new FileWriteException("Cannot create the '{$path}' directory");
 				}
-			}
-			catch( FileWriteException $e )
+			} catch( FileWriteException $e )
 			{
 				return $this->getError($e);
 			}
@@ -144,8 +166,7 @@ trait WriteFileTrait
 						{
 							throw new FileWriteException($file);
 						}
-					}
-					while(true);
+					} while(true);
 				}
 				else if( fwrite( $handle, $data ) === false )
 				{
@@ -159,16 +180,14 @@ trait WriteFileTrait
 			{
 				throw new FileWriteException($file);
 			}
-		}
-		catch( FileWriteException $e )
+		} catch( FileWriteException $e )
 		{
 			if( isset($handle) && ! $append && file_exists($file) )
 			{
 				@ unlink($file);
 			}
 			return $this->getError($e);
-		}
-		finally
+		} finally
 		{
 			if( isset($handle) )
 			{

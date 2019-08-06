@@ -1,13 +1,14 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 13.03.2019
  * Time: 1:13
  */
 
 namespace RozaVerta\CmfCore\Schemes;
+
 use Doctrine\DBAL\Platforms\AbstractPlatform;
+use RozaVerta\CmfCore\Database\Query\Criteria;
 use RozaVerta\CmfCore\Module\ModuleHelper;
 
 /**
@@ -67,7 +68,9 @@ class EventHandlerLinks_WithHandlers_SchemeDesigner extends ModuleSchemeDesigner
 					"tableName" => EventHandlers_SchemeDesigner::getTableName(),
 					"alias" => "eh",
 					"type" => "left",
-					"criteria" => "eh.id = ehl.handler_id"
+					"criteria" => function( Criteria $criteria ) {
+						$criteria->columns( "eh.id", "ehl.handler_id" );
+					},
 				]
 			],
 			"orderBy" => ["event_id", "priority"],

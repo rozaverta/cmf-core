@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 18.04.2017
  * Time: 3:12
  */
@@ -14,16 +13,24 @@ use RozaVerta\CmfCore\Route\Exceptions\PageNotFoundException;
 use RozaVerta\CmfCore\Route\Interfaces\ControllerInterface;
 use RozaVerta\CmfCore\Route\Interfaces\MountPointInterface;
 use RozaVerta\CmfCore\Route\Interfaces\RouterInterface;
-use RozaVerta\CmfCore\Traits\ApplicationTrait;
 use RozaVerta\CmfCore\Module\Traits\ModuleGetterTrait;
+use RozaVerta\CmfCore\Traits\ServiceTrait;
 
+/**
+ * Class Router
+ *
+ * @package RozaVerta\CmfCore\Route
+ */
 abstract class Router implements RouterInterface
 {
 	use ModuleGetterTrait;
-	use ApplicationTrait;
+	use ServiceTrait;
 
 	protected $controller = null;
 
+	/**
+	 * @var MountPointInterface
+	 */
 	protected $mountPoint;
 
 	public function __construct( MountPointInterface $mountPoint )
@@ -36,7 +43,6 @@ abstract class Router implements RouterInterface
 		}
 
 		$this->mountPoint = $mountPoint;
-		$this->appInit();
 		$this->setModule($module);
 	}
 
@@ -69,7 +75,7 @@ abstract class Router implements RouterInterface
 	}
 
 	/**
-	 * @param mixed $controller
+	 * @param string     $controller
 	 * @param array|null $properties
 	 * @return bool
 	 */
@@ -79,20 +85,26 @@ abstract class Router implements RouterInterface
 	}
 
 	/**
+	 * Create and set new Redirect controller
+	 *
 	 * @param string $location
 	 * @param bool $permanent
 	 * @param bool $refresh
+	 *
 	 * @return bool
 	 */
-	protected function createRedirectController( string $location, bool $permanent = false, bool $refresh = false)
+	protected function createRedirectController( string $location, bool $permanent = false, bool $refresh = false ): bool
 	{
 		return $this->setController(
-			new Redirect($this->getModule(), $this->mountPoint, compact('location', 'permanent', 'refresh'))
+			new Redirect( $this->mountPoint, compact( 'location', 'permanent', 'refresh' ) )
 		);
 	}
 
 	/**
-	 * @param string $text
+	 * Throw new PageNotFoundException
+	 *
+	 * @param string $text Not found message
+	 *
 	 * @throws PageNotFoundException
 	 */
 	protected function throw404( string $text = "" )
@@ -105,8 +117,17 @@ abstract class Router implements RouterInterface
 		return $this->getModule()->getNamespaceName() . "Controllers\\" . $name;
 	}
 
-	protected function checkController( string $name ): bool
+	protected function checkController( string $name, & $className = null ): bool
 	{
-		return class_exists( $this->getControllerClassName($name), true );
+		$testClassName = $this->getControllerClassName( $name );
+		if( class_exists( $testClassName, true ) )
+		{
+			$className = $testClassName;
+			return false;
+		}
+		else
+		{
+			return false;
+		}
 	}
 }

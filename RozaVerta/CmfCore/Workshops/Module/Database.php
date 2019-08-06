@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 07.04.2018
  * Time: 18:31
  */
@@ -21,16 +20,31 @@ use RozaVerta\CmfCore\Event\Exceptions\EventAbortException;
 use RozaVerta\CmfCore\Filesystem\Exceptions\FileNotFoundException;
 use RozaVerta\CmfCore\Database\Connection;
 use RozaVerta\CmfCore\Database\Scheme\TableLoader;
+use RozaVerta\CmfCore\Module\WorkshopModuleProcessor;
 use RozaVerta\CmfCore\Schemes\Modules_SchemeDesigner;
 use RozaVerta\CmfCore\Schemes\SchemeTables_SchemeDesigner;
 use RozaVerta\CmfCore\Support\Collection;
 use RozaVerta\CmfCore\Support\Workshop;
 use RozaVerta\CmfCore\Support\Text;
 
+/**
+ * Class Database
+ *
+ * @package RozaVerta\CmfCore\Workshops\Module
+ */
 class Database extends Workshop
 {
 	use Traits\ResourceBackupTrait;
 
+	public const TABLE_SYSTEM = 1;
+	public const TABLE_ADDON = 2;
+	public const TABLE_ALL = 3;
+
+	/**
+	 * Get module version
+	 *
+	 * @return string
+	 */
 	public function getModuleVersion()
 	{
 		return $this->getModule()->getVersion();
@@ -40,7 +54,9 @@ class Database extends Workshop
 	 * Create new table in database
 	 *
 	 * @param string $tableName
+	 *
 	 * @return $this
+	 *
 	 * @throws TableNotFoundException
 	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
 	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
@@ -146,7 +162,9 @@ class Database extends Workshop
 	 *
 	 * @param string $tableName
 	 * @param string|null $tableRename
+	 *
 	 * @return $this
+	 *
 	 * @throws TableNotFoundException
 	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
 	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
@@ -300,6 +318,17 @@ class Database extends Workshop
 		return $this;
 	}
 
+	/**
+	 * Update table version. The table version is determined from the module version.
+	 *
+	 * @param string $tableName
+	 *
+	 * @return $this|Database
+	 *
+	 * @throws TableNotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
+	 */
 	public function updateTableVersion( string $tableName )
 	{
 		$designer = $this->getTableSchemeDesigner($tableName);
@@ -317,8 +346,10 @@ class Database extends Workshop
 		{
 			$this
 				->db
-				->table(SchemeTables_SchemeDesigner::getTableName())
-				->whereId($designer->getId())
+				->plainBuilder()
+				->from( SchemeTables_SchemeDesigner::getTableName() )
+				->limit( 1 )
+				->where( "id", $designer->getId() )
 				->update([
 					"version" => $this->getModuleVersion()
 				]);
@@ -331,10 +362,10 @@ class Database extends Workshop
 	 * Drop table from database
 	 *
 	 * @param string $tableName
+	 *
 	 * @return $this
+	 *
 	 * @throws TableNotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
 	 * @throws \Throwable
 	 */
 	public function dropTable( string $tableName )
@@ -405,31 +436,53 @@ class Database extends Workshop
 	}
 
 	/**
-	 * @param null|bool $addon
+	 * Get list of current table versions from database.
+	 *
+	 * @param int $mode
+	 *
 	 * @return Collection
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
-	public function getTablesVersionList( ?bool $addon = null ): Collection
+	public function getTablesVersionList( int $mode = self::TABLE_ALL ): Collection
 	{
 		$builder = $this
 			->db
-			->table(SchemeTables_SchemeDesigner::getTableName())
+			->plainBuilder()
+			->from( SchemeTables_SchemeDesigner::getTableName() )
 			->where("module_id", $this->getModuleId());
 
-		if( !is_null($addon) )
+		if( $mode === self::TABLE_SYSTEM )
 		{
-			$builder->where("addon", $addon);
+			$builder->where( "addon", false );
+		}
+		else if( $mode === self::TABLE_ADDON )
+		{
+			$builder->where( "addon", true );
+		}
+		else if( $mode !== self::TABLE_ALL )
+		{
+			throw new InvalidArgumentException( "Invalid table mode" );
 		}
 
-		return $builder
-			->orderBy("name")
-			->select(["name", "version"])
-			->project(function($row) { return $row["version"]; }, "name");
+		$all = $builder
+			->orderByExpr( $builder->wrap( "name" ) . " ASC" )
+			->project( function( $row ) {
+				return $row["version"];
+			}, [ "name", "version" ], "name" );
+
+		return new Collection( $all );
 	}
 
 	/**
+	 * Get Doctrine DBAL Table Schema object
+	 *
 	 * @param TableLoader $table
 	 * @param Table|null $queryTable
+	 *
 	 * @return Table
+	 *
 	 * @throws \Doctrine\DBAL\DBALException
 	 */
 	protected function getDbalTable( TableLoader $table, ?Table $queryTable = null ): Table
@@ -520,16 +573,20 @@ class Database extends Workshop
 	}
 
 	/**
+	 * Get SchemeDesigner
+	 *
 	 * @param string $tableName
+	 *
 	 * @return SchemeTables_SchemeDesigner
+	 *
 	 * @throws TableNotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	protected function getTableSchemeDesigner( string $tableName )
 	{
 		try {
-			$row = $this
-				->db
-				->table(SchemeTables_SchemeDesigner::class)
+			$row = SchemeTables_SchemeDesigner::find()
 				->where("name", $tableName)
 				->first();
 		}
@@ -579,11 +636,23 @@ class Database extends Workshop
 		);
 	}
 
+	/**
+	 * Get Doctrine DBAL Platform
+	 *
+	 * @return AbstractPlatform
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 */
 	protected function getDoctrineDbalPlatform(): AbstractPlatform
 	{
 		return $this->db->getDbalDatabasePlatform();
 	}
 
+	/**
+	 * Get table prefix
+	 *
+	 * @return string
+	 */
 	protected function getTablePrefix(): string
 	{
 		return $this->db->getTablePrefix();

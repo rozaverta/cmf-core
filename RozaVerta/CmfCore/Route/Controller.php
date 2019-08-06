@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 18.04.2017
  * Time: 3:12
  */
@@ -14,11 +13,11 @@ use RozaVerta\CmfCore\Route\Interfaces\ControllerInterface;
 use RozaVerta\CmfCore\Module\Interfaces\ModuleInterface;
 use RozaVerta\CmfCore\Route\Interfaces\MountPointInterface;
 use RozaVerta\CmfCore\Support\Prop;
-use RozaVerta\CmfCore\Traits\ApplicationTrait;
 use RozaVerta\CmfCore\Traits\GetIdentifierTrait;
 use RozaVerta\CmfCore\Module\Traits\ModuleGetterTrait;
 use RozaVerta\CmfCore\Log\Traits\LoggableTrait;
 use RozaVerta\CmfCore\Traits\GetTrait;
+use RozaVerta\CmfCore\Traits\ServiceTrait;
 
 /**
  * Class Controller
@@ -31,7 +30,7 @@ abstract class Controller implements ControllerInterface
 	use GetTrait;
 	use GetIdentifierTrait;
 	use ModuleGetterTrait;
-	use ApplicationTrait;
+	use ServiceTrait;
 
 	/**
 	 * @var MountPoint
@@ -64,13 +63,35 @@ abstract class Controller implements ControllerInterface
 	protected $pageData = [];
 
 	/**
+	 * @var object|\RozaVerta\CmfCore\Event\EventManager
+	 */
+	protected $event;
+
+	/**
+	 * @var \RozaVerta\CmfCore\Http\Response
+	 */
+	protected $response;
+
+	/**
+	 * @var \RozaVerta\CmfCore\Http\Request
+	 */
+	protected $request;
+
+	/**
 	 * Controller constructor.
 	 *
 	 * @param MountPointInterface $mountPoint
-	 * @param array $data
+	 * @param array               $data
+	 *
+	 * @throws \RozaVerta\CmfCore\Exceptions\ClassNotFoundException
+	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
+	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
 	 */
 	public function __construct( MountPointInterface $mountPoint, array $data = [] )
 	{
+		$this->thisServices( "event", "response", "request" );
+
 		$module = $mountPoint->getModule();
 		$name = get_class($this);
 		if( strpos($name, $module->getNamespaceName()) !== 0 )
@@ -90,7 +111,6 @@ abstract class Controller implements ControllerInterface
 
 		unset($data['id'], $data['cacheable']);
 
-		$this->appInit();
 		$this->setModule($module);
 		$this->mountPoint = $mountPoint;
 		$this->items = $data;
@@ -194,7 +214,7 @@ abstract class Controller implements ControllerInterface
 	 * @param ControllerInterface $controller
 	 * @return bool
 	 */
-	public function change( ControllerInterface $controller ): bool
+	public function changeable( ControllerInterface $controller ): bool
 	{
 		return true;
 	}
@@ -206,10 +226,10 @@ abstract class Controller implements ControllerInterface
 	 *
 	 * @throws \Throwable
 	 */
-	public function complete()
+	public function complete(): void
 	{
 		$event = new ControllerCompleteEvent($this, $this->pageData);
-		$this->app->event->dispatch($event);
+		self::service( "event" )->dispatch( $event );
 		$this->pageData = $event->pageData;
 	}
 }

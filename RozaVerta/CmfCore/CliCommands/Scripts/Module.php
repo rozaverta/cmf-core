@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 01.05.2019
  * Time: 0:12
  */
@@ -35,6 +34,8 @@ use Throwable;
  */
 class Module extends AbstractScript
 {
+	protected $services = [ "app", "event" ];
+
 	/**
 	 * Open default menu
 	 *
@@ -116,18 +117,17 @@ class Module extends AbstractScript
 			if( $module === "*" )
 			{
 				// show all
-				$all = DatabaseManager
-					::table(Modules_SchemeDesigner::getTableName())
+				$all = DatabaseManager::plainBuilder()
+					->from( Modules_SchemeDesigner::getTableName() )
 					->where("id", "!=", 1)
 					->orderBy("name")
-					->select(["name", "version", "install"])
 					->project(function(array $row) {
 						return [
 							"name" => $row["name"],
 							"title" => "Module '" . $row["name"] . "' v" . $row["version"],
 							"install" => is_numeric($row["install"]) ? ($row["install"] > 0) : (bool) $row["install"]
 						];
-					});
+					}, [ "name", "version", "install" ] );
 
 				if(count($all) < 1)
 				{
@@ -488,7 +488,6 @@ class Module extends AbstractScript
 		});
 
 		$this
-			->app
 			->event
 			->listen(
 				ModuleEvent::eventName(),

@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 03.08.2018
  * Time: 16:27
  */
@@ -14,6 +13,11 @@ use RozaVerta\CmfCore\Schemes\Context_SchemeDesigner;
 use RozaVerta\CmfCore\Interfaces\Arrayable;
 use RozaVerta\CmfCore\Traits\GetIdentifierTrait;
 
+/**
+ * Class Context
+ *
+ * @package RozaVerta\CmfCore\Route
+ */
 class Context implements Arrayable, VarExportInterface
 {
 	use GetIdentifierTrait;
@@ -79,7 +83,7 @@ class Context implements Arrayable, VarExportInterface
 	}
 
 	/**
-	 * Raw result object
+	 * Raw result object.
 	 *
 	 * @return Context_SchemeDesigner
 	 */
@@ -89,6 +93,8 @@ class Context implements Arrayable, VarExportInterface
 	}
 
 	/**
+	 * The context uses the host name.
+	 *
 	 * @return bool
 	 */
 	public function isHost(): bool
@@ -97,6 +103,8 @@ class Context implements Arrayable, VarExportInterface
 	}
 
 	/**
+	 * The context uses query parameters.
+	 *
 	 * @return bool
 	 */
 	public function isQuery(): bool
@@ -105,6 +113,8 @@ class Context implements Arrayable, VarExportInterface
 	}
 
 	/**
+	 * The context uses the path prefix.
+	 *
 	 * @return bool
 	 */
 	public function isPath(): bool
@@ -113,6 +123,8 @@ class Context implements Arrayable, VarExportInterface
 	}
 
 	/**
+	 * The context uses the ssl protocol.
+	 *
 	 * @return bool
 	 */
 	public function isSsl(): bool
@@ -121,6 +133,8 @@ class Context implements Arrayable, VarExportInterface
 	}
 
 	/**
+	 * Get router IDs.
+	 *
 	 * @return int[]
 	 */
 	public function getRouterIds(): array

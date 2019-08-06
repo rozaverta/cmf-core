@@ -1,919 +1,166 @@
 <?php
+/**
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
+ * Date: 08.06.2019
+ * Time: 16:20
+ */
 
 namespace RozaVerta\CmfCore\Database\Query;
 
 use Closure;
 use Doctrine\DBAL\DBALException;
-use ReflectionClass;
-use ReflectionException;
-use RozaVerta\CmfCore\App;
 use RozaVerta\CmfCore\Database\Connection;
-use RozaVerta\CmfCore\Database\Scheme\SchemeDesigner;
-use RozaVerta\CmfCore\Database\Scheme\Table;
+use RozaVerta\CmfCore\Database\Interfaces\JoinBuilderInterface;
+use RozaVerta\CmfCore\Database\Interfaces\WriteBuilderInterface;
 use RozaVerta\CmfCore\Helper\Arr;
-use RozaVerta\CmfCore\Helper\Str;
-use RozaVerta\CmfCore\Support\Collection;
-use InvalidArgumentException;
 
-class Builder
+/**
+ * Class Builder
+ *
+ * @package RozaVerta\CmfCore\Database\Query
+ */
+class Builder extends AbstractBuilder implements JoinBuilderInterface, WriteBuilderInterface
 {
 	/**
-	 * @var Connection
-	 */
-	protected $connection;
-
-	/**
-	 * @var DbalQueryBuilder
-	 */
-	protected $builder;
-
-	/**
-	 * @var ReflectionClass
-	 */
-	protected $designer;
-
-	/**
-	 * @var CriteriaBuilder | null
-	 */
-	protected $where;
-
-	/**
-	 * @var CriteriaBuilder | null
-	 */
-	protected $having;
-
-	/**
-	 * @var StateUpdateBuilder | null
-	 */
-	protected $update;
-
-	/**
-	 * @var StateInsertBuilder | null
-	 */
-	protected $insert;
-
-	/**
-	 * @var string
-	 */
-	protected $table = "";
-
-	/**
-	 * @var string
-	 */
-	protected $tableAlias = "";
-
-	/**
-	 * @var Table
-	 */
-	protected $tableSchema;
-
-	/**
-	 * @var bool
-	 */
-	protected $distinct = false;
-
-	/**
 	 * @var array
 	 */
-	protected $columns = [];
+	protected $cloneable = [ 'where', 'having', 'state' ];
 
 	/**
-	 * @var array
+	 * @var WriteableState | null
 	 */
-	protected $columnsSelect = [];
+	protected $state;
+
+	protected $resultClassName = null;
 
 	/**
-	 * @var bool
-	 */
-	protected $withoutTableSchema = false;
-
-	/**
-	 * @var string[]
-	 */
-	static protected $tablePrevented = [];
-
-	/**
-	 * Create a new query builder instance.
+	 * Builder constructor.
 	 *
-	 * @param $table
-	 * @param Connection $connection
-	 * @throws ReflectionException
-	 * @throws \Throwable
-	 */
-	public function __construct( $table, Connection $connection )
-	{
-		$this->connection = $connection;
-		$this->builder = new DbalQueryBuilder( $connection->getDbalConnection() );
-
-		if( is_array($table) )
-		{
-			$alias = $table[1] ?? $table["alias"] ?? null;
-			$table = $table[0] ?? $table["table"] ?? current($table);
-		}
-		else
-		{
-			$alias = null;
-		}
-
-		if( $table instanceof Builder )
-		{
-			$builder = $table->getDbalQueryBuilder();
-			$this
-				->builder
-				->setParameters( $builder->getParameters(), $builder->getParameterTypes() );
-
-			$table = "(" . $builder->getSQL() . ")";
-			if( !$alias )
-			{
-				$alias = "tmp_table";
-			}
-		}
-
-		$this->table((string) $table, $alias);
-	}
-
-	/**
-	 * @return Connection
-	 */
-	public function getConnection()
-	{
-		return $this->connection;
-	}
-
-	/**
-	 * @return \Doctrine\DBAL\Connection
-	 */
-	public function getDbalConnection()
-	{
-		return $this->connection->getDbalConnection();
-	}
-
-	/**
-	 * @return DbalQueryBuilder
-	 */
-	public function getDbalQueryBuilder(): DbalQueryBuilder
-	{
-		return $this->builder;
-	}
-
-	/**
-	 * Get Table schema for base query table
-	 *
-	 * @return Table|null
+	 * @param Connection  $connection
+	 * @param             $table
+	 * @param string|null $alias
 	 *
 	 * @throws \Throwable
 	 */
-	public function getTableSchema(): ?Table
+	public function __construct( Connection $connection, string $table, ? string $alias = null )
 	{
-		if( isset($this->tableSchema) )
-		{
-			return $this->tableSchema;
-		}
-
-		$table = $this->table;
-		if( $this->withoutTableSchema || self::isTablePrevent($table) || strpos($table, "(") !== false || ! App::getInstance()->isInstall() )
-		{
-			return null;
-		}
-
-		self::addTablePrevent($table);
-		$this->tableSchema = Table::table($this->table);
-		self::removeTablePrevent($table);
-
-		return $this->tableSchema;
+		parent::__construct( $connection );
+		$this->addTable( $table, $alias, [] );
 	}
 
 	/**
-	 * Do not load table data
-	 *
-	 * @param bool $without
-	 * @return $this
-	 */
-	public function withoutTableSchema(bool $without = true)
-	{
-		if(isset($this->tableSchema))
-		{
-			$without = false;
-		}
-		$this->withoutTableSchema = $without;
-		return $this;
-	}
-
-	/**
-	 * Test table name as SchemeDesigner class name
-	 *
-	 * @param string $tableName
-	 * @param $designer
-	 * @return bool
-	 */
-	private function isTableDesigner( string $tableName, & $designer ): bool
-	{
-		if(strpos($tableName, '_SchemeDesigner') === false)
-		{
-			return false;
-		}
-
-		try {
-			$designer = new ReflectionClass( $tableName );
-		}
-		catch( ReflectionException $e ) {
-			$designer = null;
-			return false;
-		}
-
-		if(! $designer->isSubclassOf(SchemeDesigner::class))
-		{
-			throw new InvalidArgumentException("Invalid scheme designer class " . $designer->getName());
-		}
-
-		return true;
-	}
-
-	/**
-	 * Set base query table
-	 *
-	 * @param string $tableName
-	 * @param string|null $tableAlias
-	 * @return $this
-	 * @throws ReflectionException
-	 * @throws \Throwable
-	 */
-	protected function table( string $tableName, ?string $tableAlias = null )
-	{
-		$loadDesigner = $this->isTableDesigner($tableName, $designer);
-		if( $loadDesigner )
-		{
-			$this->designer = $designer;
-			$tableName = $this->designer->getMethod('getTableName')->invoke(null);
-		}
-
-		$fullTableName = strpos($tableName, "(") === false ? $this->connection->getTableName($tableName) : $tableName;
-		$this->table = $tableName;
-		$this->tableAlias = $tableAlias;
-
-		$this
-			->builder
-			->from(
-				$fullTableName, $tableAlias
-			);
-
-		if( $loadDesigner )
-		{
-			$schema = $this->designer->getMethod('getSchemaBuilder')->invoke(null);
-
-			if( ! empty($schema["alias"]) )
-			{
-				$tableAlias = $schema["alias"];
-				$this
-					->builder
-					->resetQueryPart('from')
-					->from(
-						$fullTableName, $tableAlias
-					);
-			}
-
-			if( empty($tableAlias) )
-			{
-				$tableAlias = $fullTableName;
-			}
-
-			$isColumns = isset($schema['columns']) && is_array($schema['columns']);
-
-			// add rename columns
-			if( $isColumns )
-			{
-				$this->columns = $schema['columns'];
-			}
-			else if($tableAlias != $fullTableName)
-			{
-				$ts = $this->getTableSchema();
-				if($ts)
-				{
-					$prefix = $tableAlias . ".";
-					foreach($ts->getColumnNames() as $name)
-					{
-						$this->columns[$name] = $prefix . $name;
-					}
-				}
-			}
-
-			// add select columns
-			if( ! empty($schema['select']) )
-			{
-				$this->select($schema['select']);
-			}
-
-			// add joins
-			if( ! empty($schema['joins']) )
-			{
-				$index = 1;
-
-				// $join : tableName, type (left), criteria[]
-
-				foreach($schema['joins'] as $join)
-				{
-					$prefix = $join["alias"] ?? 'tbl_' . ($index ++);
-					$type = $join["type"] ?? 'left';
-					$joinTableName = $join["tableName"];
-					$criteria = $join["criteria"] ?? ($tableAlias . '.id = ' . $prefix . '.id');
-
-					$this->addJoin($type, $tableAlias, $joinTableName, $prefix, $criteria, [], ! $isColumns);
-				}
-			}
-
-			// add criteria
-			if( ! empty($schema['criteria']) )
-			{
-				$this->where($schema['criteria']);
-			}
-
-			// add order
-			if( ! empty($schema['orderBy']) )
-			{
-				$orderBy = Arr::wrap($schema['orderBy']);
-				$first = false;
-
-				foreach($orderBy as $sort => $sortDir)
-				{
-					if( is_int($sort) )
-					{
-						$sort = $sortDir;
-						$sortDir = "ASC";
-					}
-					else
-					{
-						$sortDir = strtoupper($sortDir);
-					}
-
-					if($sortDir !== "DESC")
-					{
-						$sortDir = "ASC";
-					}
-
-					if($first)
-					{
-						$this->orderBy($sort, $sortDir);
-						$first = false;
-					}
-					else
-					{
-						$this->addOrderBy($sort, $sortDir);
-					}
-				}
-			}
-
-			// add group
-			if( ! empty($schema['groupBy']) )
-			{
-				$this->groupBy($schema['groupBy']);
-			}
-		}
-
-		return $this;
-	}
-
-	/**
-	 * Get full column name
-	 *
-	 * @param string $name
-	 * @return string
-	 */
-	public function getColumn(string $name): string
-	{
-		return $this->columns[$name] ?? $name;
-	}
-
-	/**
-	 * Add a basic where clause to the query.
-	 *
-	 * @param string|array|\Closure|CriteriaBuilder $name
-	 * @param null $operator
-	 * @param null $value
-	 * @param null $bindName
+	 * @param string $className
 	 *
 	 * @return $this
 	 */
-	public function where($name, $operator = null, $value = null, & $bindName = null )
+	public function setResultClassName( string $className )
 	{
-		return $this->criteria('where', $name, $operator, $value, $bindName);
-	}
-
-	/**
-	 * Filter unique identify row.
-	 *
-	 * @param $value
-	 * @param string $column
-	 * @param null $bindName
-	 *
-	 * @return $this
-	 */
-	public function whereId($value, $column = 'id', & $bindName = null)
-	{
-		return $this
-			->limit(1)
-			->where($column, CriteriaBuilder::EQ, (int) $value, $bindName);
-	}
-
-	/**
-	 * Add a "having" clause to the query.
-	 *
-	 * @param string|array|\Closure|CriteriaBuilder $name
-	 * @param null $operator
-	 * @param null $value
-	 * @param null $bindName
-	 *
-	 * @return $this
-	 */
-	public function having($name, $operator = null, $value = null, & $bindName = null )
-	{
-		return $this->criteria('having', $name, $operator, $value, $bindName);
-	}
-
-	/**
-	 * @param $type
-	 * @param $name
-	 * @param $operator
-	 * @param $value
-	 * @param null $bindName
-	 * @return $this
-	 */
-	protected function criteria( $type, $name, $operator, $value, & $bindName = null )
-	{
-		if( $name instanceof CriteriaBuilder )
-		{
-			if(! isset($this->{$type}))
-			{
-				$this->{$type} = $name;
-				$this->builder->add($type, $this->{$type});
-			}
-			else
-			{
-				$this->{$type}->raw($name);
-			}
-
-			return $this;
-		}
-
-		if( ! isset($this->{$type}) )
-		{
-			$this->{$type} = $this->newCriteria();
-			$this->builder->add($type, $this->{$type});
-		}
-
-		/** @var CriteriaBuilder $criteria */
-		$criteria = $this->{$type};
-
-		if( $name instanceof Closure )
-		{
-			$name($criteria);
-		}
-		else if( is_array($name) )
-		{
-			$criteria->each($name);
-		}
-		else
-		{
-			if( is_null($value) )
-			{
-				$value = $operator;
-				$operator = CriteriaBuilder::EQ;
-			}
-
-			$criteria->add($name, $operator, $value, $bindName);
-		}
-
-		return $this;
-	}
-
-	/**
-	 * Set the "limit" value of the query.
-	 *
-	 * @param  int $limit
-	 * @param  int $offset
-	 * @return $this
-	 */
-	public function limit( int $limit, ? int $offset = null )
-	{
-		$this
-			->builder
-			->setMaxResults( max(1, $limit));
-
-		if( ! is_null($offset) )
-		{
-			$this->offset($offset);
-		}
-
-		return $this;
-	}
-
-	/**
-	 * Set the "offset" value of the query.
-	 *
-	 * @param  int  $value
-	 * @return $this
-	 */
-	public function offset(int $value)
-	{
-		$this
-			->builder
-			->setFirstResult( max(0, $value) );
-
-		return $this;
-	}
-
-	/**
-	 * Set the limit and offset for a given page.
-	 *
-	 * @param  int  $page
-	 * @param  int  $perPage
-	 * @return Builder
-	 */
-	public function forPage(int $page, int $perPage = 15)
-	{
-		if( $page < 1 )
-		{
-			$page = 1;
-		}
-		if( $perPage < 1 )
-		{
-			$perPage = 1;
-		}
-		return $this->limit($perPage, $page > 1 ? ($page - 1) * $perPage : 0);
-	}
-
-	/**
-	 * Specifies an ordering for the query results.
-	 * Replaces any previously specified orderings, if any.
-	 *
-	 * @param string $sort  The ordering expression.
-	 * @param string $order The ordering direction.
-	 *
-	 * @return $this This Builder instance.
-	 */
-	public function orderBy(string $sort, ?string $order = null)
-	{
-		$this->builder->orderBy($this->getColumn($sort), $order);
-		return $this;
-	}
-
-	/**
-	 * Adds an ordering to the query results.
-	 *
-	 * @param string $sort  The ordering expression.
-	 * @param string $order The ordering direction.
-	 *
-	 * @return $this This Builder instance.
-	 */
-	public function addOrderBy(string $sort, ?string$order = null)
-	{
-		$this->builder->addOrderBy($this->getColumn($sort), $order);
-		return $this;
-	}
-
-	/**
-	 * Specifies a grouping over the results of the query.
-	 * Replaces any previously specified groupings, if any.
-	 *
-	 * @param mixed $groupBy The grouping expression.
-	 *
-	 * @return $this This Builder instance.
-	 */
-	public function groupBy($groupBy)
-	{
-		if(is_array($groupBy))
-		{
-			foreach($groupBy as & $column)
-			{
-				$column = $this->getColumn((string) $column);
-			}
-		}
-		else
-		{
-			$groupBy = $this->getColumn((string) $groupBy);
-		}
-		$this->builder->groupBy($groupBy);
-		return $this;
-	}
-
-	/**
-	 * Adds a grouping expression to the query.
-	 *
-	 * @param string $groupBy The grouping expression.
-	 *
-	 * @return $this This Builder instance.
-	 */
-	public function addGroupBy(string $groupBy)
-	{
-		$this->builder->addGroupBy( $this->getColumn($groupBy) );
-		return $this;
-	}
-
-	public function join($fromAlias, $join, $alias, $condition = null, array $rename = [])
-	{
-		return $this->addJoin('inner', $fromAlias, $join, $alias, $condition, $rename );
-	}
-
-	public function innerJoin($fromAlias, $join, $alias, $condition = null, array $rename = [])
-	{
-		return $this->addJoin('inner', $fromAlias, $join, $alias, $condition, $rename );
-	}
-
-	public function leftJoin($fromAlias, $join, $alias, $condition = null, array $rename = [])
-	{
-		return $this->addJoin('left', $fromAlias, $join, $alias, $condition, $rename );
-	}
-
-	public function rightJoin($fromAlias, $join, $alias, $condition = null, array $rename = [])
-	{
-		return $this->addJoin('right', $fromAlias, $join, $alias, $condition, $rename );
-	}
-
-	/**
-	 * Create new criteria for this builder
-	 *
-	 * @param string $type
-	 * @return CriteriaBuilder
-	 */
-	public function newCriteria( $type = CriteriaBuilder::TYPE_AND )
-	{
-		return new CriteriaBuilder( $this, $type );
-	}
-
-	protected function addJoin( $type, $fromAlias, $join, $alias, $condition = null, $rename = [], bool $autoLoad = true )
-	{
-		if( $condition instanceof Closure )
-		{
-			$criteria = $this->newCriteria();
-			$condition($criteria);
-			$condition = $criteria->getSQL();
-		}
-		else if( is_array($condition) )
-		{
-			$criteria = $this->newCriteria();
-			$criteria->each($condition);
-			$condition = $criteria->getSQL();
-		}
-
-		$joinTableName = $join;
-
-		$loadDesigner = $this->isTableDesigner($joinTableName, $designer);
-		if( $loadDesigner )
-		{
-			/** @var ReflectionClass $designer */
-			$joinTableName = $designer->getMethod('getTableName')->invoke(null);
-		}
-
-		if( ! $this->withoutTableSchema && $autoLoad && ! self::isTablePrevent($joinTableName) && App::getInstance()->isInstall() )
-		{
-			self::addTablePrevent($joinTableName);
-			$tableSchema = Table::table($joinTableName);
-			self::removeTablePrevent($joinTableName);
-
-			$prefix = $alias . ".";
-			foreach($tableSchema->getColumnNames() as $name)
-			{
-				$joinName = $rename[$name] ?? $name;
-				if( !isset($this->columns[$joinName]) )
-				{
-					$selectName = $prefix . $name;
-					$this->columns[$joinName] = $selectName;
-					if($joinName !== $name)
-					{
-						$this->columnsSelect[$joinName] = $selectName . " AS " . $joinName;
-					}
-				}
-			}
-		}
-
-		$part = [
-			$fromAlias => [
-				'joinType'      => $type,
-				'joinTable'     => $this->connection->getTableName($joinTableName),
-				'joinAlias'     => $alias,
-				'joinCondition' => $condition,
-			],
-		];
-
-		$this
-			->builder
-			->add('join', $part, true);
-
-		return $this;
-	}
-
-	/**
-	 * Gets the complete SQL string formed by the current specifications of this Builder.
-	 *
-	 * @return string The SQL query string.
-	 */
-	public function getSql(): string
-	{
-		$builder = $this->builder;
-		$isSelectType = $builder->getType() === DbalQueryBuilder::SELECT;
-
-		// fix empty select
-		if($isSelectType && empty( $builder->getQueryPart('select') ) )
-		{
-			$this->select();
-		}
-
-		$sql = $this->builder->getSQL();
-		if($isSelectType && $this->distinct)
-		{
-			$sql = Str::replaceFirst("SELECT ", "SELECT DISTINCT", $sql);
-		}
-
-		return $sql;
-	}
-
-	protected function getSelectColumns($columns)
-	{
-		if( ! is_array($columns) )
-		{
-			$columns = [$columns];
-		}
-
-		$map = [];
-		foreach($columns as $column)
-		{
-			if(isset($this->columnsSelect[$column]))
-			{
-				$map[] = $this->columnsSelect[$column];
-			}
-			else if(isset($this->columns[$column]))
-			{
-				$map[] = $this->columns[$column];
-			}
-			else
-			{
-				$map[] = $column;
-			}
-		}
-
-		return $map;
-	}
-
-	/**
-	 * Set the columns to be selected.
-	 *
-	 * @param  array|mixed  $columns
-	 * @return $this
-	 */
-	public function select($columns = ['*'])
-	{
-		$this->builder->select($this->getSelectColumns($columns));
-		return $this;
-	}
-
-	/**
-	 * Set distinct mode.
-	 * Force the query to only return distinct results.
-	 *
-	 * @param bool $value
-	 * @return $this
-	 */
-	public function setDistinct(bool $value = true)
-	{
-		$this->distinct = $value;
+		$this->resultClassName = $className;
 		return $this;
 	}
 
 	/**
 	 * Adds an item that is to be returned in the query result.
 	 *
-	 * @param mixed $select The selection expression.
+	 * @param array|mixed $columns
 	 *
-	 * @return $this This Builder instance.
+	 * @return $this
 	 */
-	public function addSelect($select)
+	public function select( $columns = [ '*' ] )
 	{
-		$this->builder->addSelect($this->getSelectColumns($select));
-		return $this;
-	}
-
-	protected function getDesignerReflector(): ReflectionClass
-	{
-		if( ! isset($this->designer) )
+		if( $this->select === null )
 		{
-			$this->designer = new ReflectionClass(SchemeDesigner::class );
-		}
-		return $this->designer;
-	}
-
-	protected function checkTableExists()
-	{
-		if( empty($this->table) )
-		{
-			throw new InvalidArgumentException("Unknown query table");
-		}
-	}
-
-	/**
-	 * @param string|null $column
-	 * @return false|mixed
-	 * @throws DBALException
-	 */
-	public function value(?string $column = null)
-	{
-		$this->checkTableExists();
-
-		if($column)
-		{
-			$this->select($this->getColumn($column));
+			$this->select = [];
 		}
 
-		$builder = $this->builder;
-		$builder->setMaxResults(1);
-
-		return $this
-			->getDbalConnection()
-			->fetchColumn(
-				$builder->getSQL(),
-				$builder->getParameters(),
-				0,
-				$builder->getParameterTypes()
-			);
-	}
-
-	/**
-	 * @return bool|object|SchemeDesigner
-	 *
-	 * @throws DBALException
-	 */
-	public function first()
-	{
-		$this->checkTableExists();
-
-		$builder = $this->builder;
-		$builder->setMaxResults(1);
-
-		$con = $this->getDbalConnection();
-
-		$row = $con->fetchAssoc(
-			$builder->getSQL(),
-			$builder->getParameters(),
-			$builder->getParameterTypes()
-		);
-
-		return $row ? $this->getDesignerReflector()->newInstance($row, $this->connection) : false;
-	}
-
-	/**
-	 * Get collection object as SchemeDesigner items
-	 *
-	 * @return Collection|SchemeDesigner[]
-	 *
-	 * @throws DBALException
-	 */
-	public function get()
-	{
-		return $this->project(function(array $row) {
-			return $this->getDesignerReflector()->newInstance($row, $this->connection);
-		});
-	}
-
-	/**
-	 * Get custom collection result query
-	 *
-	 * @param Closure $closure
-	 * @param string|null $keyName
-	 *
-	 * @return Collection
-	 *
-	 * @throws DBALException
-	 */
-	public function project(Closure $closure, ?string $keyName = null)
-	{
-		$this->checkTableExists();
-
-		$builder = $this->builder;
-
-		$rows = [];
-		$stmt = $this
-			->getConnection()
-			->executeQuery(
-				$builder->getSQL(),
-				$builder->getParameters(),
-				$builder->getParameterTypes()
-			);
-
-		$useKey = $keyName !== null && strlen($keyName) > 0;
-
-		while($row = $stmt->fetch())
+		foreach( Arr::wrap( $columns ) as $key => $column )
 		{
-			if($useKey)
+			if( !is_int( $key ) )
 			{
-				$rows[$row[$keyName]] = $closure($row);
+				$this->select[] = $this->grammar->wrapAs( $key, $column );
 			}
 			else
 			{
-				$rows[] = $closure($row);
+				$this->select[] = $column;
 			}
 		}
 
-		$stmt->closeCursor();
+		return $this;
+	}
 
-		return new Collection($rows);
+	/**
+	 * Add table
+	 *
+	 * @param string      $table
+	 * @param string|null $alias
+	 * @param array       $rename
+	 *
+	 * @return $this
+	 */
+	public function from( $table, ? string $alias = null, array $rename = [] )
+	{
+		return $this->addTable( $table, $alias, $rename );
+	}
+
+	/**
+	 * Add a join clause to the query.
+	 *
+	 * @param string  $mode
+	 * @param string  $table
+	 * @param string  $alias
+	 * @param Closure $condition
+	 * @param array   $rename
+	 *
+	 * @return $this
+	 */
+	public function join( string $mode, string $table, string $alias, Closure $condition, array $rename = [] )
+	{
+		return $this->addJoin( $mode, $table, $alias, $condition, $rename );
+	}
+
+	/**
+	 * Add a inner join clause to the query.
+	 *
+	 * @param string  $table
+	 * @param string  $alias
+	 * @param Closure $condition
+	 * @param array   $rename
+	 *
+	 * @return $this
+	 */
+	public function innerJoin( string $table, string $alias, Closure $condition, array $rename = [] )
+	{
+		return $this->addJoin( self::JOIN_INNER, $table, $alias, $condition, $rename );
+	}
+
+	/**
+	 * Add a left join clause to the query.
+	 *
+	 * @param string  $table
+	 * @param string  $alias
+	 * @param Closure $condition
+	 * @param array   $rename
+	 *
+	 * @return $this
+	 */
+	public function leftJoin( string $table, string $alias, Closure $condition, array $rename = [] )
+	{
+		return $this->addJoin( self::JOIN_LEFT, $table, $alias, $condition, $rename );
+	}
+
+	/**
+	 * Add a right join clause to the query.
+	 *
+	 * @param string  $table
+	 * @param string  $alias
+	 * @param Closure $condition
+	 * @param array   $rename
+	 *
+	 * @return $this
+	 */
+	public function rightJoin( string $table, string $alias, Closure $condition, array $rename = [] )
+	{
+		return $this->addJoin( self::JOIN_RIGHT, $table, $alias, $condition, $rename );
 	}
 
 	/**
@@ -925,18 +172,15 @@ class Builder
 	 *
 	 * @throws DBALException
 	 */
-	public function update( $data = null )
+	public function update( $data = null ): int
 	{
-		$this->checkTableExists();
+		$state = $this->getState( $data );
 
-		$builder = $this->builder;
-
-		return $this
-			->getConnection()
-			->executeWritable(
-				$this->getUpdateSql( $data ),
-				$builder->getParameters(),
-				$builder->getParameterTypes()
+		return (int) $this
+			->plainBuilder
+			->update(
+				$state->getParameters(),
+				$state->getTypes()
 			);
 	}
 
@@ -949,39 +193,41 @@ class Builder
 	 *
 	 * @throws DBALException
 	 */
-	public function insert($data = null)
+	public function insert( $data = null ): int
 	{
-		$this->checkTableExists();
+		$state = $this->getState( $data );
 
-		$builder = $this->builder;
-
-		return $this
-			->getConnection()
-			->executeWritable(
-				$this->getInsertSql( $data ),
-				$builder->getParameters(),
-				$builder->getParameterTypes()
+		return (int) $this
+			->plainBuilder
+			->insert(
+				$state->getParameters(),
+				$state->getTypes()
 			);
 	}
 
 	/**
-	 * Insert a new record and get the value of the primary key
+	 * Insert a new record and get the value of the primary key.
 	 *
 	 * @param null|array|Closure $data
-	 * @param null $seqName
 	 *
 	 * @return string
 	 *
 	 * @throws DBALException
 	 */
-	public function insertGetId($data = null, $seqName = null)
+	public function insertGetId( $data = null )
 	{
-		$this->insert($data);
-		return $this->lastInsertId($seqName);
+		$state = $this->getState( $data );
+
+		return (int) $this
+			->plainBuilder
+			->insertGetId(
+				$state->getParameters(),
+				$state->getTypes()
+			);
 	}
 
 	/**
-	 * Get the value of the primary key
+	 * Get the value of the primary key.
 	 *
 	 * @param null $seqName
 	 *
@@ -989,7 +235,7 @@ class Builder
 	 */
 	public function lastInsertId($seqName = null)
 	{
-		return $this->getConnection()->lastInsertId($seqName);
+		return $this->connection->lastInsertId( $seqName );
 	}
 
 	/**
@@ -999,359 +245,56 @@ class Builder
 	 *
 	 * @throws DBALException
 	 */
-	public function delete()
+	public function delete(): int
 	{
-		$this->checkTableExists();
-
-		$builder = $this->builder;
-
-		return $this
-			->getConnection()
-			->executeWritable(
-				$this->getDeleteSql(),
-				$builder->getParameters(),
-				$builder->getParameterTypes()
-			);
+		return (int) $this
+			->plainBuilder
+			->delete();
 	}
 
 	/**
-	 * Get StateInsertBuilder object
+	 * Get WriteableState object.
 	 *
-	 * @return StateInsertBuilder
+	 * @param null|array|Closure $data
+	 *
+	 * @return WriteableState
 	 */
-	public function getInsertState(): StateInsertBuilder
+	public function getState( $data = null ): WriteableState
 	{
-		if( ! isset($this->insert) )
+		if( !isset( $this->state ) )
 		{
-			$this->insert = new StateInsertBuilder($this);
+			$this->state = new WriteableState( $this->tableSchema );
 		}
 
-		return $this->insert;
-	}
-
-	/**
-	 * Get insert statement query string
-	 *
-	 * @param null $data
-	 * @return string
-	 */
-	public function getInsertSql( $data = null ): string
-	{
-		$insert = $this->getInsertState();
-
-		if( is_array($data) )
+		if( $data )
 		{
-			$insert->values($data);
-		}
-		else if( $data instanceof Closure )
-		{
-			$data($insert);
-		}
-
-		$insert->complete();
-
-		return $this->builder->insert($this->getFullTableWritableName())->getSQL();
-	}
-
-	/**
-	 * Get StateUpdateBuilder object
-	 *
-	 * @return StateUpdateBuilder
-	 */
-	public function getUpdateState(): StateUpdateBuilder
-	{
-		if( ! isset($this->update) )
-		{
-			$this->update = new StateUpdateBuilder($this);
-		}
-
-		return $this->update;
-	}
-
-	/**
-	 * Get update statement query string
-	 *
-	 * @param null $data
-	 * @return string
-	 */
-	public function getUpdateSql( $data = null ): string
-	{
-		$update = $this->getUpdateState();
-
-		if( is_array($data) )
-		{
-			$update->values($data);
-		}
-		else if( $data instanceof Closure )
-		{
-			$data($update);
-		}
-
-		$update->complete();
-
-		return $this->builder->update($this->getFullTableWritableName())->getSQL();
-	}
-
-	/**
-	 * Get delete statement query string
-	 *
-	 * @return string
-	 */
-	public function getDeleteSql(): string
-	{
-		return $this->builder->delete($this->getFullTableWritableName())->getSQL();
-	}
-
-	/**
-	 * @return string
-	 */
-	protected function getFullTableWritableName(): string
-	{
-		$table = $this->table;
-		if(strpos($table, "(") !== false)
-		{
-			throw new InvalidArgumentException("Invalid writable query table name '{$this->table}'");
-		}
-		return $this->connection->getTableName($table);
-	}
-
-	/**
-	 * Gets a string representation of this Builder which corresponds to
-	 * the final SQL query being constructed.
-	 *
-	 * @return string The string representation of this Builder.
-	 */
-	public function __toString()
-	{
-		return $this->getSql();
-	}
-
-	/**
-	 * Deep clone of all expression objects in the SQL parts.
-	 *
-	 * @return void
-	 */
-	public function __clone()
-	{
-		$this->builder = clone $this->builder;
-
-		foreach(['where', 'having', 'update', 'insert'] as $name)
-		{
-			if( isset($this->{$name}) )
+			if( is_array( $data ) )
 			{
-				$object = $this->{$name};
-				if( $object instanceof AbstractBuilderContainer )
-				{
-					$this->{$name} = $object->makeClone($this);
-				}
-				else
-				{
-					$this->{$name} = null;
-				}
+				$this->state->values( $data );
+			}
+			else if( $data instanceof Closure )
+			{
+				$data( $this->state );
+			}
+			else
+			{
+				// todo throw error
 			}
 		}
+
+		return $this->state;
 	}
 
-	/**
-	 * Retrieve the "count" result of the query.
-	 *
-	 * @param string|null $column
-	 *
-	 * @return int
-	 *
-	 * @throws DBALException
-	 */
-	public function count( ?string $column = null ): int
+	protected function prepareResult( array $row )
 	{
-		return $this->aggregate(__FUNCTION__, $column );
-	}
-
-	/**
-	 * Retrieve the minimum value of a given column.
-	 *
-	 * @param  string|null  $column
-	 *
-	 * @return mixed
-	 *
-	 * @throws DBALException
-	 */
-	public function min( ?string $column = null ): int
-	{
-		return $this->aggregate(__FUNCTION__, $column );
-	}
-
-	/**
-	 * Retrieve the maximum value of a given column.
-	 *
-	 * @param  string|null  $column
-	 *
-	 * @return mixed
-	 *
-	 * @throws DBALException
-	 */
-	public function max( ?string $column = null ): int
-	{
-		return $this->aggregate(__FUNCTION__, $column );
-	}
-
-	/**
-	 * Retrieve the sum of the values of a given column.
-	 *
-	 * @param  string|null  $column
-	 *
-	 * @return mixed
-	 *
-	 * @throws DBALException
-	 */
-	public function sum( ?string $column = null ): int
-	{
-		return $this->aggregate(__FUNCTION__, $column );
-	}
-
-	/**
-	 * Retrieve the average of the values of a given column.
-	 *
-	 * @param  string|null $column
-	 *
-	 * @return mixed
-	 *
-	 * @throws DBALException
-	 */
-	public function avg( ?string $column = null ): int
-	{
-		return $this->aggregate(__FUNCTION__, $column );
-	}
-
-	/**
-	 * Execute an aggregate function on the database.
-	 *
-	 * @param  string $function
-	 * @param  string $column
-	 *
-	 * @return int
-	 *
-	 * @throws DBALException
-	 */
-	protected function aggregate($function, $column): int
-	{
-		$this->checkTableExists();
-
-		if( empty($column) )
+		if( $this->resultClassName === null )
 		{
-			$column = "*";
-		}
-
-		$builder = clone $this->builder;
-
-		$fast = empty( $builder->getQueryPart('groupBy') ) && empty( $builder->getQueryPart('having') );
-		if($fast)
-		{
-			$builder
-				->resetQueryParts(['from', 'orderBy'])
-				->from(
-					$this->getConnection()->getTableName($this->table), $this->tableAlias
-				);
+			return $row;
 		}
 		else
 		{
-			$builder
-				->resetQueryParts(['orderBy']);
-		}
-
-		$builder
-			->setMaxResults(null)
-			->setFirstResult(null);
-
-		if( empty( $builder->getQueryPart('groupBy') ) && empty( $builder->getQueryPart('having') ) )
-		{
-			$sql = $builder
-				->select(strtoupper($function) . '(' . $column . ')')
-				->getSQL();
-		}
-
-		// Once we have run the pagination count query, we will get the resulting count and
-		// take into account what type of query it was. When there is a group by we will
-		// just return the count of the entire results set since that will be correct.
-		else
-		{
-			$countColumn = "*";
-
-			if( strpos($column, '*') === false )
-			{
-				$column .= ' AS uid';
-				$countColumn = 'uid';
-			}
-
-			$sql = "SELECT COUNT(table_count.{$countColumn}) FROM (" . $builder->select($column)->getSQL() . ") AS table_count";
-		}
-
-		// update binding values, remove not used parameters
-
-		$oldBindings = $builder->getParameters();
-		$oldTypes = $builder->getParameterTypes();
-		$bindings = [];
-		$types = [];
-
-		foreach( $oldBindings as $name => $value )
-		{
-			if( strpos($sql, ":" . $name) !== false )
-			{
-				$bindings[$name] = $value;
-				if( isset($oldTypes[$name]) )
-				{
-					$types[$name] = $oldTypes[$name];
-				}
-			}
-		}
-
-		$value = $this
-			->getConnection()
-			->fetchColumn($sql, $bindings, 0, $types);
-
-		return $value ? (int) $value : 0;
-	}
-
-	/**
-	 * Add an "order by" clause for a timestamp to the query.
-	 *
-	 * @param  string  $column
-	 * @return Builder
-	 */
-	public function latest($column = 'created_at')
-	{
-		return $this->orderBy($column, 'DESC');
-	}
-
-	/**
-	 * Add an "order by" clause for a timestamp to the query.
-	 *
-	 * @param  string  $column
-	 * @return Builder
-	 */
-	public function oldest($column = 'created_at')
-	{
-		return $this->orderBy($column, 'ASC');
-	}
-
-	static protected function addTablePrevent(string $table)
-	{
-		if( ! self::isTablePrevent($table) )
-		{
-			self::$tablePrevented[] = $table;
-		}
-	}
-
-	static protected function isTablePrevent(string $table): bool
-	{
-		return in_array($table, self::$tablePrevented, true);
-	}
-
-	static protected function removeTablePrevent(string $table)
-	{
-		$index = array_search($table, self::$tablePrevented, true);
-		if($index !== false)
-		{
-			array_splice(self::$tablePrevented, $index, 1);
+			$className = $this->resultClassName;
+			return new $className( $row, $this->connection );
 		}
 	}
 }

@@ -19,6 +19,7 @@
         "ext-json": "*",
         "ext-fileinfo": "*",
         "ext-zip": "*",
+        "ext-apcu": "*",
         "doctrine/dbal": "^2.9",
         "symfony/event-dispatcher": "^4.2",
         "symfony/console": "^4.2",

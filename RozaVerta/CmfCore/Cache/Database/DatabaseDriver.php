@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 18.08.2018
  * Time: 13:54
  */
@@ -21,7 +20,7 @@ class DatabaseDriver extends Driver
 	private $ready = false;
 
 	/**
-	 * @var null | object
+	 * @var null | DatabaseEntity
 	 */
 	private $row = null;
 
@@ -43,18 +42,20 @@ class DatabaseDriver extends Driver
 		{
 			$this->ready = true;
 
-			$row = $this->fetch(function(Builder $table) {
-				return $table->first([
-					'id', 'value', 'updated_at'
-				]);
-			}, $this->tableThen());
+			/** @var DatabaseEntity $row */
+			$row = $this->fetch( function( Builder $builder ) {
+				return $builder
+					->setResultClassName( DatabaseEntity::class )
+					->select( [ 'id', 'value', 'updated_at', ] )
+					->first();
+			}, $this->builderThen() );
 
 			if( !$row )
 			{
 				return false;
 			}
 
-			if( $this->life > 0 && (new \DateTime($row->updated_at))->getTimestamp() + $this->life < time() )
+			if( $this->life > 0 && $row->getUpdatedAt()->getTimestamp() + $this->life < time() )
 			{
 				$this->forget();
 			}
@@ -72,19 +73,17 @@ class DatabaseDriver extends Driver
 		$data = [
 			'value' => $value,
 			'size' => strlen($value),
-			'updated_at' => date(
-				$this->getConnection()->getQueryGrammar()->getDateTimeFormatString()
-			)
+			'updated_at' => new \DateTime(),
 		];
 
 		if( $this->has() )
 		{
-			$id = $this->row->id;
+			$id = $this->row->getId();
 			$update = $this->fetch(
-				function(Builder $table) use($data) {
-					return $table->update($data) !== false;
+				function( Builder $builder ) use ( $data ) {
+					return $builder->update( $data ) !== false;
 				},
-				$this->tableThen(false, $id)
+				$this->builderThen( false, $id )
 			);
 
 			if( !$update )
@@ -98,10 +97,10 @@ class DatabaseDriver extends Driver
 			$data["prefix"] = $this->hash->keyPrefix();
 
 			$id = $this->fetch(
-				function(Builder $table) use($data) {
-					return $table->insertGetId($data);
+				function( Builder $builder ) use ( $data ) {
+					return $builder->insertGetId( $data );
 				},
-				$this->tableThen(false)
+				$this->builderThen( false )
 			);
 
 			if( !$id )
@@ -110,10 +109,11 @@ class DatabaseDriver extends Driver
 			}
 		}
 
-		$row = new \stdClass();
-		$row->id = $id;
-		$row->value = $value;
-		$row->updated_at = $data['updated_at'];
+		$row = new DatabaseEntity( [
+			"id" => $id,
+			"value" => $value,
+			"updated_at" => $data["updated_at"],
+		] );
 
 		$this->row = $row;
 		$this->ready = true;
@@ -128,21 +128,21 @@ class DatabaseDriver extends Driver
 
 	public function get()
 	{
-		return $this->has() ? $this->row->value : null;
+		return $this->has() ? $this->row->getValue() : null;
 	}
 
 	public function import()
 	{
-		return $this->has() ? unserialize($this->row->value) : null;
+		return $this->has() ? unserialize( $this->row->getValue() ) : null;
 	}
 
 	public function forget(): bool
 	{
 		$delete = $this->fetch(
-			function(Builder $table) {
-				return $table->delete() !== false;
+			function( Builder $builder ) {
+				return $builder->delete() !== false;
 			},
-			$this->tableThen()
+			$this->builderThen()
 		);
 
 		if( !$delete )
@@ -156,22 +156,22 @@ class DatabaseDriver extends Driver
 		return true;
 	}
 
-	protected function tableThen( bool $hash = true, int $where_id = 0 ): Builder
+	protected function builderThen( bool $hash = true, int $whereId = 0 ): Builder
 	{
-		$table = $this->table();
+		$builder = $this->builder();
 
 		if($hash)
 		{
-			$table
+			$builder
 				->where('name', '=', $this->hash->keyName())
 				->where('prefix', '=', $this->hash->keyPrefix());
 		}
-		else if( $where_id > 0 )
+		else if( $whereId > 0 )
 		{
-			$table
-				->whereId($where_id);
+			$builder
+				->whereId( $whereId );
 		}
 
-		return $table;
+		return $builder;
 	}
 }

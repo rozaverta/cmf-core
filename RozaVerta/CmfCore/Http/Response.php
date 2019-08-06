@@ -5,7 +5,7 @@ namespace RozaVerta\CmfCore\Http;
 use RozaVerta\CmfCore\Http\Events\ResponseFileEvent;
 use RozaVerta\CmfCore\Http\Events\ResponseJsonEvent;
 use RozaVerta\CmfCore\Helper\Json;
-use RozaVerta\CmfCore\Traits\ApplicationTrait;
+use RozaVerta\CmfCore\Traits\ServiceTrait;
 use RuntimeException;
 use RozaVerta\CmfCore\Http\Collections\HeaderCollection;
 use RozaVerta\CmfCore\Http\Collections\ResponseCookieCollection;
@@ -19,21 +19,31 @@ use RozaVerta\CmfCore\Http\Exceptions\LockedResponseException;
  */
 class Response
 {
-	use ApplicationTrait;
+	use ServiceTrait;
+
+	/**
+	 * @var \RozaVerta\CmfCore\App
+	 */
+	protected $app;
+
+	/**
+	 * @var \RozaVerta\CmfCore\Event\EventManager
+	 */
+	protected $event;
 
 	/**
 	 * The default response HTTP status code
 	 *
 	 * @type int
 	 */
-	protected $default_status_code = 200;
+	protected $defaultStatusCode = 200;
 
 	/**
 	 * The HTTP version of the response
 	 *
 	 * @type string
 	 */
-	protected $protocol_version = '1.1';
+	protected $protocolVersion = '1.1';
 
 	/**
 	 * The response body
@@ -90,24 +100,36 @@ class Response
 	 *
 	 * Create a new ResponsePrototype object with a dependency injected Headers instance
 	 *
-	 * @param string $body          The response body's content
-	 * @param int $status_code      The status code
-	 * @param array $headers        The response header "hash"
+	 * @param string $body       The response body's content
+	 * @param int    $statusCode The status code
+	 * @param array  $headers    The response header "hash"
+	 *
+	 * @throws \RozaVerta\CmfCore\Exceptions\ClassNotFoundException
+	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
+	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
 	 */
-	public function __construct($body = '', $status_code = null, array $headers = [])
+	public function __construct( $body = '', $statusCode = null, array $headers = [] )
 	{
-		$this->appInit();
+		$this->thisServices( "app", "event" );
 
-		$status_code   = $status_code ?: $this->default_status_code;
+		$statusCode = $statusCode ?: $this->defaultStatusCode;
 
 		// SetTrait our body and code using our internal methods
 		$this->setBody($body);
-		$this->setCode($status_code);
+		$this->setCode( $statusCode );
 
 		$this->headers = new HeaderCollection($headers);
 		$this->cookies = new ResponseCookieCollection();
 	}
 
+	/**
+	 * The specified request has been sent
+	 *
+	 * @return $this
+	 * @throws LockedResponseException
+	 *
+	 */
 	public function preventDefault()
 	{
 		if ($this->isLocked())
@@ -125,20 +147,21 @@ class Response
 	 */
 	public function getProtocolVersion()
 	{
-		return $this->protocol_version;
+		return $this->protocolVersion;
 	}
 
 	/**
 	 * Set the HTTP protocol version
 	 *
-	 * @param string $protocol_version
-	 * @return string|$this
+	 * @param string $protocolVersion
+	 *
+	 * @return $this
 	 */
-	public function setProtocolVersion($protocol_version)
+	public function setProtocolVersion( $protocolVersion )
 	{
 		// Require that the response be unlocked before changing it
 		$this->requireUnlocked();
-		$this->protocol_version = (string) $protocol_version;
+		$this->protocolVersion = (string) $protocolVersion;
 		return $this;
 	}
 
@@ -146,6 +169,7 @@ class Response
 	 * Set the response's body content
 	 *
 	 * @param string $body  The body content string
+	 *
 	 * @return $this
 	 */
 	public function setBody($body)
@@ -224,6 +248,7 @@ class Response
 	 * Prepend a string to the response's content body
 	 *
 	 * @param string $content   The string to prepend
+	 *
 	 * @return $this
 	 */
 	public function prepend($content)
@@ -238,6 +263,7 @@ class Response
 	 * Append a string to the response's content body
 	 *
 	 * @param string $content   The string to append
+	 *
 	 * @return $this
 	 */
 	public function append($content)
@@ -255,8 +281,9 @@ class Response
 	 * preventing any methods from mutating the response
 	 * when its locked
 	 *
-	 * @throws LockedResponseException  If the response is locked
 	 * @return $this
+	 *@throws LockedResponseException  If the response is locked
+	 *
 	 */
 	public function requireUnlocked()
 	{
@@ -308,7 +335,7 @@ class Response
 	 */
 	protected function httpStatusLine()
 	{
-		return sprintf('HTTP/%s %s', $this->protocol_version, $this->status);
+		return sprintf( 'HTTP/%s %s', $this->protocolVersion, $this->status );
 	}
 
 	/**
@@ -316,6 +343,7 @@ class Response
 	 *
 	 * @param boolean $cookies_also Whether or not to also send the cookies after sending the normal headers
 	 * @param boolean $override     Whether or not to override the check if headers have already been sent
+	 *
 	 * @return $this
 	 */
 	public function sendHeaders($cookies_also = true, $override = false)
@@ -387,9 +415,12 @@ class Response
 	/**
 	 * Send the response and lock it
 	 *
-	 * @param boolean $override             Whether or not to override the check if the response has already been sent
-	 * @throws ResponseAlreadySentException If the response has already been sent
+	 * @param boolean $override Whether or not to override the check if the response has already been sent
+	 *
 	 * @return $this
+	 *
+	 * @throws ResponseAlreadySentException
+	 * @throws \Throwable
 	 */
 	public function send($override = false)
 	{
@@ -399,7 +430,7 @@ class Response
 		}
 
 		// Call trigger
-		$dispatcher = $this->app->event->dispatcher("onResponseSend");
+		$dispatcher = $this->event->dispatcher( "onResponseSend" );
 		if( ! $dispatcher->isRun() )
 		{
 			// fixed json
@@ -443,7 +474,11 @@ class Response
 	 * @param string $filename The file's name
 	 * @param string $mime_type The MIME type of the file
 	 * @param array $flags
+	 *
 	 * @return Response Thrown if the file could not be read
+	 *
+	 * @throws ResponseAlreadySentException
+	 * @throws \Throwable
 	 */
 	public function file( $path, $filename = null, $mime_type = null, array $flags = [])
 	{
@@ -462,7 +497,7 @@ class Response
 		}
 
 		// Call trigger
-		$dispatcher = $this->app->event->dispatcher("onResponseSend");
+		$dispatcher = $this->event->dispatcher( "onResponseSend" );
 		$dispatcher->dispatch(new ResponseFileEvent($this, $path, $filename, $mime_type));
 
 		$this->setBody('');
@@ -518,9 +553,13 @@ class Response
 	 * currently in the response body and replaces it with
 	 * the passed json encoded object
 	 *
-	 * @param mixed $object         The data to encode as JSON
-	 * @param string $jsonp_prefix  The name of the JSON-P function prefix
+	 * @param mixed  $object       The data to encode as JSON
+	 * @param string $jsonp_prefix The name of the JSON-P function prefix
+	 *
 	 * @return Response
+	 *
+	 * @throws ResponseAlreadySentException
+	 * @throws \Throwable
 	 */
 	public function json($object, $jsonp_prefix = null)
 	{
@@ -532,7 +571,7 @@ class Response
 		$this->requireUnlocked();
 
 		// Call trigger
-		$dispatcher = $this->app->event->dispatcher("onResponseSend");
+		$dispatcher = $this->event->dispatcher( "onResponseSend" );
 		$event = new ResponseJsonEvent($this, $object, $jsonp_prefix);
 		$dispatcher->dispatch($event);
 
@@ -573,6 +612,7 @@ class Response
 	 *
 	 * @param string $key       The name or string of the HTTP response header
 	 * @param mixed $value      The value to set the header with
+	 *
 	 * @return $this
 	 */
 	public function header($key, $value = null)
@@ -602,6 +642,7 @@ class Response
 	 * @param string $domain        The domain of which to restrict the cookie
 	 * @param boolean $secure       Flag of whether the cookie should only be sent over a HTTPS connection
 	 * @param boolean $httponly     Flag of whether the cookie should only be accessible over the HTTP protocol
+	 *
 	 * @return $this
 	 */
 	public function cookie(
@@ -641,10 +682,11 @@ class Response
 	 * Tell the browser the cache time
 	 *
 	 * @param int | \DateTime $time
-	 * @param string $e_tag
+	 * @param string          $ETag
+	 *
 	 * @return $this
 	 */
-	public function cache( $time = null, $e_tag = null )
+	public function cache( $time = null, $ETag = null )
 	{
 		if( $time instanceof \DateTime )
 		{
@@ -666,9 +708,9 @@ class Response
 		}
 
 		$this->header('Cache-Control', 'public, max-age=' . $time);
-		if( null !== $e_tag )
+		if( null !== $ETag )
 		{
-			$this->header("ETag", $e_tag);
+			$this->header( "ETag", $ETag );
 		}
 
 		return $this;
@@ -677,25 +719,38 @@ class Response
 	/**
 	 * Redirects the request to another URL
 	 *
-	 * @param string $url   The URL to redirect to
-	 * @param boolean $permanent     The HTTP status code to use for redirection
-	 * @param boolean $refresh Use Refresh: 0; header method
+	 * @param string  $url       The URL to redirect to
+	 * @param boolean $permanent The HTTP status code to use for redirection
+	 * @param boolean $refresh   Use Refresh: 0; header method
+	 *
 	 * @return $this
+	 *
+	 * @throws \Throwable
 	 */
 	public function redirect($url, $permanent = false, $refresh = false)
 	{
-		if(strpos($url, '://') === false)
-		{
-			$host = APP_HOST;
-			if( strlen($url) && $url[0] !== "/" )
-			{
-				$host .= "/";
-			}
+		$app = $this->app;
 
-			$url = BASE_PROTOCOL . '://' . $host . $url;
+		if( strpos( $url, '://' ) === false && $app->loaded( "host" ) )
+		{
+			$host = $app->host;
+			if( $host->isDefined() )
+			{
+				$prefix = $host->isSsl() ? "https://" : "http://";
+				$prefix .= $host->getName();
+				if( $host->getPort() && $host->getPort() != 80 )
+				{
+					$prefix .= ":" . $host->getPort();
+				}
+				if( strlen( $url ) && $url[0] !== "/" )
+				{
+					$prefix .= "/";
+				}
+				$url = $prefix . $url;
+			}
 		}
 
-		$this->app->event->dispatch(new ResponseRedirectEvent($this, $url, $permanent, $refresh));
+		$app->event->dispatch( new ResponseRedirectEvent( $this, $url, $permanent, $refresh ) );
 
 		if( headers_sent() )
 		{
@@ -729,7 +784,9 @@ class Response
 	 *
 	 * @link https://github.com/klein/klein.php/wiki/Response-Chunking
 	 * @link http://bit.ly/hg3gHb
+	 *
 	 * @param string $str   An optional string to send as a response "chunk"
+	 *
 	 * @return Response
 	 */
 	public function chunk($str = null)
@@ -764,6 +821,7 @@ class Response
 	 * Dump a variable
 	 *
 	 * @param mixed $obj    The variable to dump
+	 *
 	 * @return Response
 	 */
 	public function dump($obj)

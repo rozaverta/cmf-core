@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 05.04.2016
  * Time: 18:32
  */
@@ -14,8 +13,8 @@ use RozaVerta\CmfCore\Http\Events\ResponseSendEvent;
 use RozaVerta\CmfCore\Interfaces\Arrayable;
 use RozaVerta\CmfCore\Schemes\EventHandlerLinks_WithHandlers_SchemeDesigner;
 use RozaVerta\CmfCore\Schemes\Events_SchemeDesigner;
-use RozaVerta\CmfCore\Traits\ApplicationTrait;
 use RozaVerta\CmfCore\Traits\GetIdentifierTrait;
+use RozaVerta\CmfCore\Traits\ServiceTrait;
 use RozaVerta\CmfCore\Workshops\Event\Events\AbstractEvent;
 use RozaVerta\CmfCore\Workshops\Module\Events\DatabaseTableEvent;
 use RozaVerta\CmfCore\Workshops\Module\Events\ModuleEvent;
@@ -28,8 +27,18 @@ use RozaVerta\CmfCore\Workshops\Module\Events\SaveConfigFileEvent;
  */
 final class EventProvider implements Arrayable
 {
-	use ApplicationTrait;
 	use GetIdentifierTrait;
+	use ServiceTrait;
+
+	/**
+	 * @var \RozaVerta\CmfCore\App
+	 */
+	protected $app;
+
+	/**
+	 * @var \RozaVerta\CmfCore\Log\LogManager
+	 */
+	protected $log;
 
 	private $name = '';
 
@@ -44,12 +53,11 @@ final class EventProvider implements Arrayable
 	 * @param bool|null $completable
 	 *
 	 * @throws \Doctrine\DBAL\DBALException
-	 * @throws \ReflectionException
 	 * @throws \Throwable
 	 */
 	public function __construct( string $name, ? bool $completable = null )
 	{
-		$this->appInit();
+		$this->thisServices( "app", "log" );
 
 		$this->name = trim($name);
 		if( is_bool($completable) )
@@ -61,10 +69,7 @@ final class EventProvider implements Arrayable
 
 		if( $this->app->isInstall() )
 		{
-			$row = $this
-				->app
-				->db
-				->table(Events_SchemeDesigner::class)
+			$row = Events_SchemeDesigner::find()
 				->where('name', $this->name)
 				->first();
 
@@ -103,10 +108,7 @@ final class EventProvider implements Arrayable
 			return 0;
 		}
 
-		$rows = $this
-			->app
-			->db
-			->table(EventHandlerLinks_WithHandlers_SchemeDesigner::class)
+		$rows = EventHandlerLinks_WithHandlers_SchemeDesigner::find()
 			->where('event_id', $id)
 			->get();
 
@@ -118,13 +120,13 @@ final class EventProvider implements Arrayable
 				$ref = new ReflectionClass($className);
 			}
 			catch(\ReflectionException $e) {
-				$this->app->log->line($e->getMessage());
+				$this->log->line( $e->getMessage() );
 				continue;
 			}
 
 			if( ! $ref->implementsInterface( EventPrepareInterface::class ) )
 			{
-				$this->app->log->line("Class '{$className}' should implement the interface " . EventPrepareInterface::class);
+				$this->log->line( "Class '{$className}' should implement the interface " . EventPrepareInterface::class );
 			}
 			else
 			{

@@ -1,15 +1,11 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 09.03.2019
  * Time: 12:39
  */
 
-if( ! defined("APP_BASE_PATH") )
-{
-	throw new Exception("BASE_DIR is not defined");
-}
+defined( "APP_BASE_PATH" ) || die( "\"APP_BASE_PATH\" is not defined." );
 
 use Doctrine\DBAL\DBALException;
 use Doctrine\DBAL\Exception\DriverException;
@@ -17,7 +13,6 @@ use RozaVerta\CmfCore\App;
 use RozaVerta\CmfCore\Database\DatabaseManager;
 use RozaVerta\CmfCore\Events\ThrowableEvent;
 use RozaVerta\CmfCore\Helper\Path;
-use RozaVerta\CmfCore\Host\HostManager;
 use RozaVerta\CmfCore\Route\Exceptions\PageNotFoundException;
 
 // base constants
@@ -212,13 +207,13 @@ set_exception_handler(static function( Throwable $exception )
 			}
 		}
 
-		$mode = defined("DEBUG_MODE") ? DEBUG_MODE : "production";
+		$mode = defined( "APP_DEBUG_MODE" ) ? APP_DEBUG_MODE : "production";
 		$debug = "";
 
 		// default error page from file
-		if( ! $body && defined("APP_PATH") )
+		if( !$body )
 		{
-			$file = APP_PATH . 'system_error.inc.php';
+			$file = Path::application( 'system_error.inc.php' );
 			if( file_exists($file) )
 			{
 				$compact = compact('title', 'code', 'codeName', 'headTitle', 'message', 'mode', 'isError', 'replace');
@@ -230,12 +225,27 @@ set_exception_handler(static function( Throwable $exception )
 			}
 			else if($mode === "development" && (! $page404 || $code !== 404))
 			{
-				$debug = '<pre>' . get_class($exception) . ", trace: \n" . $exception->getTraceAsString() . '</pre>';
+				$debug = get_class( $exception ) . ", trace: \n" . $exception->getTraceAsString();
+				if( SERVER_CLI_MODE )
+				{
+					$debug = "<pre>{$debug}</pre>";
+				}
 			}
 		}
 
 		if( ! $body )
-			$body = <<<EOT
+		{
+			if( SERVER_CLI_MODE )
+			{
+				$body = "Title: {$title}\nCode: {$codeName}\nMessage: {$message}";
+				if( $debug )
+				{
+					$body .= "\n{$debug}";
+				}
+			}
+			else
+			{
+				$body = <<<EOT
 <!DOCTYPE html>
 <html>
 <head>
@@ -254,6 +264,8 @@ set_exception_handler(static function( Throwable $exception )
 </body>
 </html>
 EOT;
+			}
+		}
 
 		$response->setBody($body);
 	}

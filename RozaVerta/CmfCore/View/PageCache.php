@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 20.03.2019
  * Time: 18:38
  */
@@ -10,24 +9,23 @@ namespace RozaVerta\CmfCore\View;
 
 use RozaVerta\CmfCore\Cache\Cache;
 use RozaVerta\CmfCore\Route\Interfaces\ControllerInterface;
-use RozaVerta\CmfCore\Traits\ApplicationTrait;
+use RozaVerta\CmfCore\Traits\ServiceTrait;
 
 class PageCache
 {
-	use ApplicationTrait;
+	use ServiceTrait;
 
 	protected $ready = false;
 
 	/**
 	 * @var Cache
 	 */
-	protected $cache;
+	protected $pageCache;
 
 	protected $pagePackage = "main";
 	protected $pageTemplate = "main";
 	protected $pageCode = 200;
 	protected $pageHeaders = [];
-	protected $pageProtected = [];
 	protected $pageContentType = "text/html";
 	protected $pageBody = "";
 	protected $pageData = [];
@@ -37,9 +35,29 @@ class PageCache
 	 */
 	protected $pagePlugins = [];
 
+	/**
+	 * @var \RozaVerta\CmfCore\Cache\CacheManager
+	 */
+	protected $cache;
+
+	/**
+	 * @var \RozaVerta\CmfCore\Log\LogManager
+	 */
+	protected $log;
+
+	/**
+	 * PageCache constructor.
+	 *
+	 * @param ControllerInterface $controller
+	 *
+	 * @throws \RozaVerta\CmfCore\Exceptions\ClassNotFoundException
+	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
+	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
+	 */
 	public function __construct( ControllerInterface $controller )
 	{
-		$this->appInit();
+		$this->thisServices( "cache", "log" );
 
 		$name = "page-" . $controller->getId();
 		$prop = $controller->getProperties();
@@ -54,22 +72,20 @@ class PageCache
 
 		unset( $prop['prefix'] );
 
-		$this->cache = $this
-			->app
+		$this->pageCache = $this
 			->cache
 			->newCache(
 				$name,
 				$prefix,
 				$prop,
 				$this
-					->app
 					->cache
 					->hasStore("page") ? "page" : null
 			);
 
-		if( $this->cache->ready() )
+		if( $this->pageCache->ready() )
 		{
-			$data = $this->cache->import();
+			$data = $this->pageCache->import();
 			if( isset($data["package"], $data["template"], $data["body"], $data["data"], $data["headers"], $data["protected"], $data["contentType"], $data["plugins"]) )
 			{
 				$this->ready = true;
@@ -78,7 +94,6 @@ class PageCache
 				$this->pageTemplate = $data["template"];
 				$this->pageCode = $data["code"];
 				$this->pageHeaders = $data["headers"];
-				$this->pageProtected = $data["protected"];
 				$this->pageContentType = $data["contentType"];
 				$this->pageBody = $data["body"];
 				$this->pageData = $data["data"];
@@ -86,7 +101,7 @@ class PageCache
 			}
 			else
 			{
-				$this->app->log->line("Invalid data import for page cache by the " . $controller->getName() . " controller, page " . $controller->getId());
+				$this->log->line( "Invalid data import for page cache by the " . $controller->getName() . " controller, page " . $controller->getId() );
 			}
 		}
 	}
@@ -98,13 +113,12 @@ class PageCache
 
 	public function forget(): bool
 	{
-		if( $this->cache->forget() )
+		if( $this->pageCache->forget() )
 		{
 			$this->pagePackage = "main";
 			$this->pageTemplate = "main";
 			$this->pageCode = 200;
 			$this->pageHeaders = [];
-			$this->pageProtected = [];
 			$this->pageContentType = "text/html";
 			$this->pageBody = "";
 			$this->pageData = [];
@@ -213,17 +227,6 @@ class PageCache
 		return $this->pageBody;
 	}
 
-	public function setProtectedKeys( array $keys )
-	{
-		$this->pageProtected = $keys;
-		return $this;
-	}
-
-	public function getProtectedKeys(): array
-	{
-		return $this->pageProtected;
-	}
-
 	public function setPlugins( array $plugins )
 	{
 		$this->pagePlugins = $plugins;
@@ -244,16 +247,15 @@ class PageCache
 			"template"      => $this->pageTemplate,
 			"code"          => $this->pageCode,
 			"headers"       => $this->pageHeaders,
-			"protected"     => $this->pageProtected,
 			"contentType"   => $this->pageContentType,
 			"plugins"       => $this->pagePlugins
 		];
 
-		$export = $this->cache->export($data);
+		$export = $this->pageCache->export( $data );
 
 		if( !$export )
 		{
-			$this->app->log->line("Cannot write page cache");
+			$this->log->line( "Cannot write page cache" );
 		}
 
 		return $export;

@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 17.03.2019
  * Time: 20:47
  */
@@ -10,6 +9,7 @@ namespace RozaVerta\CmfCore\Schemes;
 
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\Type;
+use RozaVerta\CmfCore\Database\Query\Criteria;
 
 class Routers_SchemeDesigner extends ModuleSchemeDesigner
 {
@@ -62,22 +62,24 @@ class Routers_SchemeDesigner extends ModuleSchemeDesigner
 	{
 		return [
 			"select" => [
-				"tr.id", "tr.name", "tr.module_id", "tr.path", "tr.position", "tr.properties"
+				"tr.id", "tr.name", "tr.module_id", "tr.path", "tr.position", "tr.properties",
 			],
 			"alias" => "tr",
 			"joins" => [
 				[
 					"tableName" => Modules_SchemeDesigner::getTableName(),
 					"alias" => "tm",
-					"type" => "left",
-					"criteria" => "tr.module_id = tm.id"
-				]
+					"mode" => "left",
+					"criteria" => function( Criteria $criteria ) {
+						$criteria->columns( "tr.module_id", "tm.id" );
+					},
+				],
 			],
 			"criteria" => [
-				["tm.id", "!=", null],
-				"tm.install" => true
+				[ "tm.id", "!=", null ],
+				"tm.install" => true,
 			],
-			"orderBy" => ["position"],
+			"orderBy" => [ "position" ],
 			"groupBy" => "id",
 			"columns" => [
 				"id" => "tr.id",
@@ -86,8 +88,8 @@ class Routers_SchemeDesigner extends ModuleSchemeDesigner
 				"type" => "tr.type",
 				"rule" => "tr.rule",
 				"position" => "tr.position",
-				"properties" => "tr.properties"
-			]
+				"properties" => "tr.properties",
+			],
 		];
 	}
 }

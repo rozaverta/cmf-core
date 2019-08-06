@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 14.08.2018
  * Time: 11:16
  */
@@ -15,13 +14,20 @@ use RozaVerta\CmfCore\Helper\Path;
 use RozaVerta\CmfCore\Module\WorkshopModuleProcessor;
 use RozaVerta\CmfCore\Support\Workshop;
 use RozaVerta\CmfCore\Traits\GetTrait;
+use RozaVerta\CmfCore\Traits\MergeTrait;
 use RozaVerta\CmfCore\Traits\SetTrait;
 
+/**
+ * Class ConfigFile
+ *
+ * @package RozaVerta\CmfCore\Workshops\Module
+ */
 class ConfigFile extends Workshop
 {
 	use WriteFileTrait;
 	use SetTrait;
 	use GetTrait;
+	use MergeTrait;
 
 	protected $items = [];
 
@@ -33,6 +39,17 @@ class ConfigFile extends Workshop
 
 	protected $ready = null;
 
+	/**
+	 * ConfigFile constructor.
+	 *
+	 * @param string                  $name
+	 * @param WorkshopModuleProcessor $module
+	 *
+	 * @throws \RozaVerta\CmfCore\Exceptions\ClassNotFoundException
+	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
+	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
+	 */
 	public function __construct( string $name, WorkshopModuleProcessor $module )
 	{
 		parent::__construct($module);
@@ -48,6 +65,8 @@ class ConfigFile extends Workshop
 	}
 
 	/**
+	 * Reload data from config file.
+	 *
 	 * @return $this
 	 */
 	public function reload()
@@ -65,35 +84,8 @@ class ConfigFile extends Workshop
 	}
 
 	/**
-	 * @param array $items
-	 * @param bool $update
-	 * @return $this
-	 */
-	public function merge( array $items, $update = false )
-	{
-		if( ! count($this->items) )
-		{
-			$this->items = $items;
-		}
-		else if( $update )
-		{
-			$this->items = array_merge($this->items, $items);
-		}
-		else
-		{
-			foreach($items as $key => $value)
-			{
-				if( ! $this->offsetExists($key) )
-				{
-					$this->items[$key] = $value;
-				}
-			}
-		}
-
-		return $this;
-	}
-
-	/**
+	 * Get config filename.
+	 *
 	 * @return string
 	 */
 	public function getFilename(): string
@@ -102,6 +94,8 @@ class ConfigFile extends Workshop
 	}
 
 	/**
+	 * Get config pathname.
+	 *
 	 * @return string
 	 */
 	public function getPathname(): string
@@ -110,6 +104,8 @@ class ConfigFile extends Workshop
 	}
 
 	/**
+	 * Get config path.
+	 *
 	 * @return string
 	 */
 	public function getPath(): string
@@ -118,6 +114,8 @@ class ConfigFile extends Workshop
 	}
 
 	/**
+	 * Configuration file exists.
+	 *
 	 * @return bool
 	 */
 	public function fileExists(): bool
@@ -126,10 +124,13 @@ class ConfigFile extends Workshop
 	}
 
 	/**
+	 * Save the configuration file. Create or overwrite file contents data.
+	 *
 	 * @return void
 	 *
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws EventAbortException
+	 * @throws FileWriteException
+	 * @throws \Throwable
 	 */
 	public function save(): void
 	{
@@ -139,12 +140,12 @@ class ConfigFile extends Workshop
 
 		if( $event->isPropagationStopped() )
 		{
-			throw new EventAbortException( sprintf("Aborted the write action for the '%s' config file of the '%s' module", $this->filename, $this->getModule()->getName()) );
+			throw new EventAbortException( sprintf( 'Aborted the write action for the "%s" config file of the "%s" module.', $this->filename, $this->getModule()->getName() ) );
 		}
 
 		if($this->writeFileExport($this->pathname, $this->getAll()))
 		{
-			throw new FileWriteException( sprintf("Can't %s '%s' config file", $this->fileExists() ? "update" : "create", $this->filename) );
+			throw new FileWriteException( sprintf( 'Can\'t %s "%s" config file.', $this->fileExists() ? "update" : "create", $this->filename ) );
 		}
 
 		$dispatcher->complete();

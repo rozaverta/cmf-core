@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 12.08.2018
  * Time: 17:15
  */
@@ -10,7 +9,7 @@ namespace RozaVerta\CmfCore\CliCommands\Scripts;
 
 use RozaVerta\CmfCore\Cli\Traits\SystemHostTrait;
 use RozaVerta\CmfCore\Cli\IO\InputOutputInterface;
-use RozaVerta\CmfCore\Traits\ApplicationTrait;
+use RozaVerta\CmfCore\Traits\ServiceTrait;
 
 /**
  * Class AbstractScript
@@ -20,12 +19,27 @@ use RozaVerta\CmfCore\Traits\ApplicationTrait;
 abstract class AbstractScript
 {
 	use SystemHostTrait;
-	use ApplicationTrait;
+	use ServiceTrait;
+
+	/**
+	 * @var \RozaVerta\CmfCore\App
+	 */
+	protected $app;
+
+	/**
+	 * @var \RozaVerta\CmfCore\Helper\PhpExport
+	 */
+	protected $phpExport;
+
+	/**
+	 * @var \RozaVerta\CmfCore\Event\EventManager
+	 */
+	protected $event;
 
 	public function __construct( InputOutputInterface $IO )
 	{
-		$this->appInit();
-		$this->setIO($IO);
+		$this->thisServices();
+		$this->setIO( $IO );
 		$this->init();
 	}
 

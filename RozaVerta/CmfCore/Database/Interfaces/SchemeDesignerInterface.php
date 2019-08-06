@@ -1,14 +1,13 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 06.08.2018
  * Time: 18:50
  */
 
 namespace RozaVerta\CmfCore\Database\Interfaces;
 
-use RozaVerta\CmfCore\Database\Query\Builder;
+use RozaVerta\CmfCore\Database\Query\SchemeDesignerFetchBuilder;
 
 interface SchemeDesignerInterface
 {
@@ -31,9 +30,9 @@ interface SchemeDesignerInterface
 	/**
 	 * Create query builder for current table
 	 *
-	 * @param string|null $alias
 	 * @param string|null $connection
-	 * @return Builder
+	 *
+	 * @return SchemeDesignerFetchBuilder
 	 */
-	static public function find( ? string $alias = null, ? string $connection = null ): Builder;
+	static public function find( ? string $connection = null ): SchemeDesignerFetchBuilder;
 }

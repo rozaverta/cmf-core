@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 19.08.2018
  * Time: 18:19
  */
@@ -54,10 +53,12 @@ class Welcome extends Controller
 	 * Ready (initial) page data
 	 *
 	 * @return bool
+	 *
+	 * @throws \Throwable
 	 */
-	public function ready(): bool
+	public function initialize(): bool
 	{
-		$url = $this->app->url;
+		$url = self::service( "url" );
 
 		$this->id  = 404;
 		$page_name = $url->count() === 0 ? "index" : ($url->count() === 1 && $url->getDirLength() === 0 ? $url->getSegment(0) : "");
@@ -96,7 +97,7 @@ class Welcome extends Controller
 	 *
 	 * @throws \Throwable
 	 */
-	public function complete()
+	public function complete(): void
 	{
 		$this->pageData["pageTitle"] = $this->page["title"];
 		$this->pageData["menu"] = $this->menu;
@@ -124,7 +125,7 @@ class Welcome extends Controller
 	 */
 	protected function loadContentIndex()
 	{
-		$name = $this->app->system("name", "Elastic-CMF");
+		$name = self::app()->system( "name", "Elastic-CMF" );
 
 		$this->pageData["content"] = "<h3>{$name}</h3>
 
@@ -145,7 +146,7 @@ framework and a content management system (CMS).</p>
 	 */
 	protected function loadContentSystem()
 	{
-		$app = $this->app;
+		$app = self::app();
 		$db = Prop::prop("db")->getArray("default");
 
 		$body  = "<h3>Base info</h3>";
@@ -181,10 +182,7 @@ framework and a content management system (CMS).</p>
 		$body .= "<h3>Modules</h3>";
 
 		/** @var Modules_SchemeDesigner[] $modules */
-		$modules = $this
-			->app
-			->db
-			->table(Modules_SchemeDesigner::class)
+		$modules = Modules_SchemeDesigner::find()
 			->orderBy("name")
 			->get();
 
@@ -263,9 +261,11 @@ SOFTWARE.</p>';
 
 	/**
 	 * 404 page
+	 *
+	 * @throws \Throwable
 	 */
 	protected function loadContent404()
 	{
-		$this->pageData["content"] = '<h3>404</h3><p>' . $this->app->url->getUrl() . '</p><p>The page are you looking for cannot be found.</p>';
+		$this->pageData["content"] = '<h3>404</h3><p>' . self::service( "url" )->getUrl() . '</p><p>The page are you looking for cannot be found.</p>';
 	}
 }

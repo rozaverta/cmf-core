@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 09.03.2019
  * Time: 18:17
  */
@@ -16,7 +15,7 @@ use RozaVerta\CmfCore\Database\Connection;
 use RozaVerta\CmfCore\Database\DatabaseManager;
 use RozaVerta\CmfCore\Database\Interfaces\ProxySchemeDesignerInterface;
 use RozaVerta\CmfCore\Database\Interfaces\SchemeDesignerInterface;
-use RozaVerta\CmfCore\Database\Query\Builder;
+use RozaVerta\CmfCore\Database\Query\SchemeDesignerFetchBuilder;
 use RozaVerta\CmfCore\Interfaces\Arrayable;
 use RozaVerta\CmfCore\Interfaces\VarExportInterface;
 use RozaVerta\CmfCore\Traits\GetTrait;
@@ -146,12 +145,14 @@ class SchemeDesigner implements SchemeDesignerInterface, Arrayable, JsonSerializ
 	/**
 	 * Create query builder for current table
 	 *
-	 * @param string|null $alias
 	 * @param string|null $connection
-	 * @return Builder
+	 *
+	 * @return SchemeDesignerFetchBuilder
+	 *
+	 * @throws \Throwable
 	 */
-	static public function find( ? string $alias = null, ? string $connection = null ): Builder
+	static public function find( ? string $connection = null ): SchemeDesignerFetchBuilder
 	{
-		return DatabaseManager::table( static::class, $alias, $connection );
+		return DatabaseManager::schemeDesignerFetchBuilder( static::class, $connection );
 	}
 }

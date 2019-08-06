@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 27.08.2016
  * Time: 21:50
  */
@@ -10,7 +9,7 @@ namespace RozaVerta\CmfCore\Cli;
 
 use RozaVerta\CmfCore\Cli\IO\SymfonyInputOutput;
 use RozaVerta\CmfCore\Support\Prop;
-use RozaVerta\CmfCore\Traits\ApplicationTrait;
+use RozaVerta\CmfCore\Traits\ServiceTrait;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -18,7 +17,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 abstract class AbstractCliCommand extends Command
 {
 	use Traits\SystemHostTrait;
-	use ApplicationTrait;
+	use ServiceTrait;
 
 	/**
 	 * @var Prop
@@ -35,9 +34,18 @@ abstract class AbstractCliCommand extends Command
 	 */
 	protected $output;
 
+	/**
+	 * AbstractCliCommand constructor.
+	 *
+	 * @param array $docs
+	 * @throws \RozaVerta\CmfCore\Exceptions\ClassNotFoundException
+	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
+	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
+	 */
 	public function __construct( array $docs = [] )
 	{
-		$this->appInit();
+		$this->thisServices();
 		$this->docs = new Prop($docs);
 		parent::__construct( $docs["name"] );
 		$this->init();

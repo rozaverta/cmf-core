@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 09.03.2019
  * Time: 13:37
  */
@@ -38,6 +37,8 @@ use RozaVerta\CmfCore\Language\LanguageManager;
 use RozaVerta\CmfCore\Log\LogManager;
 use RozaVerta\CmfCore\Helper\PhpExport;
 use RozaVerta\CmfCore\Route\Exceptions\PageNotFoundException;
+use RozaVerta\CmfCore\Route\Interfaces\ControllerPackageInterface;
+use RozaVerta\CmfCore\Route\Interfaces\ControllerTemplateInterface;
 use RozaVerta\CmfCore\Route\Interfaces\MountPointInterface;
 use RozaVerta\CmfCore\Route\Interfaces\RouterInterface;
 use RozaVerta\CmfCore\Route\MountPoint;
@@ -58,15 +59,16 @@ use Symfony\Component\Console\Application;
  *
  * Class Els
  *
- * @property \RozaVerta\CmfCore\Log\LogManager $log
- * @property \RozaVerta\CmfCore\Helper\PhpExport $phpExport
- * @property \RozaVerta\CmfCore\Route\Url $url
- * @property \RozaVerta\CmfCore\View\View $view
- * @property \RozaVerta\CmfCore\Filesystem\Filesystem $filesystem
+ * @property \RozaVerta\CmfCore\App                      $app
+ * @property \RozaVerta\CmfCore\Log\LogManager           $log
+ * @property \RozaVerta\CmfCore\Helper\PhpExport         $phpExport
+ * @property \RozaVerta\CmfCore\Route\Url                $url
+ * @property \RozaVerta\CmfCore\View\View                $view
+ * @property \RozaVerta\CmfCore\Filesystem\Filesystem    $filesystem
  * @property \RozaVerta\CmfCore\Language\LanguageManager $lang
- * @property \RozaVerta\CmfCore\Session\SessionManager $session
+ * @property \RozaVerta\CmfCore\Session\SessionManager   $session
  * @property \RozaVerta\CmfCore\Database\DatabaseManager $database
- * @property \RozaVerta\CmfCore\Database\Connection $db
+ * @property \RozaVerta\CmfCore\Database\Connection      $db
  * @property \RozaVerta\CmfCore\Route\Interfaces\ControllerInterface $controller
  * @property \RozaVerta\CmfCore\Route\Context $context
  * @property \RozaVerta\CmfCore\Http\Response $response
@@ -154,6 +156,7 @@ final class App
 			require __DIR__ . DIRECTORY_SEPARATOR . "boot.inc.php";
 		}
 
+		$this->ci["app"] = $this;
 		$this->ci['host'] = HostManager::getInstance();
 		$this->host = $this->ci['host'];
 		$host = $this->ci['host'];
@@ -167,6 +170,7 @@ final class App
 		$this->ci['response'] = new Response();
 		$this->ci['request'] = Request::createFromGlobals();
 
+		$this->app = $this;
 		$this->log = $this->ci['log'];
 		$this->event = $this->ci['event'];
 		$this->response = $this->ci['response'];
@@ -180,24 +184,24 @@ final class App
 
 			$url = $app->url;
 
-			$data = [];
+			$app = [];
 
-			$data["language"]   = "ru";
-			$data["siteName"]   = $this->system("siteName", $url->getHost());
-			$data["assets"]     = Path::assetsWeb();
-			$data["charset"]    = Str::encoding();
-			$data["now"]        = time();
-			$data["fromCache"]  = false;
-			$data["host"]       = $url->getHost();
-			$data["http"]       = $url->getPrefix();
+			$app["language"] = "ru";
+			$app["siteName"] = $this->system( "siteName", $url->getHost() );
+			$app["assets"] = Path::assetsWeb();
+			$app["charset"] = Str::encoding();
+			$app["now"] = time();
+			$app["fromCache"] = false;
+			$app["host"] = $url->getHost();
+			$app["http"] = $url->getPrefix();
 
-			$data["route"] = [
+			$app["route"] = [
 				"url"  => $url->getUrl(),
 				"base" => $url->getBase(),
 				"path" => $url->getPath()
 			];
 
-			return new View($data, array_keys($data));
+			return new View( [], $app );
 		};
 
 		$this->singletons['url'] = function(App $app) {
@@ -223,13 +227,15 @@ final class App
 	 * Load singleton object
 	 *
 	 * @param string $name
+	 *
 	 * @return object
+	 *
 	 * @throws Exceptions\ClassNotFoundException
 	 * @throws Exceptions\WriteException
 	 * @throws Module\Exceptions\ResourceReadException
 	 * @throws NotFoundException
 	 */
-	public function load( string $name )
+	public function service( string $name )
 	{
 		$this->init();
 
@@ -242,7 +248,7 @@ final class App
 
 			if( ! isset($this->singletons[$name]) )
 			{
-				throw new Exceptions\NotFoundException("Singleton object '{$name}' not found");
+				throw new Exceptions\NotFoundException( "Service object '{$name}' not found" );
 			}
 
 			$object = $this->singletons[$name];
@@ -252,12 +258,12 @@ final class App
 				$this->ci[$name] = $object($this);
 				if( ! is_object($this->ci[$name]) )
 				{
-					throw new Exceptions\RuntimeException("The result of the singleton '{$name}' callback is not an object");
+					throw new Exceptions\RuntimeException( "The result of the service '{$name}' callback is not an object" );
 				}
 			}
 			else if( ! class_exists($object, true) )
 			{
-				throw new Exceptions\ClassNotFoundException("Singleton class '{$object}' not found");
+				throw new Exceptions\ClassNotFoundException( "Service class '{$object}' not found" );
 			}
 			else
 			{
@@ -265,7 +271,7 @@ final class App
 					$this->ci[$name] = ( new ReflectionMethod($object, 'getInstance') )->invoke( null );
 				}
 				catch( ReflectionException $e ) {
-					throw new Exceptions\RuntimeException("Invalid singleton '{$name}' object, " . $e->getMessage());
+					throw new Exceptions\RuntimeException( "Invalid service '{$name}' object, " . $e->getMessage() );
 				}
 			}
 		}
@@ -302,7 +308,7 @@ final class App
 		if( $autoLoad )
 		{
 			try {
-				$this->load($name);
+				$this->service( $name );
 			}
 			catch( NotFoundException $e ) {
 				return false;
@@ -446,7 +452,7 @@ final class App
 	 */
 	public function changeController( ControllerInterface $controller ): ControllerInterface
 	{
-		if( isset($this->ci["controller"]) && ! $this->controller->change($controller) )
+		if( isset( $this->ci["controller"] ) && !$this->controller->changeable( $controller ) )
 		{
 			throw new Exceptions\AccessException("Current controller '" . get_class( $this->ci["controller"] ) . "' does not allow change");
 		}
@@ -602,9 +608,7 @@ final class App
 			$isRoute = count($routers) > 0;
 		}
 		else {
-			$routers = $this
-				->db
-				->table(Routers_SchemeDesigner::class)
+			$routers = Routers_SchemeDesigner::find()
 				->get()
 				->map(function(Routers_SchemeDesigner $schemeDesigner) {
 					return new MountPoint($schemeDesigner->getId(), $schemeDesigner->getModuleId(), $schemeDesigner->getPath(), $schemeDesigner->getProperties());
@@ -692,7 +696,7 @@ final class App
 
 				if( $math )
 				{
-					$controller = $this->readyController($mountPoint);
+					$controller = $this->initializeController( $mountPoint );
 
 					// found
 					if( $controller !== null )
@@ -708,7 +712,7 @@ final class App
 
 			if( $controller === null && $mountPoint404 )
 			{
-				$controller = $this->readyController($mountPoint404);
+				$controller = $this->initializeController( $mountPoint404 );
 				$page404 = true;
 			}
 		}
@@ -727,18 +731,18 @@ final class App
 
 		$this->changeController($controller);
 
-		$ready = $this->controller->ready();
-		if( ! $ready && ! $page404 && $mountPoint404 )
+		$initialize = $this->controller->initialize();
+		if( !$initialize && !$page404 && $mountPoint404 )
 		{
-			$controller = $this->readyController($mountPoint404);
+			$controller = $this->initializeController( $mountPoint404 );
 			if( $controller !== null )
 			{
 				$this->changeController($controller);
-				$ready = $this->controller->ready();
+				$initialize = $this->controller->initialize();
 			}
 		}
 
-		if( ! $ready )
+		if( !$initialize )
 		{
 			throw new Exceptions\RuntimeException("Can't load route settings");
 		}
@@ -821,21 +825,41 @@ final class App
 
 		$this->controller->complete();
 
-		$protected = ["controller", "fromCache"];
-
 		$view = $this->view;
 		$data = $this->controller->getPageData();
-		$template = isset( $data["template"] ) ? $data["template"] : "main";
+		$package = "main";
+		$template = "main";
 
-		$view
-			->usePackage($data['package'] ?? $this->system("package", "main"))
-			->setProtectedKeys($protected)
-			->set($data);
+		if( $this->controller instanceof ControllerPackageInterface )
+		{
+			$node = $this->controller->getPackageName();
+			if( $node )
+			{
+				$package = $node;
+			}
+		}
+
+		if( $this->controller instanceof ControllerTemplateInterface )
+		{
+			$node = $this->controller->getTemplateName();
+			if( $node )
+			{
+				$template = $node;
+			}
+		}
 
 		$ct         = $this->controller->getProperties();
 		$ct['id']   = $this->controller->getId();
 		$ct['name'] = $this->controller->getName();
-		$view->set('controller', $ct);
+
+		$view
+			->mergeConfig( [
+				"controller" => $ct,
+				"package" => $package,
+				"template" => $template,
+			] )
+			->usePackage( $package )
+			->set( $data );
 
 		if( $beforeEvent )
 		{
@@ -900,7 +924,6 @@ final class App
 
 		$view
 			->usePackage( $pageCache->getPackageName() )
-			->setProtectedKeys( $pageCache->getProtectedKeys() )
 			->set( $pageCache->getPageData() )
 			->set( 'controller', $ct )
 			->set( 'fromCache', true );
@@ -938,6 +961,16 @@ final class App
 		return 'html';
 	}
 
+	/**
+	 * Render static manifest file.
+	 *
+	 * @param string $path
+	 * @param array  $data
+	 *
+	 * @return string
+	 *
+	 * @throws \Throwable
+	 */
 	private function renderManifest( string $path, array $data ): string
 	{
 		$mnf = new Prop($data);
@@ -1000,6 +1033,8 @@ final class App
 	 * @throws Exceptions\WriteException
 	 * @throws Module\Exceptions\ResourceReadException
 	 * @throws NotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function close(): void
 	{
@@ -1042,7 +1077,7 @@ final class App
 
 	public function __get( $name )
 	{
-		return $this->load($name);
+		return $this->service( $name );
 	}
 
 	public function __destruct()
@@ -1051,9 +1086,13 @@ final class App
 	}
 
 	/**
+	 * Add new service object or singleton initializer.
+	 *
 	 * @param string $name
 	 * @param $object
+	 *
 	 * @return $this
+	 *
 	 * @throws Exceptions\WriteException
 	 * @throws Module\Exceptions\ResourceReadException
 	 * @throws NotFoundException
@@ -1129,7 +1168,7 @@ final class App
 		$this->system = $system;
 	}
 
-	private function readyController( MountPointInterface $mountPoint )
+	private function initializeController( MountPointInterface $mountPoint )
 	{
 		$className = $mountPoint->getModule()->getNamespaceName() . 'Router';
 
@@ -1139,7 +1178,7 @@ final class App
 
 		if( $router instanceof RouterInterface )
 		{
-			if( $router->ready() )
+			if( $router->initialize() )
 			{
 				$controller = $router->getController();
 				if( ! is_object($controller) )
@@ -1155,8 +1194,9 @@ final class App
 				throw new Exceptions\ImplementsException("Controller must be inherited of " . ControllerInterface::class);
 			}
 		}
-		else {
-			throw new Exceptions\ImplementsException("Router must be inherited of " . RouterInterface::class);
+		else
+		{
+			throw new Exceptions\ImplementsException( "Router must be inherited of " . RouterInterface::class );
 		}
 
 		return null;

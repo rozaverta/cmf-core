@@ -1,16 +1,15 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 23.08.2018
  * Time: 22:04
  */
 
 namespace RozaVerta\CmfCore\Cache\Database;
 
-use RozaVerta\CmfCore\App;
+use Doctrine\DBAL\DBALException;
 use RozaVerta\CmfCore\Database\Connection;
-use RozaVerta\CmfCore\Database\QueryException;
+use RozaVerta\CmfCore\Database\Query\Builder;
 use RozaVerta\CmfCore\Log\LogManager;
 
 trait DatabaseConnectionTrait
@@ -53,11 +52,16 @@ trait DatabaseConnectionTrait
 		return $this->table;
 	}
 
-	protected function table()
+	/**
+	 * @return Builder
+	 *
+	 * @throws \Throwable
+	 */
+	protected function builder(): Builder
 	{
 		return $this
 			->getConnection()
-			->table($this->getTable());
+			->builder( $this->getTable() );
 	}
 
 	protected function fetch(\Closure $callback, $argument = null)
@@ -65,8 +69,7 @@ trait DatabaseConnectionTrait
 		try
 		{
 			$result = $callback(is_null($argument) ? $this->getConnection() : $argument);
-		}
-		catch( QueryException $e )
+		} catch( DBALException $e )
 		{
 			LogManager::getInstance()->throwable($e);
 			return false;

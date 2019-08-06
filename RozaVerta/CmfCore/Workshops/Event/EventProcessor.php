@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 15.04.2018
  * Time: 3:40
  */
@@ -37,19 +36,19 @@ class EventProcessor extends Workshop
 	 * @return void
 	 *
 	 * @throws EventAlreadyExistsException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function create( string $eventName, string $eventTitle = "", bool $isCompletable = false ): void
 	{
 		if( EventHelper::exists($eventName) )
 		{
-			throw new EventAlreadyExistsException("Event '{$eventName}' already exists");
+			throw new EventAlreadyExistsException( "The \"{$eventName}\" event already exists." );
 		}
 
 		if( ! EventHelper::validModuleName($eventName, $this->getModule()) )
 		{
-			throw new EventInvalidNameException("Invalid event name '{$eventName}' for the " . $this->getModule()->getName() . " module");
+			throw new EventInvalidNameException( "Invalid event name \"{$eventName}\" for the \"" . $this->getModule()->getName() . "\" module." );
 		}
 
 		$eventTitle = $this->formatEventTitle($eventTitle, $eventName);
@@ -61,12 +60,12 @@ class EventProcessor extends Workshop
 
 		if( $event->isPropagationStopped() )
 		{
-			throw new EventAbortException("The creation of an '{$eventName}' event is aborted");
+			throw new EventAbortException( "The creation of an \"{$eventName}\" event is aborted." );
 		}
 
 		$this
 			->db
-			->table(Events_SchemeDesigner::getTableName())
+			->builder( Events_SchemeDesigner::getTableName() )
 			->insert([
 				"name" => $eventName,
 				"title" => $eventTitle,
@@ -88,15 +87,15 @@ class EventProcessor extends Workshop
 	 *
 	 * @throws EventAccessException
 	 * @throws EventNotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function update( string $eventName, string $title = "", bool $completable = false ): void
 	{
 		$row = EventHelper::getSchemeDesigner($eventName);
 		if( !$row )
 		{
-			throw new EventNotFoundException("Event '{$eventName}' not found");
+			throw new EventNotFoundException( "The \"{$eventName}\" event not found." );
 		}
 
 		$this->updateProcess($row, $title, $completable);
@@ -113,8 +112,8 @@ class EventProcessor extends Workshop
 	 *
 	 * @throws EventAccessException
 	 * @throws EventAlreadyExistsException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function replace( string $eventName, string $eventTitle = "", bool $isCompletable = false ): void
 	{
@@ -134,14 +133,13 @@ class EventProcessor extends Workshop
 	 *
 	 * @param string $eventName
 	 * @param string $newEventName
-
 	 * @return void
 	 *
 	 * @throws EventAccessException
 	 * @throws EventAlreadyExistsException
 	 * @throws EventNotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function rename( string $eventName, string $newEventName ): void
 	{
@@ -149,7 +147,7 @@ class EventProcessor extends Workshop
 		$row = EventHelper::exists($eventName, $eventId, $moduleId);
 		if( !$row )
 		{
-			throw new EventNotFoundException("Event '{$eventName}' not found");
+			throw new EventNotFoundException( "The \"{$eventName}\" event not found." );
 		}
 
 		$this->permissible($moduleId, $eventName);
@@ -162,12 +160,12 @@ class EventProcessor extends Workshop
 		// check new name exists
 		if( EventHelper::exists($newEventName) )
 		{
-			throw new EventAlreadyExistsException("Event '{$newEventName}' already exists");
+			throw new EventAlreadyExistsException( "The \"{$newEventName}\" event already exists." );
 		}
 
 		if( ! EventHelper::validModuleName($newEventName, $this->getModule()) )
 		{
-			throw new EventInvalidNameException("Invalid event name '{$newEventName}' for the " . $this->getModule()->getName() . " module");
+			throw new EventInvalidNameException( "Invalid event name \"{$newEventName}\" for the \"" . $this->getModule()->getName() . "\" module." );
 		}
 
 		// dispatch event
@@ -177,29 +175,28 @@ class EventProcessor extends Workshop
 
 		if( $event->isPropagationStopped() )
 		{
-			throw new EventAbortException("The rename of an '{$eventName}' event is aborted");
+			throw new EventAbortException( "The rename of an \"{$eventName}\" event is aborted." );
 		}
 
 		$this
 			->db
-			->table(Events_SchemeDesigner::getTableName())
+			->builder( Events_SchemeDesigner::getTableName() )
 			->whereId($eventId)
 			->update(["name" => $newEventName]);
 
 		$dispatcher->complete("rename", $eventName, $newEventName);
-		$this->addDebug(Text::text("The %s event is successfully renamed. New event name is %s", $eventName, $newEventName));
+		$this->addDebug( Text::text( "The \"%s\" event is successfully renamed. New event name is \"%s\".", $eventName, $newEventName ) );
 	}
 
 	/**
 	 * Delete event
 	 *
 	 * @param string $eventName
-
 	 * @return void
 	 *
 	 * @throws EventAccessException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function delete( string $eventName ): void
 	{
@@ -218,21 +215,45 @@ class EventProcessor extends Workshop
 
 		if( $event->isPropagationStopped() )
 		{
-			throw new EventAbortException("'{$eventName}' event delete aborted");
+			throw new EventAbortException( "The \"{$eventName}\" event delete aborted." );
 		}
 
 		$this
 			->db
-			->table(Events_SchemeDesigner::getTableName())
+			->builder( Events_SchemeDesigner::getTableName() )
 			->whereId($eventId)
 			->delete();
 
 		$this->complete($dispatcher, $eventName, "delete");
 	}
 
+	/**
+	 * Event has been added to the database.
+	 *
+	 * @param string $eventName
+	 * @param null   $eventId
+	 *
+	 * @return bool
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
+	 */
+	public function registered( string $eventName, & $eventId = null ): bool
+	{
+		if( !EventHelper::exists( $eventName, $id, $moduleId ) || $moduleId !== $this->getModuleId() )
+		{
+			return false;
+		}
+
+		$eventId = $id;
+		return true;
+	}
+
 	// protected
 
 	/**
+	 * Update Database Records
+	 *
 	 * @param Events_SchemeDesigner $row
 	 * @param string $eventTitle
 	 * @param bool $isCompletable
@@ -240,8 +261,8 @@ class EventProcessor extends Workshop
 	 * @return void
 	 *
 	 * @throws EventAccessException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	protected function updateProcess( Events_SchemeDesigner $row, string $eventTitle, bool $isCompletable ): void
 	{
@@ -274,12 +295,12 @@ class EventProcessor extends Workshop
 
 		if( $event->isPropagationStopped() )
 		{
-			throw new EventAbortException("'{$eventName}' event update aborted");
+			throw new EventAbortException( "The \"{$eventName}\" event update aborted." );
 		}
 
 		$this
 			->db
-			->table(Events_SchemeDesigner::getTableName())
+			->builder( Events_SchemeDesigner::getTableName() )
 			->whereId($row->getId())
 			->update($update);
 
@@ -287,6 +308,8 @@ class EventProcessor extends Workshop
 	}
 
 	/**
+	 * Complete action, write log
+	 *
 	 * @param Dispatcher $dispatcher
 	 * @param string $eventName
 	 * @param string $action
@@ -294,10 +317,12 @@ class EventProcessor extends Workshop
 	protected function complete(Dispatcher $dispatcher, string $eventName, string $action): void
 	{
 		$dispatcher->complete($action, $eventName);
-		$this->addDebug(Text::text("The %s event is successfully " . rtrim($action, "e") . "ed", $eventName));
+		$this->addDebug( Text::text( "The \"%s\" event is successfully " . rtrim( $action, "e" ) . "ed", $eventName ) );
 	}
 
 	/**
+	 * Format event name
+	 *
 	 * @param string $eventTitle
 	 * @param string $eventName
 	 *
@@ -321,6 +346,8 @@ class EventProcessor extends Workshop
 	}
 
 	/**
+	 * Check the permission of the event module
+	 *
 	 * @param int $moduleId
 	 * @param string $eventName
 	 *
@@ -330,7 +357,7 @@ class EventProcessor extends Workshop
 	{
 		if( $this->getModuleId() !== $moduleId )
 		{
-			throw new EventAccessException("It is permissible to change the '{$eventName}' event data only for the '{$moduleId}' module");
+			throw new EventAccessException( "It is permissible to change the \"{$eventName}\" event data only for the \"{$moduleId}\" module." );
 		}
 	}
 }

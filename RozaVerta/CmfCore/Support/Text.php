@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 18.04.2017
  * Time: 0:45
  */
@@ -29,7 +28,7 @@ class Text
 		$this->text = (string) $text;
 		if( $num = count($args) > 0 )
 		{
-			$this->text = preg_replace('/(?!\')%([sd])/', '\'%$1\'', $this->text);
+			$this->text = preg_replace( '/(?![\'"])%([sd])/', '"%$1"', $this->text );
 			$this->replacement = $num == 1 && is_array($args[0]) ? $args[0] : $args;
 		}
 	}

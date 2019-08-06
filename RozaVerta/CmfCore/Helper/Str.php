@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 24.08.2017
  * Time: 10:55
  */
@@ -248,6 +247,65 @@ final class Str
 			$subject = static::replaceFirst($search, $value, $subject);
 		}
 		return $subject;
+	}
+
+	public static function replaceEscapeArray( string $search, string $escape, array $replace, string $subject ): string
+	{
+		$searchLen = strlen( $search );
+		if( $searchLen < 1 )
+		{
+			return $subject;
+		}
+
+		$right = $search === $escape;
+		$escapeLen = strlen( $escape );
+		$offset = 0;
+
+		foreach( $replace as $value )
+		{
+			$subject = static::replaceEscape( $search, $searchLen, $escape, $escapeLen, (string) $value, $subject, $right, $offset );
+		}
+
+		return $subject;
+	}
+
+	private static function replaceEscape( string $search, int $searchLen, string $escape, int $escapeLen, string $replace, string $subject, bool $right, int & $offset = 0 ): string
+	{
+		$position = strpos( $subject, $search, $offset );
+		if( $position === false )
+		{
+			return $subject;
+		}
+
+		if( $escapeLen > 0 )
+		{
+			if( $right )
+			{
+				$esc = substr( $subject, $position + $searchLen, $escapeLen ) === $escape;
+			}
+			else
+			{
+				$esc = $position >= $escapeLen && substr( $subject, $position - $escapeLen, $escapeLen ) === $escape;
+			}
+
+			if( $esc )
+			{
+				$offset = $position + ( $right ? $searchLen * 2 : $searchLen );
+				return static::replaceEscape(
+					$search,
+					$searchLen,
+					$escape,
+					$escapeLen,
+					$replace,
+					$subject,
+					$right,
+					$offset
+				);
+			}
+		}
+
+		$offset = $position + strlen( $replace );
+		return substr_replace( $subject, $replace, $position, $searchLen );
 	}
 
 	/**

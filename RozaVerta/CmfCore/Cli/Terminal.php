@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 18.04.2017
  * Time: 2:21
  */
@@ -13,7 +12,7 @@ use RozaVerta\CmfCore\Manifest;
 use RozaVerta\CmfCore\Module\ModuleManifest;
 use RozaVerta\CmfCore\Schemes\Modules_SchemeDesigner;
 use RozaVerta\CmfCore\Events\ThrowableEvent;
-use RozaVerta\CmfCore\Traits\ApplicationTrait;
+use RozaVerta\CmfCore\Traits\ServiceTrait;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\Console\Event\ConsoleErrorEvent;
@@ -21,7 +20,7 @@ use Symfony\Component\EventDispatcher\EventDispatcher;
 
 class Terminal
 {
-	use ApplicationTrait;
+	use ServiceTrait;
 
 	/**
 	 * Current system name
@@ -41,11 +40,29 @@ class Terminal
 	private $moduleCoreConfig;
 
 	/**
+	 * @var \RozaVerta\CmfCore\App
+	 */
+	protected $app;
+
+	/**
+	 * @var \RozaVerta\CmfCore\Host\HostManager
+	 */
+	protected $host;
+
+	/**
+	 * @var \RozaVerta\CmfCore\Cache\CacheManager
+	 */
+	protected $cache;
+
+	/**
+	 * @var \RozaVerta\CmfCore\Event\EventManager
+	 */
+	protected $event;
+
+	/**
 	 * Terminal constructor.
-	 * @throws Exception
-	 * @throws \ReflectionException
-	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceNotFoundException
-	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
+	 *
+	 * @throws \Throwable
 	 */
 	public function __construct()
 	{
@@ -59,9 +76,9 @@ class Terminal
 			throw new Exception("Run php as cli");
 		}
 
-		$this->appInit();
+		$this->thisServices( "app", "cache", "host", "event" );
 
-		if( $this->app->host->isDefined() )
+		if( $this->host->isDefined() )
 		{
 			$status = $this->app->system("status");
 			if( strpos($status, "-progress") > 0 || $status === "progress" )
@@ -91,7 +108,7 @@ class Terminal
 		// add system throwable
 		$dispatcher = new EventDispatcher();
 		$dispatcher->addListener(ConsoleEvents::ERROR, function (ConsoleErrorEvent $event) {
-			$this->app->event->dispatch( new ThrowableEvent( $event->getError() ));
+			$this->event->dispatch( new ThrowableEvent( $event->getError() ) );
 		});
 
 		$application->setDispatcher($dispatcher);
@@ -122,10 +139,7 @@ class Terminal
 		if( $this->app->isInstall() )
 		{
 			/** @var Modules_SchemeDesigner[] $modules */
-			$modules = $this
-				->app
-				->db
-				->table(Modules_SchemeDesigner::class)
+			$modules = Modules_SchemeDesigner::find()
 				->where("install", true)
 				->where("id", "<>", 1)
 				->get();
@@ -162,7 +176,7 @@ class Terminal
 
 		if( $this->app->isInstall() )
 		{
-			$cache = $this->app->cache->newCache($key, "console");
+			$cache = $this->cache->newCache( $key, "console" );
 			if( $cache->ready() )
 			{
 				$commands = $cache->import();

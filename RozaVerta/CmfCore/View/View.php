@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 21.08.2015
  * Time: 16:37
  */
@@ -13,11 +12,13 @@ use ReflectionClass;
 use ReflectionException;
 use RozaVerta\CmfCore\Exceptions\RuntimeException;
 use RozaVerta\CmfCore\Exceptions\WriteException;
+use RozaVerta\CmfCore\Helper\Arr;
 use RozaVerta\CmfCore\Helper\Path;
+use RozaVerta\CmfCore\Helper\Str;
 use RozaVerta\CmfCore\Schemes\TemplatePlugins_SchemeDesigner;
 use RozaVerta\CmfCore\Exceptions\NotFoundException;
 use RozaVerta\CmfCore\Support\Prop;
-use RozaVerta\CmfCore\Traits\ApplicationProxyTrait;
+use RozaVerta\CmfCore\Traits\ServiceTrait;
 use RozaVerta\CmfCore\View\Events\CompleteRenderEvent;
 use RozaVerta\CmfCore\View\Events\PreRenderEvent;
 use RozaVerta\CmfCore\View\Events\RenderGetterEvent;
@@ -32,15 +33,17 @@ use RozaVerta\CmfCore\View\Interfaces\PluginInterface;
  */
 final class View extends Lexer
 {
-	use ApplicationProxyTrait;
-
-	protected $items = [];
+	use ServiceTrait;
 
 	protected $extends = [];
 
 	private $delays = [];
 	private $depth = 0;
 	private $iteration_limit = 10;
+
+	private $config = [];
+
+	private $configCache = [];
 
 	/**
 	 * @var PluginNode[]
@@ -67,22 +70,64 @@ final class View extends Lexer
 
 	private $call = [];
 
-	private $protected = [];
-
 	private $cacheable = false;
 
 	private $fromCache = false;
 
 	private $toCache = false;
 
-	public function __construct( array $conf = [], array $protected = [] )
+	/**
+	 * @var \RozaVerta\CmfCore\Route\Url
+	 */
+	protected $url;
+
+	/**
+	 * @var \RozaVerta\CmfCore\Log\LogManager
+	 */
+	protected $log;
+
+	/**
+	 * @var \RozaVerta\CmfCore\Event\EventManager
+	 */
+	protected $event;
+
+	/**
+	 * @var \RozaVerta\CmfCore\Cache\CacheManager
+	 */
+	protected $cache;
+
+	/**
+	 * @var \RozaVerta\CmfCore\Http\Request
+	 */
+	protected $request;
+
+	/**
+	 * @var \RozaVerta\CmfCore\Database\Connection
+	 */
+	protected $db;
+
+	/**
+	 * View constructor.
+	 *
+	 * @param array $items
+	 * @param array $config
+	 *
+	 * @throws NotFoundException
+	 * @throws WriteException
+	 * @throws \RozaVerta\CmfCore\Exceptions\ClassNotFoundException
+	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
+	 */
+	public function __construct( array $items = [], array $config = [] )
 	{
-		parent::__construct($conf);
-		$this->appInit();
-		$this->protected = $protected;
-		$this->setProtectedKeys("package", "http", "host", "template", "assets");
-		if( !isset($this->items["http"]) ) $this->items["http"] = $this->url->getPrefix();
-		if( !isset($this->items["host"]) ) $this->items["host"] = $this->url->getHost();
+		parent::__construct( $items );
+		$this->thisServices( "db", "log", "url", "event", "request", "cache" );
+
+		$this->config = $config;
+
+		if( !isset( $this->config["http"] ) ) $this->config["http"] = $this->url->getPrefix();
+		if( !isset( $this->config["host"] ) ) $this->config["host"] = $this->url->getHost();
+		if( !isset( $this->config["assets"] ) ) $this->config["assets"] = "/assets/";
+		if( !isset( $this->config["charset"] ) ) $this->config["charset"] = Str::encoding();
 	}
 
 	static private $load = false;
@@ -108,9 +153,7 @@ final class View extends Lexer
 		}
 		else
 		{
-			$all = $this
-				->db
-				->table(TemplatePlugins_SchemeDesigner::class)
+			$all = TemplatePlugins_SchemeDesigner::find()
 				->where("visible", true)
 				->orderBy("name")
 				->get();
@@ -151,6 +194,56 @@ final class View extends Lexer
 		return $this;
 	}
 
+	public function mergeConfig( array $config )
+	{
+		if( count( $config ) )
+		{
+			$this->config = array_merge( $this->config, $config );
+			$this->configCache = [];
+		}
+		return $this;
+	}
+
+	public function config( string $name, $default = null )
+	{
+		if( $name === "*" )
+		{
+			return $this->config;
+		}
+
+		if( isset( $this->configCache[$name] ) )
+		{
+			return $this->configCache[$name];
+		}
+
+		if( strpos( $name, "." ) === false )
+		{
+			return array_key_exists( $name, $this->config ) ? $this->config[$name] : $default;
+		}
+
+		$keys = explode( ".", $name );
+		$target = &$this->config;
+
+		foreach( $keys as $key )
+		{
+			if( Arr::accessible( $target ) && Arr::exists( $target, $key ) )
+			{
+				$target = &$target[$key];
+			}
+			else if( is_object( $target ) && property_exists( $target, $key ) )
+			{
+				$target = &$target->{$key};
+			}
+			else
+			{
+				return $default;
+			}
+		}
+
+		$this->configCache[$name] = $target;
+		return $target;
+	}
+
 	/**
 	 * Get view extender
 	 *
@@ -172,9 +265,15 @@ final class View extends Lexer
 	/**
 	 * Register new extender
 	 *
-	 * @param string $name
+	 * @param string                              $name
 	 * @param string | ExtenderInterface | object $object
+	 *
 	 * @return $this
+	 *
+	 * @throws NotFoundException
+	 * @throws WriteException
+	 * @throws \RozaVerta\CmfCore\Exceptions\ClassNotFoundException
+	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
 	 */
 	public function register(string $name, $object)
 	{
@@ -184,21 +283,13 @@ final class View extends Lexer
 				$ref = new ReflectionClass($object);
 			}
 			catch( ReflectionException $e ) {
-				$this
-					->app
-					->log
-					->addError("Cannot load extender class ({$name}). " . $e->getMessage());
-
+				$this->log->addError( "Cannot load extender class ({$name}). " . $e->getMessage() );
 				return $this;
 			}
 
 			if( $ref->implementsInterface(ExtenderInterface::class) )
 			{
-				$this
-					->app
-					->log
-					->addError("Extender class ({$name}) must implements of " . ExtenderInterface::class);
-
+				$this->log->addError( "Extender class ({$name}) must implements of " . ExtenderInterface::class );
 				return $this;
 			}
 
@@ -207,7 +298,7 @@ final class View extends Lexer
 
 		if(isset($this->extends[$name]))
 		{
-			$this->app->log->addDebug("Override view extender method '{$name}'");
+			$this->log->addDebug( "Override view extender method '{$name}'" );
 		}
 
 		$this->extends[$name] = $object;
@@ -232,34 +323,6 @@ final class View extends Lexer
 		return $this->template;
 	}
 
-	public function setProtectedKeys( ... $keys )
-	{
-		if( count($keys) === 1 && is_array($keys[0]) )
-		{
-			$keys = $keys[0];
-		}
-
-		foreach($keys as $key)
-		{
-			if( ! in_array($key, $this->protected, true) )
-			{
-				$this->protected[] = $key;
-			}
-		}
-
-		return $this;
-	}
-
-	public function hasProtectedKey($name): bool
-	{
-		return in_array($name, $this->protected, true);
-	}
-
-	public function getProtectedKeys(): array
-	{
-		return $this->protected;
-	}
-
 	// global data
 
 	public function delay( string $name ): string
@@ -273,22 +336,7 @@ final class View extends Lexer
 
 	public function request( $name, $default = '', $escape = true )
 	{
-		if( isset($_REQUEST[$name]) )
-		{
-			$value = $_REQUEST[$name];
-		}
-		else if( isset($_POST[$name]) )
-		{
-			$value = $_POST[$name];
-		}
-		else if( isset($_GET[$name]) )
-		{
-			$value = $_GET[$name];
-		}
-		else
-		{
-			return $default;
-		}
+		$value = $this->request->param( $name, $default );
 
 		if( !$escape )
 		{
@@ -311,11 +359,13 @@ final class View extends Lexer
 	 * @example <?= $view->getOn("content") ?>
 	 * @example <?= $view->getOn("pageTitle") ?>
 	 *
-	 * @param string $name name or path
+	 * @param string $name    name or path
 	 * @param string $default default result value
 	 * @return mixed
 	 * @throws NotFoundException
 	 * @throws WriteException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function getOn( string $name, $default = "" )
 	{
@@ -328,104 +378,38 @@ final class View extends Lexer
 
 	public function assets( $file, $full = false )
 	{
-		return ( $full && isset($this->items['http']) ? $this->items['http'] : '' ) . $this->items["assets"] . $file;
+		return ( $full ? $this->config( 'http', '' ) : '' ) . $this->config( "assets" ) . $file;
 	}
 
-	public function getScript( $file, $prop = [] )
+	public function getScript( $files, array $prop = [] ): string
 	{
-		$dir = isset($prop["dir"]) ? trim($prop["dir"], "/") : "js";
-		$src = $this->items["assets"] . ( $dir ? $dir . "/" : "" );
-		$nln = isset($prop["nl"]) ? $prop["nl"] : "\n";
+		$files = $this->inkFiles( $files, $prop, "js" );
 
-		if( $dir )
+		$attr = isset( $prop["type"] ) ? ' type="' . $prop["type"] . '"' : '';
+
+		$node = $prop["charset"] ?? false;
+		if( $node )
 		{
-			$dir .= DIRECTORY_SEPARATOR;
+			$attr .= ' charset="' . ( $this->incAuto( $node ) ? $this->config( "charset" ) : $node ) . '"';
 		}
 
-		if( isset($prop['full']) && $prop['full'] && isset($this->items['http']) )
+		$node = $prop["language"] ?? false;
+		if( $node )
 		{
-			$src = $this->items['http'] . $src;
+			$attr .= ' language="' . ( $this->incAuto( $node ) ? 'JavaScript' : $node ) . '"';
 		}
 
-		$get = '';
-		$ver = isset( $prop["version"] ) ? $prop["version"] : false;
-		$srv = $ver === true || $ver === "auto";
-		$sct = isset( $prop["type"] ) ? ' type="' . $prop["type"] . '"' : '';
-
-		if( isset( $prop["charset"] ) && $prop["charset"] )
+		for( $i = 0, $len = count( $files ); $i < $len; $i++ )
 		{
-			$sct .= ' charset="';
-			$sct .=  $prop["charset"] === true || strtoupper($prop["charset"]) === 'AUTO' ? $this->items['charset'] : $prop["charset"];
-			$sct .= '"';
+			$files[$i] = '<script' . $attr . ' src="' . htmlspecialchars( $files[$i]["file"] ) . '"></script>';
 		}
 
-		if( isset( $prop["language"] ) && $prop["charset"] )
-		{
-			$sct .= ' language="';
-			$sct .=  $prop["language"] === true || strtoupper($prop["language"]) === 'AUTO' ? 'JavaScript' : $prop["language"];
-			$sct .= '"';
-		}
-
-		if( !is_array( $file ) )
-		{
-			$file = [$file];
-			$len = 1;
-		}
-		else
-		{
-			$len = count( $file );
-		}
-
-		for( $i = 0; $i < $len; $i++ )
-		{
-			$srcValue = $file[$i];
-			$get .= '<script' . $sct . ' src="';
-
-			if( $srcValue[0] === "/" || preg_match( $this->http, $srcValue ) )
-			{
-				$get .= $srcValue;
-			}
-			else
-			{
-				$get .= $this->_normalizePath( $src . $srcValue );
-				if( $ver )
-				{
-					if( $srv ) $get .= $this->_ver( $this->package->getAssetsPath() . $dir . $file[$i] );
-					else $get .= "?v=" . $ver;
-				}
-			}
-
-			$get .= '"></script>' . $nln;
-		}
-
-		if( isset($prop['trim']) )
-		{
-			$trim = $prop['trim'] === true || strtoupper($prop['trim']) === 'AUTO' ? null : $prop['trim'];
-			$get = trim($get, $trim);
-		}
-
-		return $get;
+		return $this->inc2nl( $files, $prop );
 	}
 
-	public function getStyle( $file, $prop = [] )
+	public function getStyle( $files, array $prop = [] ): string
 	{
-		$dir = isset($prop["dir"]) ? trim($prop["dir"], "/") : "css";
-		$src = $this->items["assets"] . ( $dir ? $dir . "/" : "" );
-		$nln = isset( $prop["nl"] ) ? $prop["nl"] : "\n";
-
-		if( $dir )
-		{
-			$dir .= DIRECTORY_SEPARATOR;
-		}
-
-		if( isset($prop['full']) && $prop['full'] && isset($this->items['http']) )
-		{
-			$src = $this->items['http'] . $src;
-		}
-
-		$get = '';
-		$ver = isset( $prop["version"] ) ? $prop["version"] : false;
-		$srv = $ver === true || $ver === "auto";
+		$files = $this->inkFiles( $files, $prop, "css" );
 
 		$attr = '';
 		if( !isset($prop["type"]) ) $attr .= ' type="text/css"';
@@ -437,109 +421,47 @@ final class View extends Lexer
 		if( !isset($prop["rel"]) ) $attr .= ' rel="stylesheet"';
 		else if( !empty($prop["rel"]) ) $attr .= ' rel="' . $prop["rel"] . '"';
 
-		if( !is_array( $file ) )
+		for( $i = 0, $len = count( $files ); $i < $len; $i++ )
 		{
-			$file = [$file];
-			$len = 1;
-		}
-		else
-		{
-			$len = count( $file );
+			$files[$i] = '<link' . $attr . ' href="' . htmlspecialchars( $files[$i]["file"] ) . '" />';
 		}
 
-		for( $i = 0; $i < $len; $i++ )
-		{
-			$get .= '<link' . $attr . ' href="';
-			$srcValue = $file[$i];
+		return $this->inc2nl( $files, $prop );
+	}
 
-			if( $srcValue[0] === "/" || preg_match( $this->http, $srcValue ) )
+	public function getImg( $files, array $prop = [] ): string
+	{
+		$files = $this->inkFiles( $files, $prop, "images" );
+		$size = $prop["size"] ?? false;
+		if( $size )
+		{
+			$size = $this->incAuto( $size );
+		}
+
+		for( $i = 0, $len = count( $files ); $i < $len; $i++ )
+		{
+			$file = $files[$i];
+			$image = '<img src="' . htmlspecialchars( $file["file"] ) . '"';
+			if( $size )
 			{
-				$get .= $srcValue;
+				if( $file["local"] && $file["exists"] )
+				{
+					$calc = @ getimagesize( $file["path"] );
+					if( $calc )
+					{
+						$image .= ' ' . $calc[3];
+					}
+				}
 			}
 			else
 			{
-				$get .= $this->_normalizePath( $src . $srcValue );
-				if( $ver )
-				{
-					if( $srv ) $get .= $this->_ver( $this->package->getAssetsPath() . $dir . $file[$i] );
-					else $get .= "?v=" . $ver;
-				}
+				if( isset( $prop["width"] ) ) $image .= ' width="' . $prop["width"] . '"';
+				if( isset( $prop["height"] ) ) $image .= ' height="' . $prop["height"] . '"';
 			}
-
-			$get .= '" />' . $nln;
+			$files[$i] = $image . ' />';
 		}
 
-		if( isset($prop['trim']) )
-		{
-			$trim = $prop['trim'] === true || strtoupper($prop['trim']) === 'AUTO' ? null : $prop['trim'];
-			$get = trim($get, $trim);
-		}
-
-		return $get;
-	}
-
-	public function getImg( $img, $prop = [] )
-	{
-		$baseDir = false;
-		if( $img[0] === '/' && substr($img, 0, 2) !== '//' )
-		{
-			$img = ltrim($img, '/');
-			$baseDir = true;
-		}
-
-		if( $prop === 'src' )
-		{
-			return $this->items["assets"] . ( $baseDir ? '' : 'images/' ) . $img;
-		}
-
-		$srv = ! preg_match( $this->http, $img );
-		$ins = $this->package->getAssetsPath();
-		if( $srv )
-		{
-			$assets = $this->items["assets"];
-			if( isset( $prop['dir'] )) {
-				if( !empty($prop['dir']) ) {
-					$assets .= $prop['dir'] . "/";
-					$ins .= $prop['dir'] . DIRECTORY_SEPARATOR;
-				}
-			}
-			else if( !$baseDir ) {
-				$assets .= 'images/';
-				$ins .= 'images' . DIRECTORY_SEPARATOR;
-			}
-
-			if( isset( $prop['full'] ) ) {
-				if( $prop['full'] && $assets[0] == '/' ) {
-					$assets = $this->items['http'] . $assets;
-				}
-				unset( $prop['full'] );
-			}
-
-			$ins = $ins . $img;
-			$img = $assets . $img;
-			unset( $prop['dir'], $prop['full'], $assets );
-		}
-
-		$get = '<img src="' . $img . '"';
-
-		$size = $prop === 'size';
-		if( is_array($prop) ) {
-			foreach( $prop as $name => $value ) {
-				if( !is_numeric($name) ) {
-					$get .= ' ' . $name . '="' . htmlspecialchars( $value ) . '"';
-				}
-				else if( $value === "size" ) {
-					$size = true;
-				}
-			}
-		}
-
-		if( $srv && $size && file_exists( $ins ) ) {
-			$size = @ getimagesize( $ins );
-			$get .= ' ' . $size[3];
-		}
-
-		return $get . ' />';
+		return $this->inc2nl( $files, $prop, $len > 1 );
 	}
 
 	// template
@@ -565,8 +487,8 @@ final class View extends Lexer
 
 		$this->package = Package::package($id);
 		$this->package->loadFunctions($this);
-		$this->items['assets'] = $this->package->getAssets();
-		$this->items['package'] = $name;
+		$this->config['assets'] = $this->package->getAssets();
+		$this->config['package'] = $name;
 
 		return $this;
 	}
@@ -612,6 +534,11 @@ final class View extends Lexer
 			throw new \RuntimeException("View process is run");
 		}
 
+		if( !isset( $this->package ) )
+		{
+			$this->usePackage( $this->config( "package", "main" ) );
+		}
+
 		$this->cacheable = ! is_null($cache);
 		$this->fromCache = $this->cacheable && $cache->ready();
 		$this->toCache   = $this->cacheable && ! $this->fromCache;
@@ -646,7 +573,7 @@ final class View extends Lexer
 		else
 		{
 			$path = $this->template->getPathname();
-			$app  = $this->app;
+			$app = self::app();
 			$view = $this;
 
 			ob_start();
@@ -697,22 +624,12 @@ final class View extends Lexer
 
 			}, $pluginDepth);
 
-			$copy = [];
-			foreach(array_keys($this->items) as $key)
-			{
-				if( ! in_array($key, $this->protected, true) )
-				{
-					$copy[$key] = $this->items[$key];
-				}
-			}
-
 			$cache
-				->setPageData($copy)
+				->setPageData( $this->items )
 				->setPlugins($plugins)
 				->setBody($body);
 
 			$pluginDepth = 1;
-			unset($copy);
 		}
 
 		// replace plugin data
@@ -766,7 +683,7 @@ final class View extends Lexer
 		$lexer[$this->depth] = $local;
 
 		ob_start();
-		$body = Path::includeFile( $path, [ 'path' => $path, 'chunk' => $name, 'view' => $this, 'app' => $this->app ] );
+		$body = Path::includeFile( $path, [ 'path' => $path, 'chunk' => $name, 'view' => $this, 'app' => self::app() ] );
 		$chunk = ob_get_contents();
 		ob_end_clean();
 
@@ -916,7 +833,7 @@ final class View extends Lexer
 		return $html;
 	}
 
-	private function _normalizePath( string $url ): string
+	protected function normalizePath( string $url ): string
 	{
 		for(;;)
 		{
@@ -936,19 +853,91 @@ final class View extends Lexer
 		return $url;
 	}
 
-	private function _ver( $file ): string
+	protected function incAuto( $value ): bool
 	{
-		if( !file_exists($file) )
+		return $value === true || $value && Str::lower( (string) $value ) === "auto";
+	}
+
+	protected function inkFiles( $files, array $prop, string $dir ): array
+	{
+		if( isset( $prop["dir"] ) )
 		{
-			return '';
+			$dir = trim( $prop["dir"], "/" );
 		}
 
-		$time = @ filemtime( $file );
-		if( ! $time )
+		$src = $this->config( "assets" );
+		if( $dir )
 		{
-			return '';
+			$src .= $dir . "/";
+			$dir .= DIRECTORY_SEPARATOR;
 		}
 
-		return "?t=" . $time;
+		if( isset( $prop['full'] ) && $prop['full'] )
+		{
+			$src = $this->config( 'http', '' ) . $src;
+		}
+
+		$ver = $prop["version"] ?? false;
+		$srv = $this->incAuto( $ver );
+		$prf = $this->package->getAssetsPath();
+
+		if( !is_array( $files ) )
+		{
+			$files = [ $files ];
+			$len = 1;
+		}
+		else
+		{
+			$len = count( $files );
+		}
+
+		for( $i = 0; $i < $len; $i++ )
+		{
+			$file = (string) $files[$i];
+			if( $file[0] === "/" || preg_match( $this->http, $file ) )
+			{
+				$files[$i] = [
+					"local" => false,
+					"file" => $file,
+				];
+			}
+			else
+			{
+				$path = $prf . $dir . $file;
+				$file = $this->normalizePath( $src . $file );
+				$exists = file_exists( $path );
+
+				if( $ver )
+				{
+					if( !$srv )
+					{
+						$file .= "?v=" . $ver;
+					}
+					else if( $exists )
+					{
+						$time = @ filemtime( $file );
+						if( $time )
+						{
+							$file .= '?t=' . $time;
+						}
+					}
+				}
+
+				$files[$i] = [
+					"local" => true,
+					"exists" => $exists,
+					"file" => $file,
+					"path" => $path,
+				];
+			}
+		}
+
+		return $files;
+	}
+
+	protected function inc2nl( array $files, array $prop, bool $el2nl = true ): string
+	{
+		$nln = $prop["nl"] ?? "\n";
+		return ( $prop["fl"] ?? "" ) . implode( $nln, $files ) . ( $prop["el"] ?? ( $el2nl ? $nln : "" ) );
 	}
 }

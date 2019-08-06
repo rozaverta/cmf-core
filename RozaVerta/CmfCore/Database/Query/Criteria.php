@@ -1,31 +1,31 @@
 <?php
-/**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
- * Date: 09.03.2019
- * Time: 20:38
- */
 
 namespace RozaVerta\CmfCore\Database\Query;
 
 use Closure;
 use Countable;
-use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Connection as DbalConnection;
 use Doctrine\DBAL\ParameterType;
-use Doctrine\DBAL\Query\Expression\ExpressionBuilder as DBALExpressionBuilder;
+use Doctrine\DBAL\Query\Expression\ExpressionBuilder as DbalExpressionBuilder;
 use Doctrine\DBAL\Query\Expression\CompositeExpression;
+use RozaVerta\CmfCore\Database\Connection;
 
-class CriteriaBuilder extends AbstractBuilderContainer implements Countable
+/**
+ * Class Criteria
+ *
+ * @package RozaVerta\CmfCore\Database\Query
+ */
+class Criteria extends AbstractConnectionContainer implements Countable
 {
 	public const TYPE_AND = CompositeExpression::TYPE_AND ;
 	public const TYPE_OR  = CompositeExpression::TYPE_OR  ;
 
-	public const EQ  = DBALExpressionBuilder::EQ  ;
-	public const NEQ = DBALExpressionBuilder::NEQ ;
-	public const LT  = DBALExpressionBuilder::LT  ;
-	public const LTE = DBALExpressionBuilder::LTE ;
-	public const GT  = DBALExpressionBuilder::GT  ;
-	public const GTE = DBALExpressionBuilder::GTE ;
+	public const EQ = DbalExpressionBuilder::EQ;
+	public const NEQ = DbalExpressionBuilder::NEQ;
+	public const LT = DbalExpressionBuilder::LT;
+	public const LTE = DbalExpressionBuilder::LTE;
+	public const GT = DbalExpressionBuilder::GT;
+	public const GTE = DbalExpressionBuilder::GTE;
 
 	private static $operators = [
 		'not' => self::NEQ,
@@ -49,13 +49,33 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 */
 	protected $expr;
 
+	/**
+	 * @var Parameters
+	 */
+	protected $parameters;
+
+	/**
+	 * @var string
+	 */
 	protected $type;
 
-	public function __construct( Builder $builder, $type = self::TYPE_AND )
+	/**
+	 * @var null | Closure
+	 */
+	protected $renameClosure = null;
+
+	public function __construct( Connection $connection, Parameters $parameters, $type = self::TYPE_AND )
 	{
-		parent::__construct($builder);
-		$this->expr = $this->dbalBuilder->expr();
+		parent::__construct( $connection );
+		$this->expr = $this->dbalConnection->getExpressionBuilder();
 		$this->type = $type === self::TYPE_OR ? self::TYPE_OR : self::TYPE_AND;
+		$this->parameters = $parameters;
+	}
+
+	public function registerRenameClosure( Closure $rename )
+	{
+		$this->renameClosure = $rename;
+		return $this;
 	}
 
 	/**
@@ -67,10 +87,26 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	}
 
 	/**
+	 * @param Parameters $parameters
+	 */
+	public function setParameters( Parameters $parameters ): void
+	{
+		$this->parameters = $parameters;
+	}
+
+	/**
+	 * @return Parameters
+	 */
+	public function getParameters(): Parameters
+	{
+		return $this->parameters;
+	}
+
+	/**
 	 * Creates a conjunction of the given boolean expressions.
 	 *
 	 * @param Closure $closure
-	 * @return CriteriaBuilder
+	 * @return Criteria
 	 */
 	public function orX( Closure $closure )
 	{
@@ -81,7 +117,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 * Creates a conjunction of the given boolean expressions.
 	 *
 	 * @param Closure $closure
-	 * @return CriteriaBuilder
+	 * @return Criteria
 	 */
 	public function andX( Closure $closure )
 	{
@@ -123,7 +159,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 * @param mixed $value The right expression value
 	 * @param null $bindName
 	 *
-	 * @return CriteriaBuilder
+	 * @return Criteria
 	 */
 	public function eq($name, $value, & $bindName = null)
 	{
@@ -145,7 +181,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 * @param mixed $value The right expression value
 	 * @param null $bindName
 	 *
-	 * @return CriteriaBuilder
+	 * @return Criteria
 	 */
 	public function neq($name, $value, & $bindName = null)
 	{
@@ -167,7 +203,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 * @param mixed $value The right expression value
 	 * @param null $bindName
 	 *
-	 * @return CriteriaBuilder
+	 * @return Criteria
 	 */
 	public function lt($name, $value, & $bindName = null)
 	{
@@ -184,7 +220,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 * @param mixed $value The right expression value
 	 * @param null $bindName
 	 *
-	 * @return CriteriaBuilder
+	 * @return Criteria
 	 */
 	public function lte($name, $value, & $bindName = null)
 	{
@@ -201,7 +237,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 * @param mixed $value The right expression value
 	 * @param null $bindName
 	 *
-	 * @return CriteriaBuilder
+	 * @return Criteria
 	 */
 	public function gt($name, $value, & $bindName = null)
 	{
@@ -218,7 +254,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 * @param mixed $value The right expression value
 	 * @param null $bindName
 	 *
-	 * @return CriteriaBuilder
+	 * @return Criteria
 	 */
 	public function gte($name, $value, & $bindName = null)
 	{
@@ -262,7 +298,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 * @param null   $bindName
 	 * @param array  $more
 	 *
-	 * @return CriteriaBuilder
+	 * @return Criteria
 	 *
 	 */
 	public function like($name, $value, & $bindName = null, ... $more)
@@ -279,7 +315,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 * @param null   $bindName
 	 * @param array  $more
 	 *
-	 * @return CriteriaBuilder
+	 * @return Criteria
 	 *
 	 */
 	public function notLike($name, $value, & $bindName = null, ... $more)
@@ -295,7 +331,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 * @param mixed $value The right expression value
 	 * @param null $bindName
 	 *
-	 * @return CriteriaBuilder
+	 * @return Criteria
 	 */
 	public function in($name, $value, & $bindName = null)
 	{
@@ -310,7 +346,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 * @param mixed $value The right expression value
 	 * @param null $bindName
 	 *
-	 * @return CriteriaBuilder
+	 * @return Criteria
 	 */
 	public function notIn($name, $value, & $bindName = null)
 	{
@@ -325,7 +361,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 	 * @param string $operator
 	 * @param $value
 	 * @param null $bindName
-	 * @return CriteriaBuilder
+	 * @return Criteria
 	 */
 	public function add($name, $operator, $value, & $bindName = null)
 	{
@@ -343,20 +379,45 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 			}
 		}
 
-		$bindValue = $this
-			->dbalBuilder
-			->createNamedParameter($value);
-
+		$bindValue = $this->parameters->bindNextForColumn( $value );
 		$bindName = substr($bindValue, 1);
-		$expr = $this->expr($this->rename($name), $operator, $bindValue);
+		$expr = $this->expr( $name, $operator, $bindValue );
 		return empty($expr) ? $this : $this->push($expr);
+	}
+
+	/**
+	 * Add columns comparison.
+	 *
+	 * @param string      $leftName
+	 * @param string      $operator
+	 * @param string|null $rightName
+	 *
+	 * @return $this
+	 */
+	public function columns( string $leftName, string $operator, ?string $rightName = null )
+	{
+		if( $rightName === null )
+		{
+			$rightName = $operator;
+			$operator = self::EQ;
+		}
+
+		$this->push(
+			$this->expr->comparison(
+				$this->rename( $leftName ),
+				$this->operator( $operator ),
+				$this->rename( $rightName )
+			)
+		);
+
+		return $this;
 	}
 
 	/**
 	 * @param $name
 	 * @param null $operator
 	 * @param null $value
-	 * @return CriteriaBuilder
+	 * @return Criteria
 	 */
 	public function raw($name, $operator = null, $value = null)
 	{
@@ -396,7 +457,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 		return empty($expr) ? $this : $this->push($expr);
 	}
 
-	public function getSQL()
+	public function getSql(): string
 	{
 		$len = count($this->parts);
 		if( !$len )
@@ -414,7 +475,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 
 	public function __toString()
 	{
-		return $this->getSQL();
+		return $this->getSql();
 	}
 
 	/**
@@ -431,7 +492,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 		return count($this->parts);
 	}
 
-	protected function expr( $name, $operator, $value )
+	protected function expr( $name, $operator, $value ): string
 	{
 		$expr = $this->expr;
 		$name = $this->rename($name);
@@ -461,17 +522,14 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 		if( $arrayMode )
 		{
 			$value = (array) $value;
-			$type = is_int( end($value) ) ? Connection::PARAM_INT_ARRAY : Connection::PARAM_STR_ARRAY;
+			$type = is_int( end( $value ) ) ? DbalConnection::PARAM_INT_ARRAY : DbalConnection::PARAM_STR_ARRAY;
 		}
 		else
 		{
 			$type = ParameterType::STRING;
 		}
 
-		$bindValue = $this
-			->dbalBuilder
-			->createNamedParameter($value, $type);
-
+		$bindValue = $this->parameters->bindNext( $value, $type );
 		$this->parts[] = $this->expr->{$operator}($this->rename($name), $bindValue, ... $more);
 
 		return substr($bindValue, 1);
@@ -479,17 +537,18 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 
 	protected function criteria( Closure $closure, $type )
 	{
-		$criteria = new CriteriaBuilder($this->builder, $type);
+		$criteria = new Criteria( $this->connection, $this->parameters, $type );
+		$criteria->renameClosure = $this->renameClosure;
 		$closure($criteria);
 
 		$cnt = $criteria->count();
 		if($cnt > 1)
 		{
-			$this->parts[] = "( " . $criteria->getSQL() . " )";
+			$this->parts[] = "( " . $criteria->getSql() . " )";
 		}
 		else if($cnt > 0)
 		{
-			$this->parts[] = $criteria->getSQL();
+			$this->parts[] = $criteria->getSql();
 		}
 
 		return $this;
@@ -503,7 +562,7 @@ class CriteriaBuilder extends AbstractBuilderContainer implements Countable
 
 	protected function rename( string $name ): string
 	{
-		return $this->builder->getColumn($name);
+		return $this->renameClosure === null ? $name : (string) call_user_func( $this->renameClosure, $name );
 	}
 
 	protected function operator( $operator ): string

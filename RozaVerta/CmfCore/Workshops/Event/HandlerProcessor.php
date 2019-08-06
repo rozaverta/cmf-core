@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 17.03.2019
  * Time: 14:04
  */
@@ -10,9 +9,11 @@ namespace RozaVerta\CmfCore\Workshops\Event;
 
 use ReflectionClass;
 use RozaVerta\CmfCore\Database\Connection;
+use RozaVerta\CmfCore\Database\Query\Criteria;
 use RozaVerta\CmfCore\Event\EventHelper;
 use RozaVerta\CmfCore\Event\Exceptions\EventAbortException;
 use RozaVerta\CmfCore\Event\Interfaces\EventPrepareInterface;
+use RozaVerta\CmfCore\Module\WorkshopModuleProcessor;
 use RozaVerta\CmfCore\Schemes\EventHandlerLinks_SchemeDesigner;
 use RozaVerta\CmfCore\Schemes\EventHandlers_SchemeDesigner;
 use RozaVerta\CmfCore\Schemes\Events_SchemeDesigner;
@@ -38,9 +39,8 @@ class HandlerProcessor extends Workshop
 	 * @param string $className
 	 *
 	 * @throws HandlerClassNotFoundException
-	 * @throws \ReflectionException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function createHandler( string $className ): void
 	{
@@ -48,7 +48,7 @@ class HandlerProcessor extends Workshop
 
 		if( ! class_exists($className, true) )
 		{
-			throw new HandlerClassNotFoundException("Handler class '{$className}' not found");
+			throw new HandlerClassNotFoundException( "Handler class \"{$className}\" not found." );
 		}
 
 		$ref = new ReflectionClass($className);
@@ -56,12 +56,12 @@ class HandlerProcessor extends Workshop
 
 		if( ! $ref->implementsInterface( EventPrepareInterface::class ) )
 		{
-			throw new HandlerImplementsException("Handler class '{$className}' must be implements of '" . EventPrepareInterface::class . "' interface");
+			throw new HandlerImplementsException( "Handler class \"{$className}\" must be implements of \"" . EventPrepareInterface::class . "\" interface." );
 		}
 
 		if( $this->getHandlerId($className) !== null )
 		{
-			$this->addAlert(Text::text("The %s handler was already exists", $className));
+			$this->addAlert( Text::text( 'The "%s" handler was already exists.', $className ) );
 			return;
 		}
 
@@ -72,20 +72,19 @@ class HandlerProcessor extends Workshop
 
 		if( $event->isPropagationStopped() )
 		{
-			throw new EventAbortException("The creation of an '{$className}' handler is aborted");
+			throw new EventAbortException( "The creation of an \"{$className}\" handler is aborted." );
 		}
 
-		$this
+		$handlerId = (int) $this
 			->db
-			->table(EventHandlers_SchemeDesigner::getTableName())
-			->insert([
+			->builder( EventHandlers_SchemeDesigner::getTableName() )
+			->insertGetId( [
 				"module_id" => $this->getModuleId(),
 				"class_name" => $className
 			]);
 
-		$handlerId = $this->db->lastInsertId();
 		$dispatcher->complete($handlerId);
-		$this->addDebug(Text::text("The %s handler is successfully created", $className));
+		$this->addDebug( Text::text( 'The "%s" handler is successfully created.', $className ) );
 	}
 
 	/**
@@ -93,8 +92,7 @@ class HandlerProcessor extends Workshop
 	 *
 	 * @param string $className
 	 *
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws \Doctrine\DBAL\DBALException
 	 * @throws \Throwable
 	 */
 	public function deleteHandler( string $className ): void
@@ -114,26 +112,49 @@ class HandlerProcessor extends Workshop
 
 		if( $event->isPropagationStopped() )
 		{
-			throw new EventAbortException("The '{$className}' handler delete aborted");
+			throw new EventAbortException( "The \"{$className}\" handler delete aborted." );
 		}
 
 		$this->db->transactional(function(Connection $conn) use ($handlerId) {
 
 			// remove class from handler table
 			$conn
-				->table(EventHandlers_SchemeDesigner::getTableName())
+				->builder( EventHandlers_SchemeDesigner::getTableName() )
 				->whereId($handlerId)
 				->delete();
 
 			// remove links
 			$conn
-				->table(EventHandlerLinks_SchemeDesigner::getTableName())
+				->builder( EventHandlerLinks_SchemeDesigner::getTableName() )
 				->where("handler_id", $handlerId)
 				->delete();
 		});
 
 		$dispatcher->complete($handlerId);
-		$this->addDebug(Text::text("The %s handler and handler links is successfully removed", $className));
+		$this->addDebug( Text::text( 'The "%s" handler and handler links is successfully removed.', $className ) );
+	}
+
+	/**
+	 * Handler has been added to the database.
+	 *
+	 * @param string $className
+	 * @param null   $handlerId
+	 *
+	 * @return bool
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
+	 */
+	public function registered( string $className, & $handlerId = null ): bool
+	{
+		$id = $this->getHandlerId( $this->getOriginalClassName( $className ) );
+		if( is_null( $id ) )
+		{
+			return false;
+		}
+
+		$handlerId = $id;
+		return true;
 	}
 
 	/**
@@ -144,16 +165,20 @@ class HandlerProcessor extends Workshop
 	 *
 	 * @throws EventAccessException
 	 * @throws HandlerLinkNotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function priority( int $linkId, int $priority ): void
 	{
 		$row = $this
 			->db
-			->table(EventHandlerLinks_SchemeDesigner::getTableName(), "ecl")
-			->leftJoin("ecl", EventHandlers_SchemeDesigner::getTableName(), "ec", "ecl.handler_id = el.id")
-			->leftJoin("ecl", Events_SchemeDesigner::getTableName(), "e", "ecl.event_id = e.id")
+			->builder( EventHandlerLinks_SchemeDesigner::getTableName(), "ecl" )
+			->leftJoin( EventHandlers_SchemeDesigner::getTableName(), "ec", static function( Criteria $criteria ) {
+				$criteria->columns( "ecl.handler_id", "el.id" );
+			} )
+			->leftJoin( Events_SchemeDesigner::getTableName(), "e", static function( Criteria $criteria ) {
+				$criteria->columns( "ecl.event_id", "e.id" );
+			} )
 			->whereId($linkId, 'ecl.id')
 			->select([
 				'ecl.priority', 'ec.class_name', 'ec.module_id', 'e.name'
@@ -162,19 +187,19 @@ class HandlerProcessor extends Workshop
 
 		if( !$row )
 		{
-			throw new HandlerLinkNotFoundException("Handler link '{$linkId}' not found");
+			throw new HandlerLinkNotFoundException( "Handler link \"{$linkId}\" not found." );
 		}
 
-		$moduleId  = (int) $row->get("module_id");
-		$className = $row->get("class_name");
-		$eventName = $row->get("name");
+		$moduleId = (int) $row["module_id"];
+		$className = $row["class_name"];
+		$eventName = $row["name"];
 
 		if( $moduleId !== $this->getModuleId() )
 		{
-			throw new EventAccessException("It is permissible to change the '{$eventName}' event data only for the '{$moduleId}' module");
+			throw new EventAccessException( "It is permissible to change the \"{$eventName}\" event data only for the \"{$moduleId}\" module." );
 		}
 
-		$oldPriority = (int) $row->get("priority");
+		$oldPriority = (int) $row["priority"];
 
 		if($oldPriority === $priority)
 		{
@@ -188,51 +213,51 @@ class HandlerProcessor extends Workshop
 
 		if( $event->isPropagationStopped() )
 		{
-			throw new EventAbortException("The establishment of a connection between the {$eventName} event and the {$className} handler was aborted");
+			throw new EventAbortException( "The establishment of a connection between the \"{$eventName}\" event and the \"{$className}\" handler was aborted." );
 		}
 
 		$this
 			->db
-			->table(EventHandlerLinks_SchemeDesigner::getTableName())
+			->builder( EventHandlerLinks_SchemeDesigner::getTableName() )
 			->whereId($linkId)
 			->update([ "priority" => $priority ]);
 
 		$dispatcher->complete($linkId);
-		$this->addDebug(Text::text("The connection between the %s event and the %s handler has been updated", $eventName, $className));
+		$this->addDebug( Text::text( 'The connection between the "%s" event and the "%s" handler has been updated.', $eventName, $className ) );
 	}
 
 	/**
 	 * Create link
 	 *
-	 * @param string $className
-	 * @param string $eventName
+	 * @param string   $className
+	 * @param string   $eventName
 	 *
 	 * @param int|null $priority
+	 * @param bool     $replace
 	 *
-	 * @throws HandlerNotFoundException
 	 * @throws EventNotFoundException
+	 * @throws HandlerNotFoundException
 	 * @throws \Doctrine\DBAL\DBALException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws \Throwable
 	 */
-	public function link( string $className, string $eventName, ? int $priority = null ): void
+	public function link( string $className, string $eventName, ? int $priority = null, bool $replace = false ): void
 	{
 		$className = $this->getOriginalClassName($className);
 		$handlerId = $this->getHandlerId($className);
 		if( ! $handlerId )
 		{
-			throw new HandlerNotFoundException("Class name '{$className}' not found");
+			throw new HandlerNotFoundException( "Class name \"{$className}\" not found." );
 		}
 
 		if( ! EventHelper::exists($eventName, $eventId) )
 		{
-			throw new EventNotFoundException("Event '{$eventName}' not found");
+			throw new EventNotFoundException( "Event \"{$eventName}\" not found." );
 		}
 
 		$linkId = $this->getLinkId($handlerId, $eventId);
 		if( $linkId )
 		{
-			$this->addError("The connection between the {$eventName} event and the {$className} handler was already exists");
+			$replace || $this->addError( "The connection between the \"{$eventName}\" event and the \"{$className}\" handler was already exists." );
 			return;
 		}
 
@@ -240,7 +265,7 @@ class HandlerProcessor extends Workshop
 		{
 			$priority = $this
 				->db
-				->table(EventHandlerLinks_SchemeDesigner::getTableName())
+					->builder( EventHandlerLinks_SchemeDesigner::getTableName() )
 				->where("event_id", $eventId)
 				->max("priority") + 1;
 		}
@@ -252,31 +277,32 @@ class HandlerProcessor extends Workshop
 
 		if( $event->isPropagationStopped() )
 		{
-			throw new EventAbortException("The establishment of a connection between the {$eventName} event and the {$className} handler was aborted");
+			throw new EventAbortException( "The establishment of a connection between the \"{$eventName}\" event and the \"{$className}\" handler was aborted." );
 		}
 
-		$this
+		$linkId = (int) $this
 			->db
-			->table(EventHandlerLinks_SchemeDesigner::getTableName())
-			->insert([
+			->builder( EventHandlerLinks_SchemeDesigner::getTableName() )
+			->insertGetId( [
 				"handler_id" => $handlerId,
 				"event_id" => $eventId,
 				"priority" => $priority
 			]);
 
-		$linkId = $this->db->lastInsertId();
 		$dispatcher->complete($linkId);
-		$this->addDebug(Text::text("Event %s and handler of %s connected", $eventName, $className));
+		$this->addDebug( Text::text( 'Event "%s" and handler of "%s" connected.', $eventName, $className ) );
 	}
 
 	/**
+	 * Unlink handler
+	 *
 	 * @param string $className
 	 * @param string $eventName
 	 *
-	 * @throws HandlerNotFoundException
 	 * @throws EventNotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
+	 * @throws HandlerNotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function unlink( string $className, string $eventName ): void
 	{
@@ -284,12 +310,12 @@ class HandlerProcessor extends Workshop
 		$handlerId = $this->getHandlerId($className);
 		if( ! $handlerId )
 		{
-			throw new HandlerNotFoundException("Class name '{$className}' not found");
+			throw new HandlerNotFoundException( "Class name \"{$className}\" not found." );
 		}
 
 		if( ! EventHelper::exists($eventName, $eventId) )
 		{
-			throw new EventNotFoundException("Event '{$eventName}' not found");
+			throw new EventNotFoundException( "Event \"{$eventName}\" not found." );
 		}
 
 		$linkId = $this->getLinkId($handlerId, $eventId);
@@ -305,26 +331,33 @@ class HandlerProcessor extends Workshop
 
 		if( $event->isPropagationStopped() )
 		{
-			throw new EventAbortException("Disconnection between the {$eventName} event and the {$className} handler was aborted");
+			throw new EventAbortException( "Disconnection between the \"{$eventName}\" event and the \"{$className}\" handler was aborted." );
 		}
 
 		$this
 			->db
-			->table(EventHandlerLinks_SchemeDesigner::getTableName())
-			->whereId($eventId)
+			->builder( EventHandlerLinks_SchemeDesigner::getTableName() )
+			->whereId( $linkId )
 			->delete();
 
-		$linkId = $this->db->lastInsertId();
 		$dispatcher->complete($linkId);
-		$this->addDebug(Text::text("The %s event and the %s handler are no longer associated.", $eventName, $className));
+		$this->addDebug( Text::text( 'The "%s" event and the "%s" handler are no longer associated.', $eventName, $className ) );
 	}
 
+	/**
+	 * Get handler database SchemeDesigner
+	 *
+	 * @param string $className
+	 *
+	 * @return EventHandlers_SchemeDesigner|null
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
+	 */
 	public function getHandlerScheme( string $className ): ?EventHandlers_SchemeDesigner
 	{
 		/** @var EventHandlers_SchemeDesigner|false $handler */
-		$handler = $this
-			->db
-			->table(EventHandlers_SchemeDesigner::class)
+		$handler = EventHandlers_SchemeDesigner::find()
 			->where("class_name", $this->getOriginalClassName($className))
 			->where("module_id", $this->getModuleId())
 			->first();
@@ -332,6 +365,17 @@ class HandlerProcessor extends Workshop
 		return $handler ? $handler : null;
 	}
 
+	/**
+	 * Get link database SchemeDesigner
+	 *
+	 * @param string $className
+	 * @param string $eventName
+	 *
+	 * @return EventHandlerLinks_SchemeDesigner|null
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
+	 */
 	public function getLinkScheme( string $className, string $eventName ): ?EventHandlerLinks_SchemeDesigner
 	{
 		$handlerId = $this->getHandlerId($this->getOriginalClassName($className));
@@ -341,9 +385,7 @@ class HandlerProcessor extends Workshop
 		}
 
 		/** @var EventHandlerLinks_SchemeDesigner|false $link */
-		$link = $this
-			->db
-			->table(EventHandlerLinks_SchemeDesigner::class)
+		$link = EventHandlerLinks_SchemeDesigner::find()
 			->where("handler_id", $handlerId)
 			->where("event_id", $eventId)
 			->first();
@@ -362,11 +404,11 @@ class HandlerProcessor extends Workshop
 		$className = ltrim($className, "\\");
 		if( strpos($className, "\\") === false )
 		{
-			return $className;
+			return $this->getModule()->getNamespaceName() . "Handlers\\" . $className;
 		}
 		else
 		{
-			return  $this->getModule()->getNamespaceName() . "Handlers\\" . $className;
+			return $className;
 		}
 	}
 
@@ -400,11 +442,22 @@ class HandlerProcessor extends Workshop
 
 	// protected
 
+	/**
+	 * Get link ID
+	 *
+	 * @param int $handlerId
+	 * @param int $eventId
+	 *
+	 * @return int|null
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
+	 */
 	protected function getLinkId(int $handlerId, int $eventId): ? int
 	{
 		$linkId = $this
 			->db
-			->table(EventHandlerLinks_SchemeDesigner::getTableName())
+			->builder( EventHandlerLinks_SchemeDesigner::getTableName() )
 			->where("handler_id", $handlerId)
 			->where("event_id", $eventId)
 			->value("id");
@@ -412,11 +465,21 @@ class HandlerProcessor extends Workshop
 		return $linkId && is_numeric($linkId) ? (int) $linkId : null;
 	}
 
+	/**
+	 * Get handler ID
+	 *
+	 * @param string $className
+	 *
+	 * @return int|null
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
+	 */
 	protected function getHandlerId( string $className ): ? int
 	{
 		$handlerId = $this
 			->db
-			->table(EventHandlers_SchemeDesigner::getTableName())
+			->builder( EventHandlers_SchemeDesigner::getTableName() )
 			->where("class_name", $className)
 			->where("module_id", $this->getModuleId())
 			->value("id");

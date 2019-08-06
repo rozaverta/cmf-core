@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 12.03.2019
  * Time: 10:42
  */
@@ -15,6 +14,11 @@ use RozaVerta\CmfCore\Module\ModuleManifest;
 use RozaVerta\CmfCore\Module\Exceptions\ModuleBadNameException;
 use RozaVerta\CmfCore\Module\Exceptions\ModuleNotFoundException;
 
+/**
+ * Class Modules_SchemeDesigner
+ *
+ * @package RozaVerta\CmfCore\Schemes
+ */
 class Modules_SchemeDesigner extends SchemeDesigner
 {
 	/** @return int */
@@ -80,14 +84,16 @@ class Modules_SchemeDesigner extends SchemeDesigner
 	}
 
 	/**
+	 * Get module manifest file
+	 *
 	 * @return \RozaVerta\CmfCore\Module\ModuleManifest
 	 */
 	public function getManifest(): ModuleManifest
 	{
 		if( !isset($this->manifest) )
 		{
-			$configClassName = $this->getNamespaceName() . 'Manifest';
-			$this->manifest = new $configClassName();
+			$manifestClassName = $this->getNamespaceName() . 'Manifest';
+			$this->manifest = new $manifestClassName();
 		}
 		return $this->manifest;
 	}

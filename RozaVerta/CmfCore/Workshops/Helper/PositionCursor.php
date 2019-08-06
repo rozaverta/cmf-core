@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 23.04.2019
  * Time: 10:47
  */
@@ -11,7 +10,7 @@ namespace RozaVerta\CmfCore\Workshops\Helper;
 use RozaVerta\CmfCore\Database\Connection;
 use RozaVerta\CmfCore\Database\DatabaseManager as DB;
 use RozaVerta\CmfCore\Database\Query\Builder;
-use RozaVerta\CmfCore\Database\Query\StateUpdateBuilder;
+use RozaVerta\CmfCore\Database\Query\WriteableState;
 use RozaVerta\CmfCore\Exceptions\NotFoundException;
 use RozaVerta\CmfCore\Exceptions\RuntimeException;
 
@@ -164,7 +163,9 @@ class PositionCursor
 	 * Get next position
 	 *
 	 * @return int
+	 *
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function getNextPosition(): int
 	{
@@ -175,7 +176,9 @@ class PositionCursor
 	 * Get last position
 	 *
 	 * @return int
+	 *
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function getLastPosition(): int
 	{
@@ -195,8 +198,11 @@ class PositionCursor
 	 * Get a recording position
 	 *
 	 * @param int $id
+	 *
 	 * @return int|null
+	 *
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function getPosition(int $id): ?int
 	{
@@ -230,7 +236,7 @@ class PositionCursor
 			->where($this->column, "<", 1)
 			->select(['id'])
 			->orderBy($this->column)
-			->addOrderBy($column)
+			->orderBy( $column )
 			->get();
 
 		$cnt = $all->count();
@@ -248,16 +254,16 @@ class PositionCursor
 						{
 							$this
 								->getBuilder($connection)
-								->update(function(StateUpdateBuilder $state) use ($delta) {
+								->update( function( WriteableState $state ) use ( $connection, $delta ) {
 									$this
 										->mergeData($state)
-										->expr($this->column, $this->column . ' + ' . $delta);
+										->expr( $this->column, $connection->getGrammar()->wrap( $this->column ) . ' + ' . $delta );
 								});
 						}
 					}
 
 					$updater = $this->getBuilder($connection);
-					$state = $updater->getUpdateState();
+					$state = $updater->getState();
 					$this->mergeData($state, false);
 
 					$position = $this->step;
@@ -266,7 +272,7 @@ class PositionCursor
 					{
 						$state->set($this->column, $position);
 						$updater
-							->whereId((int) $item->get("id"))
+							->whereId( (int) $item["id"] )
 							->update();
 
 						$position += $this->step;
@@ -277,9 +283,14 @@ class PositionCursor
 
 		// step 2. calculate duplicate positions
 
-		$all = $this
-			->getBuilder()
-			->select(['COUNT(id) as count_positions', $this->column])
+		$builder = $this->getBuilder();
+		$grammar = $builder->getGrammar();
+
+		$all = $builder
+			->select( [
+				$grammar->newExpression( 'COUNT(%s) as %s', [ 'id', 'count_positions' ] ),
+				$this->column,
+			] )
 			->having('count_positions', '>', 1)
 			->groupBy($this->column)
 			->get();
@@ -290,7 +301,7 @@ class PositionCursor
 		{
 			foreach($all as $item)
 			{
-				$changed += $this->restoreDuplicatePosition((int) $item->get($this->column), $column);
+				$changed += $this->restoreDuplicatePosition( (int) $item[$this->column], $column );
 			}
 		}
 
@@ -334,16 +345,16 @@ class PositionCursor
 						$this
 							->getBuilder($connection)
 							->where($this->column, '>', $position)
-							->update(function(StateUpdateBuilder $state) use ($delta) {
+							->update( function( WriteableState $state ) use ( $connection, $delta ) {
 								$this
 									->mergeData($state)
-									->expr($this->column, $this->column . ' + ' . $delta);
+									->expr( $this->column, $connection->getGrammar()->wrap( $this->column ) . ' + ' . $delta );
 							});
 					}
 				}
 
 				$updater = $this->getBuilder($connection);
-				$state = $updater->getUpdateState();
+				$state = $updater->getState();
 				$this->mergeData($state, false);
 				$first = true;
 
@@ -357,7 +368,7 @@ class PositionCursor
 					{
 						$state->set($this->column, $position);
 						$updater
-							->whereId((int) $item->get("id"))
+							->whereId( (int) $item["id"] )
 							->update();
 					}
 
@@ -521,10 +532,10 @@ class PositionCursor
 						->getBuilder($connection)
 						->where('id', '!=', $id)
 						->where($this->column, '<', $position)
-						->update(function(StateUpdateBuilder $state) use ($delta) {
+						->update( function( WriteableState $state ) use ( $connection, $delta ) {
 							$this
 								->mergeData($state)
-								->expr($this->column, $this->column . ' + ' . $delta);
+								->expr( $this->column, $connection->getGrammar()->wrap( $this->column ) . ' + ' . $delta );
 						});
 
 					$this->querySetPosition($id, $first, $connection);
@@ -561,10 +572,10 @@ class PositionCursor
 						->getBuilder($connection)
 						->where('id', '!=', $id)
 						->where($this->column, '>', $position)
-						->update(function(StateUpdateBuilder $state) use ($delta) {
+						->update( function( WriteableState $state ) use ( $connection, $delta ) {
 							$this
 								->mergeData($state)
-								->expr($this->column, $this->column . ' - ' . $delta);
+								->expr( $this->column, $connection->getGrammar()->wrap( $this->column ) . ' - ' . $delta );
 						});
 
 					$this->querySetPosition($id, $last, $connection);
@@ -660,10 +671,10 @@ class PositionCursor
 									$b->where($this->column, '<', $positionRight + 1);
 								}
 
-								$b->update(function(StateUpdateBuilder $state) use ($delta) {
+								$b->update( function( WriteableState $state ) use ( $connection, $delta ) {
 									$this
 										->mergeData($state)
-										->expr($this->column, $this->column . ' - ' . $delta);
+										->expr( $this->column, $connection->getGrammar()->wrap( $this->column ) . ' - ' . $delta );
 								});
 							});
 					}
@@ -703,10 +714,10 @@ class PositionCursor
 									->where('id', '!=', $idLeft)
 									->where($this->column, '>', $positionRight)
 									->where($this->column, '<', $positionLeft + 1)
-									->update(function(StateUpdateBuilder $state) use ($delta) {
+									->update( function( WriteableState $state ) use ( $connection, $delta ) {
 										$this
 											->mergeData($state)
-											->expr($this->column, $this->column . ' + ' . $delta);
+											->expr( $this->column, $connection->getGrammar()->wrap( $this->column ) . ' + ' . $delta );
 									});
 							});
 					}
@@ -750,10 +761,10 @@ class PositionCursor
 									->where("id", "!=", $idLeft)
 									->where($this->column, '>', $positionLeft - 1)
 									->where($this->column, '<', $positionRight)
-									->update(function(StateUpdateBuilder $state) use ($delta) {
+									->update( function( WriteableState $state ) use ( $connection, $delta ) {
 										$this
 											->mergeData($state)
-											->expr($this->column, $this->column . ' - ' . $delta);
+											->expr( $this->column, $connection->getGrammar()->wrap( $this->column ) . ' - ' . $delta );
 									});
 							});
 					}
@@ -792,10 +803,10 @@ class PositionCursor
 									->where("id", "!=", $idLeft)
 									->where($this->column, '>', $positionRight - 1)
 									->where($this->column, '<', $positionLeft + 1)
-									->update(function(StateUpdateBuilder $state) use ($delta) {
+									->update( function( WriteableState $state ) use ( $connection, $delta ) {
 										$this
 											->mergeData($state)
-											->expr($this->column, $this->column . ' + ' . $delta);
+											->expr( $this->column, $connection->getGrammar()->wrap( $this->column ) . ' + ' . $delta );
 									});
 							});
 					}
@@ -807,12 +818,14 @@ class PositionCursor
 	/**
 	 * Add update columns for query
 	 *
-	 * @param StateUpdateBuilder $state
-	 * @param bool $secondary
-	 * @return StateUpdateBuilder
+	 * @param WriteableState $state
+	 * @param bool           $secondary
+	 *
+	 * @return WriteableState
+	 *
 	 * @throws \Exception
 	 */
-	private function mergeData( StateUpdateBuilder $state, bool $secondary = true): StateUpdateBuilder
+	private function mergeData( WriteableState $state, bool $secondary = true ): WriteableState
 	{
 		if( $secondary && $this->updateMode === self::UPDATE_MODE_PRIMARY )
 		{
@@ -843,11 +856,14 @@ class PositionCursor
 	 * Get query builder
 	 *
 	 * @param Connection|null $connection
+	 *
 	 * @return Builder
+	 *
+	 * @throws \Throwable
 	 */
 	private function getBuilder(? Connection $connection = null): Builder
 	{
-		$builder = is_null($connection) ? DB::table($this->tableName) : $connection->table($this->tableName);
+		$builder = is_null( $connection ) ? DB::builder( $this->tableName ) : $connection->builder( $this->tableName );
 		if(count($this->where))
 		{
 			$builder->where($this->where);
@@ -858,10 +874,13 @@ class PositionCursor
 	/**
 	 * Set one position for the specified entry
 	 *
-	 * @param int $id
-	 * @param int $position
+	 * @param int             $id
+	 * @param int             $position
 	 * @param Connection|null $connection
-	 * @param bool $secondary
+	 * @param bool            $secondary
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	private function querySetPosition(int $id, int $position, ? Connection $connection = null, bool $secondary = false)
 	{
@@ -869,7 +888,7 @@ class PositionCursor
 			->getBuilder($connection)
 			->whereId($id)
 			->update(
-				function(StateUpdateBuilder $state) use ($position, $secondary) {
+				function( WriteableState $state ) use ( $position, $secondary ) {
 					$this
 						->mergeData($state, $secondary)
 						->set($this->column, $position);
@@ -900,8 +919,11 @@ class PositionCursor
 	 * Get next entry (id and position column)
 	 *
 	 * @param int $position
+	 *
 	 * @return array|null
+	 *
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	private function getNext(int $position): ? array
 	{
@@ -917,8 +939,11 @@ class PositionCursor
 	 * Get previous entry (id and position column)
 	 *
 	 * @param int $position
+	 *
 	 * @return array|null
+	 *
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	private function getPrev(int $position): ? array
 	{
@@ -934,7 +959,9 @@ class PositionCursor
 	 * Create next/prev query
 	 *
 	 * @param Builder $builder
+	 *
 	 * @return array|null
+	 *
 	 * @throws \Doctrine\DBAL\DBALException
 	 */
 	private function getPrevNext(Builder $builder): ? array
@@ -948,7 +975,10 @@ class PositionCursor
 			return null;
 		}
 
-		return ['id' => (int) $row->get("id"), 'position' => (int) $row->get("position")];
+		return [
+			'id' => (int) $row["id"],
+			'position' => (int) $row[$this->column],
+		];
 	}
 
 	/**

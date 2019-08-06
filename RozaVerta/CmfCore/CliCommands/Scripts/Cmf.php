@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 13.03.2019
  * Time: 20:32
  */
@@ -37,6 +36,8 @@ use RuntimeException;
 class Cmf extends AbstractScript
 {
 	use ScriptUserTrait;
+
+	protected $services = [ "app", "phpExport" ];
 
 	/**
 	 * @var Config
@@ -168,7 +169,7 @@ class Cmf extends AbstractScript
 							if($action === "install")
 							{
 								DatabaseManager::connection()
-									->table(TemplatePackages_SchemeDesigner::getTableName())
+									->builder( TemplatePackages_SchemeDesigner::getTableName() )
 									->where("name", "main")
 									->where("module_id", $module->getId())
 									->update([
@@ -517,7 +518,7 @@ class Cmf extends AbstractScript
 
 		if( is_array($content) )
 		{
-			$text .= $this->app->phpExport
+			$text .= $this->phpExport
 					->config(PhpExport::SHORT_ARRAY_SYNTAX | PhpExport::ARRAY_PRETTY_PRINT)
 					->data($content) . "\nreturn \$data;\n";
 		}

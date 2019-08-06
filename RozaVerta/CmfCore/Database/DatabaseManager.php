@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 09.03.2019
  * Time: 18:21
  */
@@ -11,6 +10,7 @@ namespace RozaVerta\CmfCore\Database;
 use RozaVerta\CmfCore\Exceptions\NotFoundException;
 use RozaVerta\CmfCore\Support\Prop;
 use RozaVerta\CmfCore\Traits\SingletonInstanceTrait;
+use Throwable;
 
 /**
  * Class DatabaseManager
@@ -34,18 +34,66 @@ final class DatabaseManager
 	 * @param string $tableName
 	 * @param null|string $alias
 	 * @param null|string $connection
-	 * @return Query\Builder
 	 */
-	public static function table( string $tableName, ?string $alias = null, ?string $connection = null ): Query\Builder
+	public static function table( string $tableName, ?string $alias = null, ?string $connection = null )
 	{
-		return self::getInstance()->getConnection($connection)->table($tableName, $alias);
+		return null;
+	}
+
+	/**
+	 * Create new plain builder.
+	 *
+	 * @param string|null $connection
+	 *
+	 * @return Query\PlainBuilder
+	 *
+	 * @throws NotFoundException
+	 */
+	public static function plainBuilder( ?string $connection = null ): Query\PlainBuilder
+	{
+		return self::getInstance()->getConnection( $connection )->plainBuilder();
+	}
+
+	/**
+	 * Create new query builder.
+	 *
+	 * @param string      $table
+	 * @param string|null $alias
+	 * @param string|null $connection
+	 *
+	 * @return Query\Builder
+	 *
+	 * @throws Throwable
+	 */
+	public static function builder( string $table, ?string $alias = null, ?string $connection = null ): Query\Builder
+	{
+		return self::getInstance()->getConnection( $connection )->builder( $table, $alias );
+	}
+
+	/**
+	 * Create new SchemeDesigner fetch query builder.
+	 *
+	 * @param string      $className
+	 *
+	 * @param string|null $connection
+	 *
+	 * @return Query\SchemeDesignerFetchBuilder
+	 *
+	 * @throws Throwable
+	 */
+	public static function schemeDesignerFetchBuilder( string $className, ?string $connection = null ): Query\SchemeDesignerFetchBuilder
+	{
+		return self::getInstance()->getConnection( $connection )->schemeDesignerFetchBuilder( $className );
 	}
 
 	/**
 	 * Get the database connection
 	 *
 	 * @param null|string $connection
+	 *
 	 * @return Connection
+	 *
+	 * @throws NotFoundException
 	 */
 	public static function connection( ?string $connection = null ): Connection
 	{
@@ -56,7 +104,10 @@ final class DatabaseManager
 	 * Get the database connection
 	 *
 	 * @param null|string $name
+	 *
 	 * @return Connection
+	 *
+	 * @throws NotFoundException
 	 */
 	public function getConnection( ?string $name = null ): Connection
 	{

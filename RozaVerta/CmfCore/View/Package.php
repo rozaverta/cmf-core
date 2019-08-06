@@ -1,14 +1,12 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 23.09.2016
  * Time: 19:34
  */
 
 namespace RozaVerta\CmfCore\View;
 
-use RozaVerta\CmfCore\Database\DatabaseManager as DB;
 use RozaVerta\CmfCore\Cache\Cache;
 use RozaVerta\CmfCore\Filesystem\Iterator;
 use RozaVerta\CmfCore\Helper\Callback;
@@ -189,8 +187,12 @@ final class Package implements Interfaces\PackageInterface, VarExportInterface
 
 	/**
 	 * @param int $id
+	 *
 	 * @return Package
+	 *
 	 * @throws Exceptions\PackageNotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	static public function package( int $id ): Package
 	{
@@ -211,6 +213,14 @@ final class Package implements Interfaces\PackageInterface, VarExportInterface
 		return self::$store[$id];
 	}
 
+	/**
+	 * @param string $name
+	 *
+	 * @return int|null
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
+	 */
 	static public function getIdFromName( string $name ): ? int
 	{
 		static $idn = null;
@@ -225,8 +235,7 @@ final class Package implements Interfaces\PackageInterface, VarExportInterface
 			}
 			else
 			{
-				$all = DB
-					::table(TemplatePackages_SchemeDesigner::class)
+				$all = TemplatePackages_SchemeDesigner::find()
 					->orderBy("name")
 					->get();
 
@@ -245,13 +254,16 @@ final class Package implements Interfaces\PackageInterface, VarExportInterface
 
 	/**
 	 * @param int $id
+	 *
 	 * @return Package
+	 *
 	 * @throws Exceptions\PackageNotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	static private function load(int $id): Package
 	{
-		$row = DB
-			::table(TemplatePackages_SchemeDesigner::class)
+		$row = TemplatePackages_SchemeDesigner::find()
 			->whereId($id)
 			->first();
 

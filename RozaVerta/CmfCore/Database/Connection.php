@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 09.03.2019
  * Time: 18:22
  */
@@ -12,10 +11,17 @@ use BadMethodCallException;
 use Closure;
 use Doctrine\DBAL\Connection as DBALConnection;
 use Doctrine\DBAL\DBALException;
+use Doctrine\DBAL\Driver\ResultStatement;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\FetchMode;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use RozaVerta\CmfCore\Database\Query\Builder;
+use RozaVerta\CmfCore\Database\Query\Grammars\MySqlGrammar;
+use RozaVerta\CmfCore\Database\Query\Grammars\PostgresGrammar;
+use RozaVerta\CmfCore\Database\Query\Grammars\SQLiteGrammar;
+use RozaVerta\CmfCore\Database\Query\Grammars\SqlServerGrammar;
+use RozaVerta\CmfCore\Database\Query\PlainBuilder;
+use RozaVerta\CmfCore\Database\Query\SchemeDesignerFetchBuilder;
 use Throwable;
 
 /**
@@ -48,9 +54,6 @@ use Throwable;
  * @method \Doctrine\DBAL\Driver\ResultStatement executeQuery(string $query, array $params = [], $types = []) Executes an, optionally parametrized, SQL query.
  * @method \Doctrine\DBAL\Driver\ResultStatement executeCacheQuery(string $query, array $params = [], $types = [], ?\Doctrine\DBAL\Cache\QueryCacheProfile $qcp = null) Executes a caching query.
  * @method string|int lastInsertId(string $seqName = null) Returns the ID of the last inserted row, or the last value from a sequence object, depending on the underlying driver.
- * @method mixed[]|false fetchAssoc(string $statement, array $params = [], array $types = []) Prepares and executes an SQL query and returns the first row of the result as an associative array.
- * @method mixed[]|false fetchArray(string $statement, array $params = [], array $types = []) Prepares and executes an SQL query and returns the first row of the result as a numerically indexed array.
- * @method mixed|false fetchColumn(string $statement, array $params = [], int $column = 0, array $types = []) Prepares and executes an SQL query and returns the value of a single column of the first row of the result.
  *
  * @package RozaVerta\CmfCore\Database
  */
@@ -74,6 +77,11 @@ class Connection
 	protected $prefix = "";
 
 	/**
+	 * @var Grammar
+	 */
+	protected $grammar;
+
+	/**
 	 * Connection constructor.
 	 *
 	 * @param array $params
@@ -87,6 +95,7 @@ class Connection
 
 		$this->name = $name;
 		$this->prefix = $params["prefix"] ?? "";
+		$this->loadGrammar();
 	}
 
 	/**
@@ -122,6 +131,16 @@ class Connection
 	}
 
 	/**
+	 * Get platform Grammar
+	 *
+	 * @return Grammar
+	 */
+	public function getGrammar(): Grammar
+	{
+		return $this->grammar;
+	}
+
+	/**
 	 * Get the full table name with the table prefix.
 	 *
 	 * @param string $table
@@ -148,14 +167,50 @@ class Connection
 	 * @param string $name
 	 * @param string|null $alias
 	 *
+	 * @deprecated
+	 */
+	public function table( string $name, string $alias = null )
+	{
+		return null;
+	}
+
+	/**
+	 * Create new plain builder.
+	 *
+	 * @return PlainBuilder
+	 */
+	public function plainBuilder(): PlainBuilder
+	{
+		return new PlainBuilder( $this );
+	}
+
+	/**
+	 * Create new query builder.
+	 *
+	 * @param string      $table
+	 * @param string|null $alias
+	 *
 	 * @return Builder
 	 *
 	 * @throws Throwable
-	 * @throws \ReflectionException
 	 */
-	public function table(string $name, string $alias = null): Builder
+	public function builder( string $table, ?string $alias = null ): Builder
 	{
-		return new Builder([$name, $alias], $this);
+		return new Builder( $this, $table, $alias );
+	}
+
+	/**
+	 * Create new SchemeDesigner fetch query builder.
+	 *
+	 * @param string $className
+	 *
+	 * @return SchemeDesignerFetchBuilder
+	 *
+	 * @throws Throwable
+	 */
+	public function schemeDesignerFetchBuilder( string $className ): SchemeDesignerFetchBuilder
+	{
+		return new SchemeDesignerFetchBuilder( $this, $className );
 	}
 
 	/**
@@ -201,9 +256,133 @@ class Connection
 	 *
 	 * @throws DBALException
 	 */
-	public function executeWritable($query, array $params = [], array $types = [])
+	public function executeWritable( string $query, array $params = [], array $types = [] ): int
 	{
-		return $this->conn->executeUpdate($query, $params, $types);
+		return (int) $this->execProxy( 'executeUpdate', [ $query, $params, $types ] );
+	}
+
+	/**
+	 * Executes an SQL INSERT query with the given parameters and returns the last value of the insert identifier.
+	 *
+	 * @param string $query
+	 * @param array  $params
+	 * @param array  $types
+	 *
+	 * @return mixed
+	 *
+	 * @throws DBALException
+	 */
+	public function executeInsertGetId( string $query, array $params = [], array $types = [] )
+	{
+		$this->execProxy( 'executeUpdate', [ $query, $params, $types ] );
+		return $this->execProxy( 'lastInsertId' );
+	}
+
+	/**
+	 * Prepares and executes an SQL query and returns the first row of the result
+	 * as an associative array.
+	 *
+	 * @param string         $query  The SQL query.
+	 * @param mixed[]        $params The query parameters.
+	 * @param int[]|string[] $types  The query parameter types.
+	 *
+	 * @return mixed[]|false False is returned if no rows are found.
+	 *
+	 * @throws DBALException
+	 */
+	public function fetchAssoc( string $query, array $params = [], array $types = [] )
+	{
+		return $this->fetchOne(
+			static function( ResultStatement $statement, $param ) {
+				return $statement->fetch( $param );
+			},
+			FetchMode::ASSOCIATIVE, $query, $params, $types
+		);
+	}
+
+	/**
+	 * Prepares and executes an SQL query and returns the first row of the result
+	 * as a numerically indexed array.
+	 *
+	 * @param string         $query  The SQL query to be executed.
+	 * @param mixed[]        $params The prepared statement params.
+	 * @param int[]|string[] $types  The query parameter types.
+	 *
+	 * @return mixed[]|false False is returned if no rows are found.
+	 *
+	 * @throws DBALException
+	 */
+	public function fetchArray( string $query, array $params = [], array $types = [] )
+	{
+		return $this->fetchOne(
+			static function( ResultStatement $statement, $param ) {
+				return $statement->fetch( $param );
+			},
+			FetchMode::NUMERIC, $query, $params, $types
+		);
+	}
+
+	/**
+	 * Prepares and executes an SQL query and returns the value of a single column
+	 * of the first row of the result.
+	 *
+	 * @param string         $query  The SQL query to be executed.
+	 * @param mixed[]        $params The prepared statement params.
+	 * @param int            $column The 0-indexed column number to retrieve.
+	 * @param int[]|string[] $types  The query parameter types.
+	 *
+	 * @return mixed|false False is returned if no rows are found.
+	 *
+	 * @throws DBALException
+	 */
+	public function fetchColumn( string $query, array $params = [], $column = 0, array $types = [] )
+	{
+		return $this->fetchOne(
+			static function( ResultStatement $statement, $param ) {
+				return $statement->fetchColumn( $param );
+			},
+			$column, $query, $params, $types
+		);
+	}
+
+	/**
+	 * Prepares and executes an SQL query and returns the result as an associative array.
+	 *
+	 * @param string         $query  The SQL query.
+	 * @param mixed[]        $params The query parameters.
+	 * @param int[]|string[] $types  The query parameter types.
+	 *
+	 * @return mixed[]
+	 *
+	 * @throws DBALException
+	 */
+	public function fetchAll( string $query, array $params = [], $types = [] )
+	{
+		return $this->fetchOne(
+			static function( ResultStatement $statement, $param ) {
+				return $statement->fetchAll( $param );
+			},
+			FetchMode::ASSOCIATIVE, $query, $params, $types
+		);
+	}
+
+	/**
+	 * Adds an driver-specific LIMIT clause to the query.
+	 *
+	 * @param string $query
+	 * @param int    $limit
+	 * @param int    $offset
+	 *
+	 * @return string
+	 *
+	 * @throws DBALException
+	 */
+	public function modifyLimitQuery( string $query, ? int $limit, ? int $offset = null )
+	{
+		return $this
+			->conn
+			->getDatabasePlatform()
+			->modifyLimitQuery( $query, $limit, $offset );
 	}
 
 	/**
@@ -249,6 +428,27 @@ class Connection
 	}
 
 	/**
+	 * Fetch first result
+	 *
+	 * @param Closure $closure
+	 * @param         $param
+	 * @param         $query
+	 * @param array   $params
+	 * @param array   $types
+	 *
+	 * @return mixed
+	 *
+	 * @throws DBALException
+	 */
+	protected function fetchOne( \Closure $closure, $param, string $query, array $params = [], array $types = [] )
+	{
+		$stmt = $this->executeQuery( $query, $params, $types );
+		$result = $closure( $stmt, $param );
+		$stmt->closeCursor();
+		return $result;
+	}
+
+	/**
 	 * @param $name
 	 * @param $arguments
 	 *
@@ -286,12 +486,41 @@ class Connection
 			case "executeQuery":
 			case "executeCacheQuery":
 			case "lastInsertId":
-			case "fetchAssoc":
-			case "fetchArray":
-			case "fetchColumn":
 				return $this->execProxy($name, $arguments);
 		}
 
 		throw new BadMethodCallException("Call to undefined method " . __CLASS__ . "::{$name}()");
+	}
+
+	/**
+	 * Load Grammar platform object
+	 *
+	 * @throws DBALException
+	 */
+	private function loadGrammar()
+	{
+		$driver = $this->conn->getDriver();
+		switch( $driver )
+		{
+			case 'mysql':
+				$this->grammar = new MySqlGrammar( $this );
+				break;
+
+			case 'pgsql':
+				$this->grammar = new PostgresGrammar( $this );
+				break;
+
+			case 'sqlite':
+				$this->grammar = new SQLiteGrammar( $this );
+				break;
+
+			case 'sqlsrv':
+				$this->grammar = new SqlServerGrammar( $this );
+				break;
+
+			default:
+				$this->grammar = new Grammar( $this );
+				break;
+		}
 	}
 }

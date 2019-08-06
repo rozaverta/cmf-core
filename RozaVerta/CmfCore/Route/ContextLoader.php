@@ -1,17 +1,14 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 20.03.2019
  * Time: 14:16
  */
 
 namespace RozaVerta\CmfCore\Route;
 
-use RozaVerta\CmfCore\Route\Context;
 use RozaVerta\CmfCore\Schemes\ContextRouterLinks_SchemeDesigner;
 use RozaVerta\CmfCore\Cache\Cache;
-use RozaVerta\CmfCore\Database\DatabaseManager as DB;
 use RozaVerta\CmfCore\Host\Interfaces\HostInterface;
 use RozaVerta\CmfCore\Schemes\Context_SchemeDesigner;
 use RozaVerta\CmfCore\Support\Collection;
@@ -82,7 +79,11 @@ class ContextLoader
 
 	/**
 	 * @param Cache|null $cache
+	 *
 	 * @return $this
+	 *
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function load(? Cache $cache = null)
 	{
@@ -106,9 +107,7 @@ class ContextLoader
 			$routers = [];
 
 			/** @var ContextRouterLinks_SchemeDesigner[] $links */
-			$links = DB
-				::table(ContextRouterLinks_SchemeDesigner::class)
-				->get();
+			$links = ContextRouterLinks_SchemeDesigner::find()->get();
 
 			foreach($links as $link)
 			{
@@ -126,7 +125,7 @@ class ContextLoader
 			}
 
 			/** @var Context_SchemeDesigner[] $schemes */
-			$schemes = DB::table(Context_SchemeDesigner::class)->get();
+			$schemes = Context_SchemeDesigner::find()->get();
 
 			foreach($schemes as $scheme)
 			{

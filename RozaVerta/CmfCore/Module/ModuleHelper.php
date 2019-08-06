@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 26.08.2018
  * Time: 16:48
  */
@@ -132,11 +131,12 @@ final class ModuleHelper
 	 * Has module install
 	 *
 	 * @param string $name
-	 * @param null $moduleId
+	 * @param null   $moduleId
 	 *
 	 * @return bool
 	 *
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
 	 */
 	static public function installed( string $name, & $moduleId = null ): bool
 	{
@@ -163,7 +163,7 @@ final class ModuleHelper
 			$name = (string) $name;
 			if( ! self::installed($name) )
 			{
-				throw new RuntimeException("Dependency error: the '" . self::toName($name) . "' module is not installed");
+				throw new RuntimeException( "Dependency error. The \"" . self::toName( $name ) . "\" module is not installed." );
 			}
 		}
 	}
@@ -172,27 +172,32 @@ final class ModuleHelper
 	 * Module exists
 	 *
 	 * @param string $name
-	 * @param null $moduleId
+	 * @param null   $moduleId
 	 *
 	 * @return bool
 	 *
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
 	 */
 	static public function exists( string $name, & $moduleId = null ): bool
 	{
 		try {
-			$builder = DB::table(Modules_SchemeDesigner::getTableName())->select(["id"]);
+			$builder = DB::plainBuilder()->from( Modules_SchemeDesigner::getTableName() );
 
 			if( is_numeric($name) )
 			{
-				$builder->whereId( (int) $name );
+				$builder->where( "id", (int) $name );
+			}
+			else if( strpos( $name, "\\" ) !== false )
+			{
+				$builder->where( "namespace_name", $name );
 			}
 			else
 			{
 				$builder->where("name", self::toName( (string) $name ) );
 			}
 
-			$id = $builder->value();
+			$id = $builder->value( "id" );
 		}
 		catch(TableNotFoundException $e) {
 			return false;
@@ -200,7 +205,7 @@ final class ModuleHelper
 
 		if( is_numeric($id) && $id > 0 )
 		{
-			$moduleId = $id;
+			$moduleId = (int) $id;
 			return true;
 		}
 
@@ -215,6 +220,7 @@ final class ModuleHelper
 	 * @return int|null
 	 *
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
 	 */
 	static public function getId( string $name ): ?int
 	{
@@ -233,14 +239,15 @@ final class ModuleHelper
 	 * @throws Exceptions\ResourceReadException
 	 * @throws ModuleNotFoundException
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
 	 */
 	static public function workshop( $name ): WorkshopModuleProcessor
 	{
-		$builder = DB::table(Modules_SchemeDesigner::getTableName())->select(["id"]);
+		$builder = DB::plainBuilder()->from( Modules_SchemeDesigner::getTableName() );
 
 		if( is_numeric($name) )
 		{
-			$builder->whereId( (int) $name );
+			$builder->where( "id", (int) $name );
 		}
 		else
 		{
@@ -248,7 +255,7 @@ final class ModuleHelper
 		}
 
 		try {
-			$id = $builder->value();
+			$id = $builder->value( "id" );
 		}
 		catch(TableNotFoundException $e) {
 			$id = false;
@@ -274,6 +281,7 @@ final class ModuleHelper
 	 * @throws Exceptions\ResourceReadException
 	 * @throws ModuleNotFoundException
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
 	 */
 	static public function module( $name ): Module
 	{
@@ -295,6 +303,7 @@ final class ModuleHelper
 	 * @return string|null
 	 *
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	static public function getNamespaceName( $name ): ?string
 	{
@@ -309,6 +318,7 @@ final class ModuleHelper
 	 * @return string|null
 	 *
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	static public function getName( int $id )
 	{
@@ -323,6 +333,7 @@ final class ModuleHelper
 	 * @return string|null
 	 *
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	static public function getKey( int $id )
 	{
@@ -337,10 +348,11 @@ final class ModuleHelper
 	 * @return Modules_SchemeDesigner
 	 * @throws ModuleNotFoundException
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	static public function getSchemeDesigner( $name ): Modules_SchemeDesigner
 	{
-		$builder = DB::table(Modules_SchemeDesigner::class );
+		$builder = Modules_SchemeDesigner::find();
 
 		if( is_numeric($name) )
 		{
@@ -355,7 +367,7 @@ final class ModuleHelper
 		$row = $builder->first();
 		if( !$row )
 		{
-			throw new ModuleNotFoundException("The '{$name}' module not found");
+			throw new ModuleNotFoundException( "The \"{$name}\" module not found." );
 		}
 
 		return $row;
@@ -364,18 +376,23 @@ final class ModuleHelper
 	/**
 	 * Get module property by ID from cache
 	 *
-	 * @param $name
+	 * @param        $name
 	 * @param string $property
 	 *
 	 * @return string|null
 	 *
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	static protected function idv( $name, string $property ): ?string
 	{
 		static $store;
 
-		if( ! is_int($name) )
+		if( is_int( $name ) )
+		{
+			$id = $name;
+		}
+		else
 		{
 			$id = self::idn($name);
 			if( $id < 1 )
@@ -394,7 +411,7 @@ final class ModuleHelper
 			else
 			{
 				/** @var Modules_SchemeDesigner[] $all */
-				$all = DB::table(Modules_SchemeDesigner::class)
+				$all = Modules_SchemeDesigner::find()
 					->where("install", true)
 					->get();
 
@@ -427,6 +444,7 @@ final class ModuleHelper
 	 * @return int
 	 *
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
 	 */
 	static protected function idn( $name ): int
 	{
@@ -441,10 +459,13 @@ final class ModuleHelper
 			}
 			else
 			{
-				$all = DB::table(Modules_SchemeDesigner::getTableName())
-					->where("install", true)
-					->select(["id", "name", "namespace_name"])
-					->project(function($item) { $item["id"] = (int) $item["id"]; return $item; });
+				$all = DB::plainBuilder()
+					->from( Modules_SchemeDesigner::getTableName() )
+					->where( "install", true )
+					->project( function( $item ) {
+						$item["id"] = (int) $item["id"];
+						return $item;
+					}, [ "id", "name", "namespace_name" ] );
 
 				$idn = [];
 

@@ -1,21 +1,22 @@
 <?php
 /**
- * Created by IntelliJ IDEA.
- * User: GoshaV [Maniako] <gosha@rozaverta.com>
+ * Created by GoshaV [Maniako] <gosha@rozaverta.com>
  * Date: 11.03.2019
  * Time: 20:38
  */
 
 namespace RozaVerta\CmfCore\Database\Scheme;
 
+use Doctrine\DBAL\ParameterType;
 use InvalidArgumentException;
-use RozaVerta\CmfCore\Database\DatabaseManager as DB;
+use RozaVerta\CmfCore\Database\DatabaseManager;
 use RozaVerta\CmfCore\Exceptions\NotFoundException;
 use RozaVerta\CmfCore\Helper\Arr;
 use RozaVerta\CmfCore\Module\Interfaces\ModuleInterface;
 use RozaVerta\CmfCore\Module\Module;
 use RozaVerta\CmfCore\Module\ResourceJson;
 use RozaVerta\CmfCore\Module\Traits\ModuleGetterTrait;
+use RozaVerta\CmfCore\Schemes\SchemeTables_SchemeDesigner;
 use RozaVerta\CmfCore\Support\Prop;
 
 class TableLoader
@@ -48,12 +49,16 @@ class TableLoader
 	 */
 	protected $resource;
 
+	private $addon = false;
+
+	private $cacheVersion = null;
+
 	/**
 	 * TableLoader constructor.
 	 *
-	 * @param string $name
+	 * @param string               $name
 	 * @param ModuleInterface|null $module
-	 * @param string|null $cacheVersion
+	 * @param string|null          $cacheVersion
 	 *
 	 * @throws NotFoundException
 	 * @throws \Doctrine\DBAL\DBALException
@@ -65,10 +70,13 @@ class TableLoader
 		// find module in database scheme table
 		if( !$module )
 		{
-			$moduleId = DB::table("scheme_tables")
-				->where("name", $name)
-				->select(["module_id"])
-				->value();
+			$conn = DatabaseManager::connection();
+			$table = $conn->getTableName( SchemeTables_SchemeDesigner::getTableName() );
+			$moduleId =
+				$conn->fetchColumn(
+					$conn->getGrammar()->modifyLimitQuery( "SELECT module_id FROM {$table} WHERE name = ?", 1 ),
+					[ $name ], 0, [ ParameterType::STRING ]
+				);
 
 			if( ! is_numeric($moduleId) )
 			{
@@ -84,15 +92,17 @@ class TableLoader
 			throw new InvalidArgumentException("Invalid resource file type for the '{$name}' table");
 		}
 
+		$resource->isCacheVersion( $this->cacheVersion );
+		$this->addon = $resource->isAddon();
 		$this->name = $name;
 		$this->setModule($module);
 
-		foreach($resource->getArray("columns") as $row)
+		foreach( $resource->getArray("columns") as $row)
 		{
 			$this->_addColumn( is_array($row) ? $row : ["name" => $row] );
 		}
 
-		foreach($resource->getArray("indexes") as $row)
+		foreach( $resource->getArray("indexes") as $row)
 		{
 			$this->_addIndex( Arr::wrap($row) );
 		}
@@ -106,7 +116,7 @@ class TableLoader
 			]);
 		}
 
-		foreach($resource->getArray("foreignKeys") as $row)
+		foreach( $resource->getArray("foreignKeys") as $row)
 		{
 			$this->_addForeignKey( (array) $row );
 		}
@@ -116,7 +126,36 @@ class TableLoader
 		$this->extra = new Prop( $resource->getArray("extra") );
 	}
 
-	protected function _addColumn(array $row)
+	/**
+	 * Table is addon
+	 *
+	 * @return bool
+	 */
+	public function isAddon(): bool
+	{
+		return $this->addon;
+	}
+
+	/**
+	 * Table loaded from cache version
+	 *
+	 * @param null $cacheVersion
+	 * @return bool
+	 */
+	public function isCacheVersion( & $cacheVersion = null ): bool
+	{
+		if( is_null( $this->cacheVersion ) )
+		{
+			return false;
+		}
+		else
+		{
+			$cacheVersion = $this->cacheVersion;
+			return true;
+		}
+	}
+
+	protected function _addColumn( array $row)
 	{
 		if( empty($row["name"]) )
 		{
@@ -132,7 +171,7 @@ class TableLoader
 		$this->columns[$name] = new Column($name, $row);
 	}
 
-	protected function _addIndex(array $row)
+	protected function _addIndex( array $row)
 	{
 		if( empty($row["columns"]) )
 		{
@@ -211,7 +250,7 @@ class TableLoader
 		}
 
 		$options = [];
-		foreach(["onUpdate", "onDelete", "default"] as $option)
+		foreach( ["onUpdate", "onDelete", "default"] as $option)
 		{
 			if( isset($row[$option]) )
 			{

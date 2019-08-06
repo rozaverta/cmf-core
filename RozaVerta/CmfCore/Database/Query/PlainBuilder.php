@@ -398,7 +398,7 @@ class PlainBuilder extends AbstractConnectionContainer
 		return $this
 			->connection
 			->fetchColumn(
-				$this->createSqlForSelect( $this->grammar->wrapSafe( $column ) ), $this->parameters->getParameters(), $this->parameters->getTypes()
+				$this->createSqlForSelect( $this->grammar->wrapSafe( $column ) ), $this->parameters->getParameters(), 0, $this->parameters->getTypes()
 			);
 	}
 
@@ -671,7 +671,7 @@ class PlainBuilder extends AbstractConnectionContainer
 		return (int) $this
 			->connection
 			->fetchColumn(
-				$sql, $this->parameters->getParameters(), $this->parameters->getTypes()
+				$sql, $this->parameters->getParameters(), 0, $this->parameters->getTypes()
 			);
 	}
 

@@ -270,7 +270,12 @@ final class HostManager
 				$ssl = $this->isServerSsl();
 			}
 
-			if( isset($_SERVER['SERVER_PORT']) && is_numeric($_SERVER['SERVER_PORT']) )
+			if( preg_match( '/:(\d{1,4})\/?$/', $host, $m ) )
+			{
+				$port = (int) $m[1];
+				$host = substr( $host, 0, strlen( $host ) - strlen( $m[0] ) );
+			}
+			else if( isset( $_SERVER['SERVER_PORT'] ) && is_numeric( $_SERVER['SERVER_PORT'] ) )
 			{
 				$port = (int) $_SERVER['SERVER_PORT'];
 			}
@@ -293,8 +298,14 @@ final class HostManager
 			}
 		}
 
+		$hostPort = $host . ":" . $port;
+
 		// aliases
-		if( isset($this->_conf['aliases'][$host]) )
+		if( isset( $this->_conf['aliases'][$hostPort] ) )
+		{
+			$host = $this->_conf['aliases'][$hostPort];
+		}
+		else if( isset( $this->_conf['aliases'][$host] ) )
 		{
 			$host = $this->_conf['aliases'][$host];
 		}

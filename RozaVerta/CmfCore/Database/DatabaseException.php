@@ -29,11 +29,11 @@ class DatabaseException extends DBALException implements DatabaseThrowableInterf
 
 	static public function unknownSourceTable(): self
 	{
-		return new self( "Unknown source table of the request" );
+		return new self( "Unknown source table of the request." );
 	}
 
 	static public function invalidQueryParameter( string $param ): self
 	{
-		return new self( "Invalid query parameter: " . $param );
+		return new self( "Invalid query parameter: \"{$param}\"." );
 	}
 }

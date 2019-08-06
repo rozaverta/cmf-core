@@ -7,7 +7,6 @@
 
 namespace RozaVerta\CmfCore\Database\Scheme;
 
-use Doctrine\DBAL\ParameterType;
 use InvalidArgumentException;
 use RozaVerta\CmfCore\Database\DatabaseManager;
 use RozaVerta\CmfCore\Exceptions\NotFoundException;
@@ -70,17 +69,14 @@ class TableLoader
 		// find module in database scheme table
 		if( !$module )
 		{
-			$conn = DatabaseManager::connection();
-			$table = $conn->getTableName( SchemeTables_SchemeDesigner::getTableName() );
-			$moduleId =
-				$conn->fetchColumn(
-					$conn->getGrammar()->modifyLimitQuery( "SELECT module_id FROM {$table} WHERE name = ?", 1 ),
-					[ $name ], 0, [ ParameterType::STRING ]
-				);
+			$moduleId = DatabaseManager::plainBuilder()
+				->from( SchemeTables_SchemeDesigner::getTableName() )
+				->where( "name", $name )
+				->value( "module_id" );
 
 			if( ! is_numeric($moduleId) )
 			{
-				throw new NotFoundException("Table '{$name}' not found");
+				throw new NotFoundException( "The \"{$name}\" table not found." );
 			}
 
 			$module = Module::module((int) $moduleId);
@@ -89,7 +85,7 @@ class TableLoader
 		$resource = $module->getResourceJson("db_" . $name, $cacheVersion );
 		if( $resource->getType() !== "#/database_table" )
 		{
-			throw new InvalidArgumentException("Invalid resource file type for the '{$name}' table");
+			throw new InvalidArgumentException( "Invalid resource file type for the \"{$name}\" table." );
 		}
 
 		$resource->isCacheVersion( $this->cacheVersion );
@@ -165,7 +161,7 @@ class TableLoader
 		$name = $row["name"];
 		if( array_key_exists($name, $this->columns) )
 		{
-			throw $this->createException("The '{$name}' column is already exists.");
+			throw $this->createException( "The \"{$name}\" column is already exists." );
 		}
 
 		$this->columns[$name] = new Column($name, $row);
@@ -218,7 +214,7 @@ class TableLoader
 
 		if( array_key_exists($name, $this->indexes) || array_key_exists($name, $this->fkConstraint) )
 		{
-			throw $this->createException("The '{$name}' index is already exists.");
+			throw $this->createException( "The \"{$name}\" index is already exists." );
 		}
 
 		$this->indexes[$name] = new Index($name, $columns, $type);
@@ -260,7 +256,7 @@ class TableLoader
 
 		if( array_key_exists($name, $this->indexes) || array_key_exists($name, $this->fkConstraint) )
 		{
-			throw $this->createException("The '{$name}' index is already exists.");
+			throw $this->createException( "The \"{$name}\" index is already exists." );
 		}
 
 		$this->fkConstraint[$name] = new ForeignKeyConstraint($name, $columns, $row["fkTableName"], $fkColumns, $options);
@@ -324,7 +320,7 @@ class TableLoader
 
 	protected function createException( $text, $exception = InvalidArgumentException::class )
 	{
-		$text .= " Database resource config file db_{$this->name}.json";
+		$text .= " Database resource config file \"db_{$this->name}.json\".";
 		return new $exception($text);
 	}
 }

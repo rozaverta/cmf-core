@@ -16,7 +16,6 @@ use RozaVerta\CmfCore\Database\Interfaces\FetchBuilderInterface;
 use RozaVerta\CmfCore\Database\Scheme\Table;
 use RozaVerta\CmfCore\Support\Collection;
 use RozaVerta\CmfCore\Exceptions\InvalidArgumentException;
-use RozaVerta\CmfCore\Database\Grammar;
 
 /**
  * Class AbstractBuilder
@@ -573,7 +572,7 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 	{
 		$schema = Table::table( $table );
 
-		if( !isset( $this->table ) )
+		if( empty( $this->table ) )
 		{
 			$this->table = $table;
 			$this->tableAlias = $alias;

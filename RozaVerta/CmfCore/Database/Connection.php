@@ -499,22 +499,23 @@ class Connection
 	 */
 	private function loadGrammar()
 	{
-		$driver = $this->conn->getDriver();
+		$driver = $this->conn->getDriver()->getName();
 		switch( $driver )
 		{
-			case 'mysql':
+			case 'pdo_mysql':
+			case 'drizzle_pdo_mysql':
 				$this->grammar = new MySqlGrammar( $this );
 				break;
 
-			case 'pgsql':
+			case 'pdo_pgsql':
 				$this->grammar = new PostgresGrammar( $this );
 				break;
 
-			case 'sqlite':
+			case 'pdo_sqlite':
 				$this->grammar = new SQLiteGrammar( $this );
 				break;
 
-			case 'sqlsrv':
+			case 'pdo_sqlsrv':
 				$this->grammar = new SqlServerGrammar( $this );
 				break;
 

@@ -77,7 +77,7 @@ class SchemeDesignerFetchBuilder extends AbstractBuilder
 			$this->columns = Arr::wrap( $schemaBuilder['columns'] );
 		}
 
-		$this->addTable( $table, $alias, (array) $schemaBuilder["rename"] ?? [] );
+		$this->addTable( $table, $alias, Arr::wrap( $schemaBuilder["rename"] ?? [] ) );
 
 		if( isset( $schemaBuilder["select"] ) )
 		{
@@ -108,7 +108,7 @@ class SchemeDesignerFetchBuilder extends AbstractBuilder
 				}
 
 				$this
-					->builder
+					->plainBuilder
 					->from(
 						$tableName, $alias
 					);
@@ -129,7 +129,7 @@ class SchemeDesignerFetchBuilder extends AbstractBuilder
 				$criteria = $this->newCriteria();
 				$params = $criteria->getParameters();
 
-				if( !$condition instanceof Closure )
+				if( $condition instanceof Closure )
 				{
 					$condition( $criteria );
 				}

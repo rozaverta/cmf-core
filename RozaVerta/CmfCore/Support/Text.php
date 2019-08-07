@@ -28,7 +28,6 @@ class Text
 		$this->text = (string) $text;
 		if( $num = count($args) > 0 )
 		{
-			$this->text = preg_replace( '/(?![\'"])%([sd])/', '"%$1"', $this->text );
 			$this->replacement = $num == 1 && is_array($args[0]) ? $args[0] : $args;
 		}
 	}

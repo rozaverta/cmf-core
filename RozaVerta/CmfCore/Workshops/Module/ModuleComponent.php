@@ -13,6 +13,8 @@ use Doctrine\DBAL\Types\Type;
 use InvalidArgumentException;
 use ReflectionClass;
 use ReflectionException;
+use RozaVerta\CmfCore\Database\Query\Parameters;
+use RozaVerta\CmfCore\Database\Scheme\TableLoader;
 use RozaVerta\CmfCore\Event\Dispatcher;
 use RozaVerta\CmfCore\Event\Exceptions\EventAbortException;
 use RozaVerta\CmfCore\Event\Interfaces\EventPrepareInterface;
@@ -75,14 +77,14 @@ class ModuleComponent extends Workshop
 
 		if( $event->isPropagationStopped() )
 		{
-			throw new EventAbortException("Module installation aborted" );
+			throw new EventAbortException( "Module installation aborted." );
 		}
 
 		$this->setModuleData();
 
 		$this->installProcess();
 
-		$this->complete($dispatcher, "install", "The %s module successfully installed");
+		$this->complete( $dispatcher, "install", "The \"%s\" module successfully installed." );
 
 		return $this;
 	}
@@ -99,7 +101,7 @@ class ModuleComponent extends Workshop
 		$module = $this->getModule();
 		if( ! $module->isInstall() )
 		{
-			throw new InvalidArgumentException("Module not installed yet");
+			throw new InvalidArgumentException( "Module not installed yet." );
 		}
 
 		// check version
@@ -118,12 +120,12 @@ class ModuleComponent extends Workshop
 		$compare = version_compare($old, $module->getVersion());
 		if( $compare > 0 )
 		{
-			return $this->addError("Version Detection Error or installed module version above updated");
+			return $this->addError( "Version Detection Error or installed module version above updated." );
 		}
 
 		if( ! $force && $compare === 0 )
 		{
-			return $this->addDebug("The latest version of the module is installed");
+			return $this->addDebug( "The latest version of the module is installed." );
 		}
 
 		$this->moduleData = [];
@@ -144,14 +146,14 @@ class ModuleComponent extends Workshop
 
 		if( $event->isPropagationStopped() )
 		{
-			throw new EventAbortException("Module update aborted" );
+			throw new EventAbortException( "Module update aborted." );
 		}
 
 		$this->setModuleData();
 
 		$this->updateProcess($old, $force);
 
-		$this->complete($dispatcher, "update", "The %s module successfully updated");
+		$this->complete( $dispatcher, "update", "The \"%s\" module successfully updated." );
 
 		return $this;
 	}
@@ -163,10 +165,11 @@ class ModuleComponent extends Workshop
 
 	/**
 	 * @param Dispatcher $dispatcher
-	 * @param string $action
-	 * @param string $debugText
+	 * @param string     $action
+	 * @param string     $debugText
 	 *
 	 * @throws DBALException
+	 * @throws NotFoundException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ModuleNotFoundException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceNotFoundException
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
@@ -221,11 +224,11 @@ class ModuleComponent extends Workshop
 
 			if($flush)
 			{
-				$this->addDebug("The cache was successfully cleared");
+				$this->addDebug( "The cache was successfully cleared." );
 			}
 			else
 			{
-				$this->addError("Cache flush process failed");
+				$this->addError( "Cache flush process failed." );
 			}
 
 		}
@@ -263,7 +266,7 @@ class ModuleComponent extends Workshop
 					}
 					else
 					{
-						$this->addError(Text::text("Handler must implement %s interface", EventPrepareInterface::class));
+						$this->addError( Text::text( "Handler must implement \"%s\" interface.", EventPrepareInterface::class ) );
 					}
 				}
 			}
@@ -275,7 +278,6 @@ class ModuleComponent extends Workshop
 	 * @throws NotFoundException
 	 * @throws \Doctrine\DBAL\Exception\TableNotFoundException
 	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
-	 * @throws \RozaVerta\CmfCore\Filesystem\Exceptions\FileAccessException
 	 * @throws \RozaVerta\CmfCore\Filesystem\Exceptions\FileReadException
 	 * @throws \Throwable
 	 */
@@ -342,7 +344,7 @@ class ModuleComponent extends Workshop
 				}
 				catch( EventProcessorExceptionInterface $e )
 				{
-					$this->addError(Text::text("Create event %s error, %s", $event["name"], $e->getMessage()));
+					$this->addError( Text::text( "Create event \"%s\" error, \"%s\".", $event["name"], $e->getMessage() ) );
 				}
 			}
 			unset($drv);
@@ -445,14 +447,14 @@ class ModuleComponent extends Workshop
 			{
 				if( !is_array($data) )
 				{
-					$this->addError( "Invalid config file data format ({$name})" );
+					$this->addError( "Invalid config file data format ({$name})." );
 					continue;
 				}
 
 				$drv = new ConfigFile($name, $module);
 				if( $drv->fileExists() )
 				{
-					$this->addError(Text::text("Can not duplicate the %s config file of the %s module", $name, $module->getName()));
+					$this->addError( Text::text( "Can not duplicate the \"%s\" config file of the \"%s\" module.", $name, $module->getName() ) );
 				}
 				else
 				{
@@ -596,7 +598,7 @@ class ModuleComponent extends Workshop
 					);
 				} catch( EventProcessorExceptionInterface $e )
 				{
-					$this->addError( Text::text( "Replace event %s error, %s", $event["name"], $e->getMessage() ) );
+					$this->addError( Text::text( "Replace event \"%s\" error, \"%s\".", $event["name"], $e->getMessage() ) );
 				}
 			}
 			unset( $drv );
@@ -656,7 +658,7 @@ class ModuleComponent extends Workshop
 			{
 				if( !is_array( $data ) )
 				{
-					$this->addError( "Invalid config file data format ({$name})" );
+					$this->addError( "Invalid config file data format ({$name})." );
 					continue;
 				}
 
@@ -775,12 +777,48 @@ class ModuleComponent extends Workshop
 		return $string;
 	}
 
-	protected function databaseInsertValues(string $table, array $values)
+	protected function databaseValuesTypes( string $table ): ?array
 	{
+		try
+		{
+			$loader = new TableLoader( $table, $this->getModule() );
+		} catch( \Throwable $e )
+		{
+			$this->addError( "Database insert error. " . $e->getMessage() );
+			return null;
+		}
+
+		$types = [];
+		foreach( $loader->getColumns() as $column )
+		{
+			$types[$column->getName()] = $column->getType();
+		}
+
+		return $types;
+	}
+
+	protected function databaseFilterValuesTypes( array $values, array $types )
+	{
+		$result = [];
+		foreach( array_keys( $values ) as $key )
+		{
+			$result[$key] = isset( $types[$key] ) ? $types[$key] : Parameters::inferType( $values[$key] );
+		}
+		return $result;
+	}
+
+	protected function databaseInsertValues( string $tableName, array $values )
+	{
+		$types = $this->databaseValuesTypes( $tableName );
+		if( is_null( $types ) )
+		{
+			return;
+		}
+
 		$build = $this
 			->db
 			->plainBuilder()
-			->from( $table );
+			->from( $tableName );
 
 		if( Arr::associative($values) )
 		{
@@ -791,17 +829,23 @@ class ModuleComponent extends Workshop
 		{
 			$insert = $this->replaceModuleData($insert);
 			try {
-				$build->insert($insert);
+				$build->insert( $insert, $this->databaseFilterValuesTypes( $insert, $types ) );
 			}
 			catch(DBALException $e)
 			{
-				$this->addError(Text::text("Database insert error. Table %s, error - %s", $table, $e->getMessage()));
+				$this->addError( Text::text( "Database insert error. Table \"%s\", error - \"%s\".", $tableName, $e->getMessage() ) );
 			}
 		}
 	}
 
 	protected function databaseUpdateValues(string $tableName, array $values, array $unique)
 	{
+		$types = $this->databaseValuesTypes( $tableName );
+		if( is_null( $types ) )
+		{
+			return;
+		}
+
 		if( Arr::associative($values) )
 		{
 			$values = [$values];
@@ -842,12 +886,12 @@ class ModuleComponent extends Workshop
 				{
 					$builder
 						->removePart( "where" )
-						->insert( $insert );
+						->insert( $insert, $this->databaseFilterValuesTypes( $insert, $types ) );
 				}
 			}
 			catch(DBALException $e)
 			{
-				$this->addError(Text::text("Database insert error. Table %s, error - %s", $tableName, $e->getMessage()));
+				$this->addError( Text::text( "Database insert error. Table \"%s\", error - \"%s\".", $tableName, $e->getMessage() ) );
 			}
 		}
 	}

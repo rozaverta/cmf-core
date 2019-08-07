@@ -14,13 +14,13 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Schema\SchemaDiff;
 use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Types\Type;
+use Doctrine\DBAL\ParameterType;
 
 use InvalidArgumentException;
 use RozaVerta\CmfCore\Event\Exceptions\EventAbortException;
 use RozaVerta\CmfCore\Filesystem\Exceptions\FileNotFoundException;
 use RozaVerta\CmfCore\Database\Connection;
 use RozaVerta\CmfCore\Database\Scheme\TableLoader;
-use RozaVerta\CmfCore\Module\WorkshopModuleProcessor;
 use RozaVerta\CmfCore\Schemes\Modules_SchemeDesigner;
 use RozaVerta\CmfCore\Schemes\SchemeTables_SchemeDesigner;
 use RozaVerta\CmfCore\Support\Collection;
@@ -67,7 +67,7 @@ class Database extends Workshop
 		$design = $this->getTableSchemeDesigner($tableName);
 		if($design->getId() > 0)
 		{
-			throw new InvalidArgumentException("Table '{$tableName}' has been installed");
+			throw new InvalidArgumentException( "Table \"{$tableName}\" has been installed." );
 		}
 
 		$moduleId = $this->getModuleId();
@@ -91,7 +91,7 @@ class Database extends Workshop
 
 		if( $event->isPropagationStopped() )
 		{
-			throw new EventAbortException("Aborted the creation of a table for the table '{$tableName}'" );
+			throw new EventAbortException( "Aborted the creation of a table for the table \"{$tableName}\"." );
 		}
 
 		$queries = $schema->toSql( $this->getDoctrineDbalPlatform() );
@@ -116,11 +116,11 @@ class Database extends Workshop
 				$conn->insert(
 					$dbConn->getTableName(SchemeTables_SchemeDesigner::getTableName()),
 					$record, [
-						"module_id" => Type::INTEGER,
-						"name" => Type::STRING,
-						"title" => Type::STRING,
-						"description" => Type::STRING,
-						"version" => Type::STRING
+					"module_id" => ParameterType::INTEGER,
+					"name" => ParameterType::STRING,
+					"title" => ParameterType::STRING,
+					"description" => ParameterType::STRING,
+					"version" => ParameterType::STRING,
 					]);
 
 				// fixed core module
@@ -137,11 +137,11 @@ class Database extends Workshop
 							"install" => false
 						],
 						[
-							"id" => Type::INTEGER,
-							"name" => Type::STRING,
-							"namespace_name" => Type::STRING,
-							"version" => Type::STRING,
-							"install" => Type::BOOLEAN
+							"id" => ParameterType::INTEGER,
+							"name" => ParameterType::STRING,
+							"namespace_name" => ParameterType::STRING,
+							"version" => ParameterType::STRING,
+							"install" => ParameterType::BOOLEAN,
 						]
 					);
 				}
@@ -152,7 +152,7 @@ class Database extends Workshop
 		$this->resourceWriteCache($fileResource);
 
 		$dispatcher->complete();
-		$this->addDebug(Text::text("Add new database table %s", $tableName));
+		$this->addDebug( Text::text( "Add new database table \"%s\".", $tableName ) );
 
 		return $this;
 	}
@@ -175,18 +175,18 @@ class Database extends Workshop
 		$designer = $this->getTableSchemeDesigner($tableName);
 		if( $designer->getId() < 1 )
 		{
-			throw new InvalidArgumentException("Table '{$tableName}' has been not installed");
+			throw new InvalidArgumentException( "The \"{$tableName}\" table has been not installed." );
 		}
 
 		if( $designer->getModuleId() !== $this->getModuleId() )
 		{
-			throw new InvalidArgumentException("Table '{$tableName}' is used by another module");
+			throw new InvalidArgumentException( "The \"{$tableName}\" is used by another module." );
 		}
 
 		$oldestVersion = $designer->getVersion();
 		if( version_compare($this->getModuleVersion(), $oldestVersion, "<") )
 		{
-			throw new InvalidArgumentException("The latest version of the module can not be less than the current version of the module");
+			throw new InvalidArgumentException( "The latest version of the module can not be less than the current version of the module." );
 		}
 
 		$rename = false;
@@ -238,7 +238,7 @@ class Database extends Workshop
 
 		if( $event->isPropagationStopped() )
 		{
-			throw new EventAbortException("Updating table '{$tableName}' was aborted" );
+			throw new EventAbortException( "Updating table \"{$tableName}\" was aborted." );
 		}
 
 		$queries = [];
@@ -295,11 +295,11 @@ class Database extends Workshop
 								"id" => $designer->getId()
 							],
 							[
-								"module_id" => Type::INTEGER,
-								"name" => Type::STRING,
-								"title" => Type::STRING,
-								"description" => Type::STRING,
-								"version" => Type::STRING
+								"module_id" => ParameterType::INTEGER,
+								"name" => ParameterType::STRING,
+								"title" => ParameterType::STRING,
+								"description" => ParameterType::STRING,
+								"version" => ParameterType::STRING,
 							]);
 				});
 
@@ -309,10 +309,10 @@ class Database extends Workshop
 		// complete
 
 		$dispatcher->complete();
-		$this->addDebug(Text::text("Update database table %s", $tableName));
+		$this->addDebug( Text::text( "Update database table \"%s\".", $tableName ) );
 		if($rename)
 		{
-			$this->addDebug(Text::text("Rename data base table %s in %s", $tableName, $tableRename));
+			$this->addDebug( Text::text( "Rename database table from \"%s\" to \"%s\".", $tableName, $tableRename ) );
 		}
 
 		return $this;
@@ -334,12 +334,12 @@ class Database extends Workshop
 		$designer = $this->getTableSchemeDesigner($tableName);
 		if( $designer->getId() < 1 )
 		{
-			return $this->addError("Table '{$tableName}' has been not found, cannot update version");
+			return $this->addError( "The \"{$tableName}\" table has been not found, cannot update version." );
 		}
 
 		if( $designer->getModuleId() !== $this->getModuleId() )
 		{
-			return $this->addError("Table '{$tableName}' is used by another module");
+			return $this->addError( "The \"{$tableName}\" table is used by another module." );
 		}
 
 		if( $designer->getVersion() < $this->getModuleVersion() )
@@ -379,7 +379,7 @@ class Database extends Workshop
 
 		if( $designer->getModuleId() !== $this->getModuleId() )
 		{
-			throw new InvalidArgumentException("Table '{$tableName}' is used by another module");
+			throw new InvalidArgumentException( "The \"{$tableName}\" table is used by another module." );
 		}
 
 		try {
@@ -405,7 +405,7 @@ class Database extends Workshop
 
 		if( $event->isPropagationStopped() )
 		{
-			throw new EventAbortException("Deleting table '{$tableName}' was aborted" );
+			throw new EventAbortException( "Deleting table \"{$tableName}\" was aborted." );
 		}
 
 		$schema = new Schema();
@@ -430,7 +430,7 @@ class Database extends Workshop
 		$this->resourceRemoveCache($tableName, "#/database_table", true);
 
 		$dispatcher->complete();
-		$this->addDebug(Text::text("Drop database table %s", $tableName));
+		$this->addDebug( Text::text( "Drop database table \"%s\".", $tableName ) );
 
 		return $this;
 	}
@@ -463,7 +463,7 @@ class Database extends Workshop
 		}
 		else if( $mode !== self::TABLE_ALL )
 		{
-			throw new InvalidArgumentException( "Invalid table mode" );
+			throw new InvalidArgumentException( "Invalid table mode." );
 		}
 
 		$all = $builder

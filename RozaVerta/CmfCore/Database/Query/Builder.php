@@ -77,7 +77,7 @@ class Builder extends AbstractBuilder implements JoinBuilderInterface, WriteBuil
 		{
 			if( !is_int( $key ) )
 			{
-				$this->select[] = $this->grammar->wrapAs( $key, $column );
+				$this->select[] = "{$key} AS {$column}";
 			}
 			else
 			{

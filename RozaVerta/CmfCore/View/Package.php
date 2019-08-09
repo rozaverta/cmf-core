@@ -94,7 +94,7 @@ final class Package implements Interfaces\PackageInterface, VarExportInterface
 	}
 
 	/**
-	 * Package description
+	 * PackageHelper description
 	 *
 	 * @return string
 	 */
@@ -104,7 +104,7 @@ final class Package implements Interfaces\PackageInterface, VarExportInterface
 	}
 
 	/**
-	 * Package author
+	 * PackageHelper author
 	 *
 	 * @return string
 	 */
@@ -114,7 +114,7 @@ final class Package implements Interfaces\PackageInterface, VarExportInterface
 	}
 
 	/**
-	 * Package url link
+	 * PackageHelper url link
 	 *
 	 * @return string
 	 */
@@ -214,45 +214,6 @@ final class Package implements Interfaces\PackageInterface, VarExportInterface
 	}
 
 	/**
-	 * @param string $name
-	 *
-	 * @return int|null
-	 *
-	 * @throws \Doctrine\DBAL\DBALException
-	 * @throws \Throwable
-	 */
-	static public function getIdFromName( string $name ): ? int
-	{
-		static $idn = null;
-
-		if( is_null($idn) )
-		{
-			// load packages IDs
-			$cache = new Cache('id_from_name', 'template/package');
-			if( $cache->ready() )
-			{
-				$idn = $cache->import();
-			}
-			else
-			{
-				$all = TemplatePackages_SchemeDesigner::find()
-					->orderBy("name")
-					->get();
-
-				/** @var TemplatePackages_SchemeDesigner $item */
-				foreach($all as $item)
-				{
-					$idn[$item->getName()] = $item->getId();
-				}
-
-				$cache->export($idn);
-			}
-		}
-
-		return $idn[$name] ?? null;
-	}
-
-	/**
 	 * @param int $id
 	 *
 	 * @return Package
@@ -305,7 +266,7 @@ final class Package implements Interfaces\PackageInterface, VarExportInterface
 		$data["templates"] = [];
 		$data["templatesProperties"] = [];
 		$data["chunks"] = [];
-		$data["title"] = $data["title"] ?? ("Package " . $name);
+		$data["title"] = $data["title"] ?? ( "PackageHelper " . $name );
 		$data["version"] = $data["version"] ?? "1.0.0";
 		$data["license"] = $data["license"] ?? "";
 		$data["readme"] = $data["readme"] ?? "";

@@ -22,6 +22,7 @@ use RozaVerta\CmfCore\Traits\ServiceTrait;
 use RozaVerta\CmfCore\View\Events\CompleteRenderEvent;
 use RozaVerta\CmfCore\View\Events\PreRenderEvent;
 use RozaVerta\CmfCore\View\Events\RenderGetterEvent;
+use RozaVerta\CmfCore\View\Helpers\PackageHelper;
 use RozaVerta\CmfCore\View\Interfaces\ExtenderInterface;
 use RozaVerta\CmfCore\View\Interfaces\PluginDynamicInterface;
 use RozaVerta\CmfCore\View\Interfaces\PluginInterface;
@@ -466,11 +467,22 @@ final class View extends Lexer
 
 	// template
 
+	/**
+	 * Select current package.
+	 *
+	 * @param string $name
+	 *
+	 * @return $this
+	 *
+	 * @throws Exceptions\PackageNotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
+	 */
 	public function usePackage( string $name )
 	{
 		if( $this->depth > 0 )
 		{
-			throw new RuntimeException("You can not change the package in the process of rendering");
+			throw new RuntimeException( "You can not change the package in the process of rendering." );
 		}
 
 		if( !isset($this->packages) )
@@ -479,10 +491,10 @@ final class View extends Lexer
 		}
 
 		$name = trim($name);
-		$id = Package::getIdFromName($name);
+		$id = PackageHelper::getIdFromNameCached( $name );
 		if(is_null($id))
 		{
-			throw new Exceptions\PackageNotFoundException("The '{$name}' package not found");
+			throw new Exceptions\PackageNotFoundException( "The \"{$name}\" package not found." );
 		}
 
 		$this->package = Package::package($id);

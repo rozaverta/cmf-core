@@ -335,11 +335,26 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 	public function orderBy( string $sort, ?string $order = null )
 	{
 		$sort = $this->getColumn( $sort );
-		$order = $order === null || strtoupper( $order ) === "ASC" ? "ASC" : "DESC";
 
 		$this
 			->plainBuilder
-			->orderByExpr( $this->grammar->wrap( $sort ) . " " . $order );
+			->orderBy( $sort, $order );
+
+		return $this;
+	}
+
+	/**
+	 * Add an "order by random()" clause to the query.
+	 *
+	 * @param string|null $seed
+	 *
+	 * @return $this
+	 */
+	public function orderByRandom( ?string $seed = null )
+	{
+		$this
+			->plainBuilder
+			->orderByRandom( $seed );
 
 		return $this;
 	}
@@ -381,25 +396,21 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 		{
 			foreach( $groupBy as & $column )
 			{
-				$column =
-					$column instanceof Expression
-						? $column->getValue()
-						: $this->grammar->wrap( $this->getColumn( (string) $column ) );
+				$this
+					->plainBuilder
+					->groupBy(
+						$column instanceof Expression ? $column->getValue() : $this->getColumn( (string) $column )
+					);
 			}
-			$groupBy = implode( ", ", $groupBy );
-		}
-		else if( $groupBy instanceof Expression )
-		{
-			$groupBy = $groupBy->getValue();
 		}
 		else
 		{
-			$groupBy = $this->grammar->wrap( $this->getColumn( (string) $groupBy ) );
+			$this
+				->plainBuilder
+				->groupBy(
+					$groupBy instanceof Expression ? $groupBy->getValue() : $this->getColumn( (string) $groupBy )
+				);
 		}
-
-		$this
-			->plainBuilder
-			->groupByExpr( $groupBy );
 
 		return $this;
 	}
@@ -506,11 +517,11 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 	 *
 	 * @throws DBALException
 	 */
-	public function value( ?string $column = null )
+	public function value( string $column )
 	{
 		return $this
 			->calcPlainBuilder()
-			->value( $column );
+			->value( $this->getColumn( $column ) );
 	}
 
 	/**
@@ -699,7 +710,7 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 		if( isset( $this->having ) )
 		{
 			$params = $this->having->getParameters();
-			$builder->whereExpr( $this->having->getSql(), $params->getParameters(), $params->getTypes() );
+			$builder->havingExpr( $this->having->getSql(), $params->getParameters(), $params->getTypes() );
 		}
 
 		return $builder;
@@ -709,7 +720,7 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 	{
 		if( isset( $this->columns[$column] ) && strpos( $this->columns[$column], "." ) === false )
 		{
-			$columns[] = $this->grammar->wrapAs( $column, $this->columns[$column] );
+			$columns[] = $column . " AS " . $this->columns[$column];
 			return true;
 		}
 		else
@@ -718,11 +729,11 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 		}
 	}
 
-	protected function getSelectSql( bool $full = false ): ?string
+	protected function getSelectSql( bool $full = false )
 	{
 		$tableAlias = $this->tableAlias !== null;
 
-		if( is_array( $this->select ) )
+		if( is_array( $this->select ) && count( $this->select ) > 0 )
 		{
 			$columns = [];
 
@@ -730,7 +741,7 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 			{
 				if( $column instanceof Expression )
 				{
-					$columns[] = $column->getValue();
+					$columns[] = $column;
 					continue;
 				}
 
@@ -750,15 +761,11 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 				$columns[] = $column;
 			}
 
-			return implode( ', ', $columns );
-		}
-		else if( $full && $tableAlias )
-		{
-			return $this->tableAlias . ".*";
+			return $columns;
 		}
 		else
 		{
-			return $this->select === null ? null : (string) $this->select;
+			return $full ? [ $tableAlias ? ( $this->tableAlias . ".*" ) : "*" ] : null;
 		}
 	}
 }

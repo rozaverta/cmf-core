@@ -18,7 +18,7 @@ class PackageProcessor extends Workshop
 	/**
 	 * PackageProcessor constructor.
 	 *
-	 * @param string $packageName
+	 * @param string $name
 	 *
 	 * @throws PackageNotFoundException
 	 * @throws \Doctrine\DBAL\DBALException
@@ -27,16 +27,16 @@ class PackageProcessor extends Workshop
 	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
 	 * @throws \Throwable
 	 */
-	public function __construct( string $packageName )
+	public function __construct( string $name )
 	{
 		$moduleId = DatabaseManager::plainBuilder()
 			->from( TemplatePackages_SchemeDesigner::getTableName() )
-			->where("name", $packageName)
+			->where( "name", $name )
 			->value("module_id");
 
 		if( ! is_numeric($moduleId) )
 		{
-			throw new PackageNotFoundException( "The \"{$packageName}\" template package not found." );
+			throw new PackageNotFoundException( "The \"{$name}\" template package not found." );
 		}
 
 		parent::__construct( ModuleHelper::workshop($moduleId) );

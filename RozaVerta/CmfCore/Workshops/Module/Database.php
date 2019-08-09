@@ -467,7 +467,7 @@ class Database extends Workshop
 		}
 
 		$all = $builder
-			->orderByExpr( $builder->wrap( "name" ) . " ASC" )
+			->orderBy( "name" )
 			->project( function( $row ) {
 				return $row["version"];
 			}, [ "name", "version" ], "name" );

@@ -277,7 +277,7 @@ class Grammar
 	 *
 	 * @throws DBALException
 	 */
-	public function modifyLimitQuery( string $query, ? int $limit, ? int $offset = null )
+	public function compileLimitQuery( string $query, ? int $limit, ? int $offset = null )
 	{
 		return $this
 			->platform

@@ -151,6 +151,15 @@ interface FetchBuilderInterface
 	public function orderBy( string $sort, ?string $order = null );
 
 	/**
+	 * Add an "order by random()" clause to the query.
+	 *
+	 * @param string|null $seed
+	 *
+	 * @return $this
+	 */
+	public function orderByRandom( ?string $seed = null );
+
+	/**
 	 * Add an "order by" clause for a timestamp to the query.
 	 *
 	 * @param string $column
@@ -184,7 +193,7 @@ interface FetchBuilderInterface
 	 *
 	 * @return false|mixed
 	 */
-	public function value( ?string $column = null );
+	public function value( string $column );
 
 	/**
 	 * Get the first row result SchemeDesigner object

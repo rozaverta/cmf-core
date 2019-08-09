@@ -185,7 +185,7 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 		/** @var Modules_SchemeDesigner $row */
 		try {
 			$row = $conn->fetchAssoc(
-				$conn->getGrammar()->modifyLimitQuery( $query, 1 ), $where, $types
+				$conn->getGrammar()->compileLimitQuery( $query, 1 ), $where, $types
 			);
 			if( $row )
 			{

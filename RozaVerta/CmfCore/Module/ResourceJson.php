@@ -74,33 +74,12 @@ class ResourceJson implements Interfaces\ResourceInterface
 			}
 		}
 
-		$filePath = $file;
-		$file = new \SplFileInfo(realpath($file));
+		/** @var \SplFileInfo $file */
+
+		$data = self::pathToJson( $file, $file, $this->raw );
 		$this->pathname = $file->getPathname();
-
-		if( ! $file->isFile() )
-		{
-			throw new ResourceNotFoundException("The resource file '{$filePath}' not found");
-		}
-
 		$this->path = $file->getPath();
 		$this->name = $file->getBasename(".json");
-		$this->raw = @ file_get_contents($this->pathname);
-		if( ! $this->raw )
-		{
-			throw new ResourceReadException("Cannot ready resource file '{$this->name}'");
-		}
-
-		try {
-			$data = Json::parse($this->raw, true);
-			if( ! is_array($data) )
-			{
-				throw new JsonParseException("Resource data is not array");
-			}
-		}
-		catch( JsonParseException $e ) {
-			throw new ResourceReadException("Cannot read resource file '{$this->name}', json parser error: " . $e->getCode());
-		}
 
 		if( isset($data['type']) && is_string($data['type']) )
 		{
@@ -208,5 +187,37 @@ class ResourceJson implements Interfaces\ResourceInterface
 	public function getRawData(): string
 	{
 		return $this->raw;
+	}
+
+	public static function pathToJson( string $path, & $file = null, & $raw = null ): array
+	{
+		$path = realpath( $path );
+		$file = new \SplFileInfo( $path );
+		$name = $file->getBasename( ".json" );
+
+		if( !$file->isFile() )
+		{
+			throw new ResourceNotFoundException( "The resource file \"{$path}\" not found." );
+		}
+
+		$raw = @ file_get_contents( $path );
+		if( !$raw )
+		{
+			throw new ResourceReadException( "Cannot ready resource file \"{$name}\"." );
+		}
+
+		try
+		{
+			$data = Json::parse( $raw, true );
+			if( !is_array( $data ) )
+			{
+				throw new JsonParseException( "The \"{$name}\" resource json data is not array." );
+			}
+		} catch( JsonParseException $e )
+		{
+			throw new ResourceReadException( "Cannot read resource file \"{$name}\", json parser error: \"" . $e->getCode() . '".' );
+		}
+
+		return $data;
 	}
 }

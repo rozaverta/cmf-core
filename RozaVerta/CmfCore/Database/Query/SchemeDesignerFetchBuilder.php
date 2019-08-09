@@ -122,7 +122,7 @@ class SchemeDesignerFetchBuilder extends AbstractBuilder
 			{
 				if( empty( $join["criteria"] ) || empty( $join["tableName"] ) )
 				{
-					continue; // todo throw error
+					throw new InvalidArgumentException( 'The parameters "criteria" and "tableName" are required for the join clause.' );
 				}
 
 				$condition = $join["criteria"];

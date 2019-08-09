@@ -30,6 +30,7 @@ use RozaVerta\CmfCore\Support\Workshop;
 use RozaVerta\CmfCore\Workshops\Event\EventProcessor;
 use RozaVerta\CmfCore\Workshops\Event\HandlerProcessor;
 use RozaVerta\CmfCore\Workshops\Event\Interfaces\EventProcessorExceptionInterface;
+use RozaVerta\CmfCore\Workshops\View\PackageManagerProcessor;
 
 /**
  * Class ModuleComponent
@@ -401,10 +402,21 @@ class ModuleComponent extends Workshop
 
 		// 5. templates
 
-		$rec = $this->getResourceData("templates", "#/template_collection");
+		$rec = $manifest->getArray( "packages" );
+		//$rec = $this->getResourceData("templates", "#/template_collection");
 		if(count($rec))
 		{
-			// todo
+			$drv = new PackageManagerProcessor( $module );
+			foreach( $rec as $packageName )
+			{
+				try
+				{
+					$drv->install( $packageName );
+				} catch( \Exception $e )
+				{
+					$this->addError( Text::text( 'Can\'t create the "%s" package: "%s"', $packageName, $e->getMessage() ) );
+				}
+			}
 			unset($drv);
 		}
 
@@ -644,6 +656,25 @@ class ModuleComponent extends Workshop
 					{
 						$this->addError( $e->getMessage() );
 					}
+				}
+			}
+			unset( $drv );
+		}
+
+		// 5. templates
+
+		$rec = $manifest->getArray( "packages" );
+		if( count( $rec ) )
+		{
+			$drv = new PackageManagerProcessor( $module );
+			foreach( $rec as $packageName )
+			{
+				try
+				{
+					$drv->update( $packageName, $force );
+				} catch( \Exception $e )
+				{
+					$this->addError( Text::text( 'Can\'t update the "%s" package: "%s"', $packageName, $e->getMessage() ) );
 				}
 			}
 			unset( $drv );

@@ -20,21 +20,21 @@ class TemplatePackages_SchemeDesigner extends ModuleSchemeDesigner
 	public function getId(): int { return $this->items["id"]; }
 
 	/**
-	 * Package access name.
+	 * PackageHelper access name.
 	 *
 	 * @return string
 	 */
 	public function getName(): string { return $this->items["name"]; }
 
 	/**
-	 * Package version.
+	 * PackageHelper version.
 	 *
 	 * @return string
 	 */
 	public function getVersion(): string { return $this->items["version"]; }
 
 	/**
-	 * Package is addon for module.
+	 * PackageHelper is addon for module.
 	 *
 	 * @return bool
 	 */

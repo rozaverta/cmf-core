@@ -27,7 +27,7 @@ class Iterator implements IteratorAggregate
 		}
 		else
 		{
-			throw new Exceptions\PathInvalidArgumentException("The '{$path}' path does not exist or is not a directory or is a link");
+			throw new Exceptions\PathInvalidArgumentException( "The \"{$path}\" path does not exist or is not a directory or is a link." );
 		}
 	}
 
@@ -124,7 +124,7 @@ class Iterator implements IteratorAggregate
 		return $collection;
 	}
 
-	protected function eachOnly( \Closure $closure, string $path, int $depth, int $limit, bool $not_file, bool $not_directory, bool $not_link, bool $not_hidden )
+	protected function eachOnly( \Closure $closure, string $path, int $depth, int $limit, bool $not_file, bool $not_directory, bool $not_link, bool $not_hidden, string $relativePath = "" )
 	{
 		$iterator = new \FilesystemIterator($path);
 		$is_depth = $limit === 0 || $depth < $limit;
@@ -136,10 +136,11 @@ class Iterator implements IteratorAggregate
 				$not_file && $file->isFile() ||
 				$not_directory && $file->isDir() ||
 				$not_link && $file->isLink() ||
-				$not_hidden && $file->getBasename()[0] === "." ) && $closure($file, $depth + 1, $this->path );
+				$not_hidden && $file->getBasename()[0] === "." ) && $closure( $file, $depth + 1, $this->path, $relativePath );
 
 			if( $is_depth && $file->isDir() && ! $file->isLink() )
 			{
+				$basename = $file->getBasename();
 				$this->eachOnly(
 					$closure,
 					$path . $file->getBasename(),
@@ -148,7 +149,8 @@ class Iterator implements IteratorAggregate
 					$not_file,
 					$not_directory,
 					$not_link,
-					$not_hidden
+					$not_hidden,
+					$relativePath . "/" . $basename
 				);
 			}
 		}

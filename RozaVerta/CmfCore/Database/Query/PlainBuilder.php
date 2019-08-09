@@ -11,7 +11,6 @@ use Doctrine\DBAL\DBALException;
 use RozaVerta\CmfCore\Database\Connection;
 use RozaVerta\CmfCore\Database\DatabaseException;
 use RozaVerta\CmfCore\Database\Expression;
-use RozaVerta\CmfCore\Database\Grammar;
 use RozaVerta\CmfCore\Helper\Str;
 
 /**
@@ -77,43 +76,6 @@ class PlainBuilder extends AbstractConnectionContainer
 	}
 
 	/**
-	 * Wrap a value in keyword identifiers.
-	 *
-	 * @param Expression|string $value
-	 * @return string
-	 */
-	public function wrap( $value ): string
-	{
-		return $this->grammar->wrap( $value );
-	}
-
-	/**
-	 * Wrap a table in keyword identifiers.
-	 *
-	 * @param Expression|string $table
-	 * @param string|null       $alias
-	 *
-	 * @return string
-	 */
-	public function wrapTable( $table, ? string $alias = null ): string
-	{
-		return $this->grammar->wrapTable( $table, $alias );
-	}
-
-	/**
-	 * Wrap a value in keyword identifiers with alias.
-	 *
-	 * @param Expression|string $value
-	 * @param string            $alias
-	 *
-	 * @return string
-	 */
-	public function wrapAs( $value, string $alias ): string
-	{
-		return $this->grammar->wrapAs( $value, $alias );
-	}
-
-	/**
 	 * Add a basic where clause to the query.
 	 *
 	 * @param string $expression
@@ -164,7 +126,7 @@ class PlainBuilder extends AbstractConnectionContainer
 	 *
 	 * @return PlainBuilder
 	 */
-	public function whereOr( string $name, $operator, $value = null )
+	public function orWhere( string $name, $operator, $value = null )
 	{
 		return $this->comparison( 'where', ' OR ', $name, $operator, $value );
 	}
@@ -220,7 +182,7 @@ class PlainBuilder extends AbstractConnectionContainer
 	 *
 	 * @return PlainBuilder
 	 */
-	public function havingOr( string $name, $operator, $value = null )
+	public function orHaving( string $name, $operator, $value = null )
 	{
 		return $this->comparison( 'having', ' OR ', $name, $operator, $value );
 	}
@@ -228,14 +190,26 @@ class PlainBuilder extends AbstractConnectionContainer
 	/**
 	 * Add an "order by" clause to the query.
 	 *
-	 * @param string $column
-	 * @param string $dir
+	 * @param string $sort
+	 * @param string $order
 	 * @return PlainBuilder
 	 */
-	public function orderBy( string $column, string $dir = "ASC" )
+	public function orderBy( string $sort, ?string $order = null )
 	{
-		$expression = $this->grammar->wrap( $column ) . ( strtoupper( $dir ) === "DESC" ? " DESC" : " ASC" );
+		$expression = $this->grammar->wrap( $sort ) . ( $order && strtoupper( $order ) === "DESC" ? " DESC" : " ASC" );
 		return $this->addPart( 'orderBy', ', ', $expression );
+	}
+
+	/**
+	 * Add an "order by random()" clause to the query.
+	 *
+	 * @param string|null $seed
+	 *
+	 * @return PlainBuilder
+	 */
+	public function orderByRandom( ?string $seed = null )
+	{
+		return $this->addPart( 'orderBy', ', ', $this->grammar->orderByRandom( $seed ) );
 	}
 
 	/**
@@ -367,7 +341,7 @@ class PlainBuilder extends AbstractConnectionContainer
 	/**
 	 * Get the first result of the query as an associative array.
 	 *
-	 * @param null $select
+	 * @param null|string|array $select
 	 *
 	 * @return false|array[]
 	 *
@@ -405,7 +379,7 @@ class PlainBuilder extends AbstractConnectionContainer
 	/**
 	 * Execute the query as a "select" statement and get all result as an array with elements of an associative array.
 	 *
-	 * @param null $select
+	 * @param null|string|array $select
 	 *
 	 * @return array[]
 	 *
@@ -423,10 +397,10 @@ class PlainBuilder extends AbstractConnectionContainer
 	 * Execute the query as a "select" statement and applies the callback to the all result
 	 * (elements of the given arrays)
 	 *
-	 * @param \Closure    $closure
-	 * @param null        $select
+	 * @param \Closure          $closure
+	 * @param null|string|array $select
 	 *
-	 * @param string|null $keyName
+	 * @param string|null       $keyName
 	 * @return mixed[]
 	 *
 	 * @throws DBALException
@@ -641,7 +615,7 @@ class PlainBuilder extends AbstractConnectionContainer
 			}
 			else
 			{
-				$column = $this->wrap( $column );
+				$column = $this->grammar->wrap( $column );
 			}
 
 			if( !empty( $select ) )
@@ -993,7 +967,7 @@ class PlainBuilder extends AbstractConnectionContainer
 		{
 			return $this
 				->grammar
-				->modifyLimitQuery(
+				->compileLimitQuery(
 					$query,
 					$this->limit,
 					$this->offset

@@ -24,6 +24,7 @@ use RozaVerta\CmfCore\Helper\Arr;
 use RozaVerta\CmfCore\Module\ModuleHelper;
 use RozaVerta\CmfCore\Module\WorkshopModuleProcessor;
 use RozaVerta\CmfCore\Schemes\Modules_SchemeDesigner;
+use RozaVerta\CmfCore\Schemes\TemplatePackages_SchemeDesigner;
 use RozaVerta\CmfCore\Support\Prop;
 use RozaVerta\CmfCore\Support\Text;
 use RozaVerta\CmfCore\Support\Workshop;
@@ -407,6 +408,7 @@ class ModuleComponent extends Workshop
 		if(count($rec))
 		{
 			$drv = new PackageManagerProcessor( $module );
+			$drv->addLogTransport( $this );
 			foreach( $rec as $packageName )
 			{
 				try
@@ -547,11 +549,7 @@ class ModuleComponent extends Workshop
 					$drv->updateTableVersion($tableName);
 				}
 
-				$index = array_search($currentTableName, $tables);
-				if($index !== false)
-				{
-					array_splice($tables, $index, 1);
-				}
+				$this->arrayRemoveValue( $currentTableName, $tables );
 			}
 		}
 
@@ -663,10 +661,18 @@ class ModuleComponent extends Workshop
 
 		// 5. templates
 
+		$drv = new PackageManagerProcessor( $module );
+		$drv->addLogTransport( $this );
+		$packages = $drv
+			->getPackages( PackageManagerProcessor::PACKAGE_SYSTEM )
+			->map( function( TemplatePackages_SchemeDesigner $designer ) {
+				return $designer->getName();
+			} )
+			->toArray();
+
 		$rec = $manifest->getArray( "packages" );
 		if( count( $rec ) )
 		{
-			$drv = new PackageManagerProcessor( $module );
 			foreach( $rec as $packageName )
 			{
 				try
@@ -674,11 +680,28 @@ class ModuleComponent extends Workshop
 					$drv->update( $packageName, $force );
 				} catch( \Exception $e )
 				{
-					$this->addError( Text::text( 'Can\'t update the "%s" package: "%s"', $packageName, $e->getMessage() ) );
+					$this->addError( Text::text( 'Can\'t update the "%s" package: "%s".', $packageName, $e->getMessage() ) );
+				}
+
+				$this->arrayRemoveValue( $packageName, $packages );
+			}
+		}
+
+		if( count( $packages ) )
+		{
+			foreach( $packages as $package )
+			{
+				try
+				{
+					$drv->uninstall( $package );
+				} catch( \Exception $e )
+				{
+					$this->addError( Text::text( 'Can\'t uninstall the "%s" package: "%s".', $package, $e->getMessage() ) );
 				}
 			}
-			unset( $drv );
 		}
+
+		unset( $drv );
 
 		// 7. file configs
 
@@ -924,6 +947,15 @@ class ModuleComponent extends Workshop
 			{
 				$this->addError( Text::text( "Database insert error. Table \"%s\", error - \"%s\".", $tableName, $e->getMessage() ) );
 			}
+		}
+	}
+
+	private function arrayRemoveValue( $needle, array & $haystack )
+	{
+		$index = array_search( $needle, $haystack );
+		if( $index !== false )
+		{
+			array_splice( $haystack, $index, 1 );
 		}
 	}
 }

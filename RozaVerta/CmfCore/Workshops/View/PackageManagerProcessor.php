@@ -16,6 +16,7 @@ use RozaVerta\CmfCore\Module\Exceptions\ExpectedModuleException;
 use RozaVerta\CmfCore\Module\ModuleHelper;
 use RozaVerta\CmfCore\Module\ResourceJson;
 use RozaVerta\CmfCore\Schemes\TemplatePackages_SchemeDesigner;
+use RozaVerta\CmfCore\Support\Collection;
 use RozaVerta\CmfCore\Support\Prop;
 use RozaVerta\CmfCore\Support\Text;
 use RozaVerta\CmfCore\Support\Workshop;
@@ -24,10 +25,56 @@ use RozaVerta\CmfCore\Workshops\Helper\LastInsertIdTrait;
 use RozaVerta\CmfCore\Workshops\View\Exceptions\PackageNotFoundException;
 use ZipArchive;
 
+/**
+ * Class PackageManagerProcessor
+ *
+ * @package RozaVerta\CmfCore\Workshops\View
+ */
 class PackageManagerProcessor extends Workshop
 {
 	use LastInsertIdTrait;
 	use WriteFileTrait;
+
+	public const PACKAGE_SYSTEM = 1;
+	public const PACKAGE_ADDON = 2;
+	public const PACKAGE_ALL = 3;
+
+	/**
+	 * Get module packages.
+	 *
+	 * @param int $mode
+	 *
+	 * @return Collection | TemplatePackages_SchemeDesigner[]
+	 *
+	 * @throws DBALException
+	 */
+	public function getPackages( int $mode = self::PACKAGE_ALL ): Collection
+	{
+		$builder = $this
+			->db
+			->plainBuilder()
+			->from( TemplatePackages_SchemeDesigner::getTableName() )
+			->where( "module_id", $this->getModuleId() );
+
+		if( $mode === self::PACKAGE_SYSTEM )
+		{
+			$builder->where( "addon", false );
+		}
+		else if( $mode === self::PACKAGE_ADDON )
+		{
+			$builder->where( "addon", true );
+		}
+		else if( $mode !== self::PACKAGE_ALL )
+		{
+			throw new Exceptions\PackageInvalidArgumentsException( "Invalid package mode." );
+		}
+
+		$all = $builder->project( function( array $row ) {
+			return new TemplatePackages_SchemeDesigner( $row, $this->db );
+		} );
+
+		return new Collection( $all );
+	}
 
 	/**
 	 * Install the package from the zip archive.
@@ -359,13 +406,14 @@ class PackageManagerProcessor extends Workshop
 	 */
 	private function zip( string $name, string $version ): string
 	{
-		$file = $name . '-v' . $version . '-t' . date( 'dmYHis' );
-		$file = Path::addons( $this->getModule()->getKey() . "/resources/packages/" . $file );
+		$path = Path::addons( $this->getModule()->getKey() . "/resources/packages" );
+		$file = $path . DIRECTORY_SEPARATOR . $name . '-v' . $version . '-t' . date( 'dmYHis' ) . ".zip";
 		if( file_exists( $file ) )
 		{
 			throw new Exceptions\FilesystemException( "Could not create and open zip file \"{$file}\". File already exists." );
 		}
 
+		$this->filesystem->exists( $path ) || $this->filesystem->makeDirectory( $path, 0777, true );
 		$zip = new ZipArchive();
 		if( $zip->open( $file, ZipArchive::CREATE ) !== true )
 		{
@@ -393,9 +441,9 @@ class PackageManagerProcessor extends Workshop
 	private function toZip( ZipArchive $zip, string $path )
 	{
 		$iter = new Iterator( $path );
-		$iter->each( function( \SplFileInfo $file, $depth, $filePath, $relative ) use ( $zip ) {
-			$path = $relative . "/" . $file->getBasename();
-			if( !( $file->isDir() ? $zip->addEmptyDir( $path ) : $zip->addFile( $filePath, $path ) ) )
+		$iter->each( function( \SplFileInfo $file, $depth, $fullPath, $relativePath ) use ( $zip ) {
+			$path = $relativePath . "/" . $file->getBasename();
+			if( !( $file->isDir() ? $zip->addEmptyDir( $path ) : $zip->addFile( $file->getPathname(), $path ) ) )
 			{
 				throw new Exceptions\FilesystemException( 'Failed to create backup package. Could not add file "' . $path . '" to the zip archive.' );
 			}
@@ -423,16 +471,16 @@ class PackageManagerProcessor extends Workshop
 		}
 
 		$fs = $this->filesystem;
-		$viewDir = Path::view($name);
-		$assetsDir = Path::assets($name);
+		$view = Path::view( $name );
+		$assets = Path::assets( $name );
 
 		if( !$update )
 		{
-			if($fs->exists($viewDir))
+			if( $fs->exists( $view ) )
 			{
 				throw new Exceptions\PackageInvalidArgumentsException( "Warning! The \"{$name}\" view directory already exists." );
 			}
-			if($fs->exists($assetsDir))
+			if( $fs->exists( $assets ) )
 			{
 				throw new Exceptions\PackageInvalidArgumentsException( "Warning! The \"{$name}\" assets directory already exists." );
 			}
@@ -452,12 +500,13 @@ class PackageManagerProcessor extends Workshop
 			throw new Exceptions\PackageInvalidArgumentsException( "Unable to unpack zip package file, tmp directory is not writable." );
 		}
 
-		if( !$zip->extractTo( $tmpZipDir ) || !$zip->close() )
+		$tmp = $tmpZipDir;
+		if( !$zip->extractTo( $tmp ) || !$zip->close() )
 		{
 			throw new Exceptions\PackageInvalidArgumentsException( "Unable to extract zip package file." );
 		}
 
-		$manifest = $tmpZipDir . DIRECTORY_SEPARATOR . "manifest.json";
+		$manifest = $tmp . DIRECTORY_SEPARATOR . "manifest.json";
 		$data = ResourceJson::pathToJson( $manifest );
 
 		if( isset( $data["name"] ) && $data["name"] !== $name )
@@ -484,9 +533,13 @@ class PackageManagerProcessor extends Workshop
 		$name = $manifest->get( "name" );
 		$filesystem = $this->filesystem;
 
-		$fromManifest = $dirs["tmp"] . "manifest.json";
-		$fromView = $dirs["tmp"] . "view";
-		$fromAssets = $dirs["tmp"] . "assets";
+		$tmp = $dirs["tmp"] . DIRECTORY_SEPARATOR;
+		$fromManifest = $tmp . "manifest.json";
+		$fromView = $tmp . "view";
+		$fromAssets = $tmp . "assets";
+
+		// create empty directory
+		$filesystem->exists( $dirs["view"] ) || $filesystem->makeDirectory( $dirs["view"], 0777, true );
 
 		// manifest.json file
 		if( !$filesystem->copy( $fromManifest, $dirs["view"] . DIRECTORY_SEPARATOR . "manifest.json" ) )

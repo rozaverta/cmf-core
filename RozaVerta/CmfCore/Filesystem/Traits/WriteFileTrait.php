@@ -12,6 +12,7 @@ use RozaVerta\CmfCore\Helper\Json;
 use RozaVerta\CmfCore\Helper\PhpExport;
 use RozaVerta\CmfCore\Filesystem\Exceptions\FileWriteException;
 use RozaVerta\CmfCore\Log\Interfaces\LoggableInterface;
+use RozaVerta\CmfCore\Log\LogManager;
 
 trait WriteFileTrait
 {
@@ -195,7 +196,7 @@ trait WriteFileTrait
 			}
 		}
 
-		if( $this instanceof LoggableInterface )
+		if( $this instanceof LoggableInterface && !$this instanceof LogManager )
 		{
 			$this->addDebug("The '{$file}' file is successfully " . ($append ? "updated" : "created"));
 		}

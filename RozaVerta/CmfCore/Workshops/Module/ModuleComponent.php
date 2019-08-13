@@ -119,7 +119,7 @@ class ModuleComponent extends Workshop
 			$old = "0";
 		}
 
-		$compare = version_compare($old, $module->getVersion());
+		$compare = version_compare( $old, $module->getManifest()->getVersion() );
 		if( $compare > 0 )
 		{
 			return $this->addError( "Version Detection Error or installed module version above updated." );
@@ -503,7 +503,7 @@ class ModuleComponent extends Workshop
 	{
 		/** @var WorkshopModuleProcessor $module */
 		$module = $this->getModule();
-		$moduleVersion = $module->getVersion();
+		$moduleVersion = $module->getManifest()->getVersion();
 		$manifest = new Prop( $module->getManifest()->getManifestData() );
 
 		// check and make if not exists backup directory
@@ -775,13 +775,14 @@ class ModuleComponent extends Workshop
 	protected function setModuleData()
 	{
 		$module = $this->getModule();
+		$manifest = $module->getManifest();
 
 		$this->moduleData["moduleId"] = $module->getId();
 		$this->moduleData["moduleName"] = $module->getName();
 		$this->moduleData["moduleKey"] = $module->getKey();
 		$this->moduleData["moduleNamespaceName"] = $module->getNamespaceName();
-		$this->moduleData["moduleTitle"] = $module->getTitle();
-		$this->moduleData["moduleVersion"] = $module->getVersion();
+		$this->moduleData["moduleTitle"] = $manifest->getTitle();
+		$this->moduleData["moduleVersion"] = $manifest->getVersion();
 		$this->moduleData["modulePathname"] = $module->getPathname();
 
 		$dateTime = new DateTime();

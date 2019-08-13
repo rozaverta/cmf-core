@@ -8,7 +8,6 @@
 namespace RozaVerta\CmfCore\Module;
 
 use Doctrine\DBAL\Exception\TableNotFoundException;
-use Doctrine\DBAL\ParameterType;
 use RozaVerta\CmfCore\Database\DatabaseManager;
 use RozaVerta\CmfCore\Cache\Cache;
 use RozaVerta\CmfCore\Interfaces\VarExportInterface;
@@ -158,7 +157,7 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 	// -- protected
 
 	/**
-	 * @param int $id
+	 * @param int  $id
 	 * @param bool $install
 	 *
 	 * @return array
@@ -167,29 +166,26 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 	 * @throws Exceptions\ResourceReadException
 	 * @throws ModuleNotFoundException
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
 	 */
 	static protected function load( int $id, bool $install = true )
 	{
-		$conn = DatabaseManager::connection();
-		$query = "SELECT * FROM " . $conn->getTableName( Modules_SchemeDesigner::getTableName() ) . " WHERE id = ?";
-		$where = [ $id ];
-		$types = [ ParameterType::INTEGER ];
+		$builder = DatabaseManager::plainBuilder()
+			->from( Modules_SchemeDesigner::getTableName() )
+			->where( "id", $id )
+			->limit( 1 );
 
 		if( $install )
 		{
-			$query .= " AND install = ?";
-			$where[] = true;
-			$types[] = ParameterType::BOOLEAN;
+			$builder->where( "install", true );
 		}
 
 		/** @var Modules_SchemeDesigner $row */
 		try {
-			$row = $conn->fetchAssoc(
-				$conn->getGrammar()->compileLimitQuery( $query, 1 ), $where, $types
-			);
+			$row = $builder->first();
 			if( $row )
 			{
-				$row = new Modules_SchemeDesigner( $row, $conn );
+				$row = new Modules_SchemeDesigner( $row, $builder->getConnection() );
 			}
 		}
 		catch( TableNotFoundException $e ) {
@@ -214,12 +210,12 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 				"install" => false,
 				"namespace_name" => $manifest->getNamespaceName(),
 				"version" => $manifest->getVersion()
-			], $conn );
+			], $builder->getConnection() );
 		}
 
 		if( $install )
 		{
-			if( $manifest->getVersion() !== $row->getVersion() )
+			if( defined( "SERVER_CLI_MODE" ) && !SERVER_CLI_MODE && $manifest->getVersion() !== $row->getVersion() )
 			{
 				throw new ModuleConflictVersionException("The current version of the '{$row->get('name')}' module does not match the installed version of the module");
 			}

@@ -160,7 +160,7 @@ class PackageManagerProcessor extends Workshop
 
 		if( $package->isAddon() )
 		{
-			throw new Exceptions\PackageInvalidArgumentsException( "The specified \"{$name}\" package belongs to another module." );
+			throw new Exceptions\PackageInvalidArgumentsException( "The specified \"{$name}\" package is an addon and cannot be updated from the zip archive." );
 		}
 
 		$package->getVersion();

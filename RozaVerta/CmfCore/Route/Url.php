@@ -25,8 +25,8 @@ class Url implements \Countable
 	protected $port         = 80;
 	protected $path         = "/";
 	protected $isDir        = true;
-	protected $ext          = "";
-	protected $lowerExt     = false;
+	protected $ext = null;
+	protected $lowerExt = null;
 	protected $segments     = [];
 	protected $length       = 0;
 	protected $dirLength    = 0;
@@ -48,14 +48,11 @@ class Url implements \Countable
 	/**
 	 * Url constructor.
 	 *
-	 * @param Prop|array|string $prop
+	 * @param Prop|array|string $config
 	 */
-	public function __construct( $prop = null )
+	public function __construct( $config = null )
 	{
-		if( ! $prop instanceof Prop )
-		{
-			$prop = new Prop(is_null($prop) ? [] : $prop);
-		}
+		$prop = $config instanceof Prop ? $config : new Prop( $config === null ? [] : $config );
 
 		if( $prop->getIs("directory") )
 		{
@@ -85,7 +82,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Reload data from Host object
+	 * Reload data from Host object.
 	 *
 	 * @param Host $host
 	 * @return $this
@@ -94,7 +91,7 @@ class Url implements \Countable
 	{
 		// host
 
-		$pref = ($this->isSsl() ? "https://" : "http://") . $host->getHostname();
+		$pref = ( $host->isSsl() ? "https://" : "http://" ) . $host->getHostname();
 		if($host->getPort() !== 80)
 		{
 			$pref .= ":" . $host->getPort();
@@ -146,7 +143,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Reload data from URL path string
+	 * Reload data from URL path string.
 	 *
 	 * @param string $path
 	 * @return $this
@@ -156,8 +153,8 @@ class Url implements \Countable
 		// clean data
 
 		$this->context    = "/";
-		$this->ext        = "";
-		$this->lowerExt   = "";
+		$this->ext = null;
+		$this->lowerExt = null;
 		$this->segments   = [];
 		$this->length     = 0;
 		$this->dirLength  = 0;
@@ -174,14 +171,14 @@ class Url implements \Countable
 			$this->ready = true;
 		}
 
-		$host_default = defined("ORIGINAL_HOST") ? ORIGINAL_HOST : ($_SERVER['HTTP_HOST'] ?? "localhost");
-		$host_protocol = defined("BASE_PROTOCOL") ? BASE_PROTOCOL : "http";
+		$hostDefault = defined( "APP_ORIGINAL_HOST" ) ? APP_ORIGINAL_HOST : ( $_SERVER['HTTP_HOST'] ?? "localhost" );
+		$hostProtocolDefault = defined( "APP_SSL" ) ? ( APP_SSL ? "https" : "http" ) : "http";
 
 		// add host prefix ?
 
 		if( ! preg_match('/^[a-z]{3,8}:/', $path) )
 		{
-			$prefix = $host_protocol;
+			$prefix = $hostProtocolDefault;
 			if( substr($path, 0, 2) === "//" )
 			{
 				$path = $prefix . ":" . $path;
@@ -189,7 +186,7 @@ class Url implements \Countable
 			else
 			{
 				$prefix .= "://";
-				$prefix .= $host_default;
+				$prefix .= $hostDefault;
 
 				if( isset($_SERVER['SERVER_PORT']) && intval($_SERVER['SERVER_PORT']) !== 80 )
 				{
@@ -203,7 +200,6 @@ class Url implements \Countable
 
 				$path = $prefix . $path;
 			}
-
 		}
 
 		$len = strlen($this->basePrefix);
@@ -211,17 +207,23 @@ class Url implements \Countable
 		if( ! $parse )
 		{
 			$parse = [
-				"scheme" => $host_protocol,
-				"host" => $host_default,
+				"scheme" => $hostProtocolDefault,
+				"host" => $hostDefault,
 				"path" => $path
 			];
 		}
 
-		$this->host = $parse["host"] ?? $host_default;
+		$this->host = $parse["host"] ?? $hostDefault;
 		$this->port = isset($parse["port"]) ? intval($parse["port"]) : 80;
-		$this->protocol = $parse["scheme"] ?? $host_protocol;
+		$this->protocol = $parse["scheme"] ?? $hostProtocolDefault;
 		$this->path = $parse["path"] ?? "/";
 		$this->url = $this->protocol . "://" . $this->host;
+
+		if( $this->port === 80 )
+		{
+			$this->url .= ":" . $this->port;
+		}
+
 		$this->base = $this->basePath == "full" ? $this->url : "";
 
 		if( ! strlen($this->path) || $this->path[0] !== "/" )
@@ -291,7 +293,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Get URL string
+	 * Get URL string.
 	 *
 	 * @return string
 	 */
@@ -301,7 +303,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Get base path
+	 * Get base path.
 	 *
 	 * @return string
 	 */
@@ -311,19 +313,20 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Get URL Prefix - Protocol, Domain and Base Path
+	 * Get URL Prefix - Protocol, Domain and Base Path.
 	 *
 	 * @return string
 	 */
 	public function getPrefix(): string
 	{
 		$prefix  = $this->protocol . "://" . $this->host;
+		if( $this->port !== 80 ) $prefix .= ":" . $this->port;
 		$prefix .= $this->isBasePrefix() ? $this->basePrefix : "/";
 		return $prefix;
 	}
 
 	/**
-	 * Get domain name
+	 * Get domain name.
 	 *
 	 * @return string
 	 */
@@ -333,7 +336,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Get port
+	 * Get port.
 	 *
 	 * @return int
 	 */
@@ -343,9 +346,10 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Get full path
+	 * Get full path.
 	 *
 	 * @param bool $context
+	 *
 	 * @return string
 	 */
 	public function getPath( bool $context = false ): string
@@ -361,9 +365,10 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Get offset path
+	 * Get offset path.
 	 *
 	 * @param int $offset
+	 *
 	 * @return string
 	 */
 	public function getOffsetPath( int $offset ): string
@@ -391,9 +396,10 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Get the last specified segments
+	 * Get the last specified segments.
 	 *
 	 * @param int $offset
+	 *
 	 * @return array
 	 */
 	public function getOffsetSegments( int $offset ): array
@@ -402,7 +408,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Get context path
+	 * Get context path.
 	 *
 	 * @return string
 	 */
@@ -432,27 +438,27 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Get URL extension
+	 * Get URL extension.
 	 *
-	 * @return string
+	 * @return string|null
 	 */
-	public function getExt(): string
+	public function getExt(): ?string
 	{
 		return $this->ext;
 	}
 
 	/**
-	 * Get lowercase URL extension
+	 * Get lowercase URL extension.
 	 *
-	 * @return string
+	 * @return string|null
 	 */
-	public function getLowerExt(): string
+	public function getLowerExt(): ?string
 	{
 		return $this->lowerExt;
 	}
 
 	/**
-	 * Get URL protocol scheme, http or https
+	 * Get URL protocol scheme, http or https.
 	 *
 	 * @return string
 	 */
@@ -472,9 +478,10 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Check segment existence
+	 * Check segment existence.
 	 *
 	 * @param int $number
+	 *
 	 * @return bool
 	 */
 	public function hasSegment( int $number ): bool
@@ -483,9 +490,10 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Get a specific segment
+	 * Get a specific segment.
 	 *
 	 * @param int $number
+	 *
 	 * @return string
 	 */
 	public function getSegment( int $number = 0 ): string
@@ -503,7 +511,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Get all segments
+	 * Get all segments.
 	 *
 	 * @return array
 	 */
@@ -513,7 +521,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Count segments without last open segment
+	 * Count segments without last open segment.
 	 *
 	 * @return int
 	 */
@@ -523,7 +531,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Url mode, 'get' or 'rewrite'
+	 * Url mode, 'get' or 'rewrite'.
 	 *
 	 * @return string
 	 */
@@ -533,7 +541,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Get URL configuration
+	 * Get URL configuration.
 	 *
 	 * @return \RozaVerta\CmfCore\Support\Prop
 	 */
@@ -543,7 +551,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Get full url scheme string
+	 * Get full url scheme string.
 	 *
 	 * @param Context $context
 	 * @param string $path
@@ -605,7 +613,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Get url string
+	 * Get url string.
 	 *
 	 * @param string $path
 	 * @param array $query
@@ -654,7 +662,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Create context path, shift segments
+	 * Create context path, shift segments.
 	 *
 	 * @param int $delta
 	 *
@@ -697,7 +705,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Compare the URL extension with a string or array
+	 * Compare the URL extension with a string or array.
 	 *
 	 * @param $ext
 	 *
@@ -732,7 +740,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Compare specified URL segment
+	 * Compare specified URL segment.
 	 *
 	 * @param string $test
 	 * @param int $number
@@ -755,7 +763,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Check if the URL segment is a number
+	 * Check if the URL segment is a number.
 	 *
 	 * @param int $number
 	 *
@@ -810,7 +818,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Get last URL segment without extension (by default)
+	 * Get last URL segment without extension (by default).
 	 *
 	 * @param bool $suffix
 	 *
@@ -820,7 +828,7 @@ class Url implements \Countable
 	{
 		if( $this->last )
 		{
-			return $this->last . ( $suffix ? $this->ext : "" );
+			return $this->last . ( $suffix && $this->ext !== null ? $this->ext : "" );
 		}
 		else
 		{
@@ -854,7 +862,7 @@ class Url implements \Countable
 	// protected
 
 	/**
-	 * Clean relative path
+	 * Clean relative path.
 	 *
 	 * @param $uri
 	 *
@@ -880,7 +888,7 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Is base prefix
+	 * Is base prefix.
 	 *
 	 * @return bool
 	 */
@@ -890,7 +898,8 @@ class Url implements \Countable
 	}
 
 	/**
-	 * Create a URL based on configuration mode
+	 * Create a URL based on configuration mode.
+	 *
 	 * @param $url
 	 * @param $path
 	 * @param array $query

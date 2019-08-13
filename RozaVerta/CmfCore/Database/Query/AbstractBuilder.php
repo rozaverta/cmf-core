@@ -123,7 +123,7 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 		if( !isset( $this->tableSchema ) )
 		{
 			$table = $this->table;
-			if( strpos( $table, "(" ) !== false || !App::getInstance()->isInstall() )
+			if( strpos( $table, "(" ) !== false || !App::getInstance()->installed() )
 			{
 				throw new InvalidArgumentException();
 			}

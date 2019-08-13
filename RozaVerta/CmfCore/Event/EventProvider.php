@@ -7,6 +7,7 @@
 
 namespace RozaVerta\CmfCore\Event;
 
+use Doctrine\DBAL\Types\Type;
 use ReflectionClass;
 use RozaVerta\CmfCore\Event\Interfaces\EventPrepareInterface;
 use RozaVerta\CmfCore\Http\Events\ResponseSendEvent;
@@ -49,7 +50,7 @@ final class EventProvider implements Arrayable
 	/**
 	 * EventProvider constructor.
 	 *
-	 * @param string $name
+	 * @param string    $name
 	 * @param bool|null $completable
 	 *
 	 * @throws \Doctrine\DBAL\DBALException
@@ -67,17 +68,20 @@ final class EventProvider implements Arrayable
 
 		// ready database only for install system
 
-		if( $this->app->isInstall() )
+		if( $this->app->installed() )
 		{
-			$row = Events_SchemeDesigner::find()
+			$row = $this
+				->app
+				->db
+				->plainBuilder()
+				->from( Events_SchemeDesigner::getTableName() )
 				->where('name', $this->name)
-				->first();
+				->first( [ "id", "completable" ] );
 
-			/** @var Events_SchemeDesigner $row */
 			if( $row )
 			{
-				$this->setId($row->getId());
-				$this->completable = $row->isCompletable();
+				$this->setId( (int) $row["id"] );
+				$this->completable = $this->app->db->convertToPHPValue( $row["completable"], Type::BOOLEAN );
 			}
 		}
 		else
@@ -118,8 +122,7 @@ final class EventProvider implements Arrayable
 			$className = $row->getClassName();
 			try {
 				$ref = new ReflectionClass($className);
-			}
-			catch(\ReflectionException $e) {
+			} catch(\ReflectionException $e) {
 				$this->log->line( $e->getMessage() );
 				continue;
 			}

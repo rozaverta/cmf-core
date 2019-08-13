@@ -64,14 +64,9 @@ set_exception_handler(static function( Throwable $exception )
 		exit;
 	}
 
-	function exc_has_app()
-	{
-		return class_exists(App::class, false);
-	}
-
 	function exc_db($exception)
 	{
-		if( exc_has_app() && $exception instanceof DBALException )
+		if( $exception instanceof DBALException )
 		{
 			$app = App::getInstance();
 			$app->log->line("SQL error: " . $exception->getMessage());
@@ -90,12 +85,11 @@ set_exception_handler(static function( Throwable $exception )
 		}
 	}
 
-	if( ! exc_has_app() || ! App::getInstance()->isInstall() )
+	$app = class_exists( App::class, false ) ? App::getInstance() : null;
+	if( !( $app && $app->initialized() && $app->installed() ) )
 	{
-		exc_print("%s. %s, %s", [($isError ? "Fatal error" : "System error"), $exception->getCode(), $exception->getMessage()] );
+		exc_print( "%s. %s, %s", [ ( $isError ? "Fatal error" : "System error" ), $exception->getCode(), $exception->getMessage() ] );
 	}
-
-	$app = App::getInstance();
 
 	$title    = $isError ? "Fatal error" : "System error";
 	$code     = $exception->getCode();

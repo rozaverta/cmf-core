@@ -49,7 +49,7 @@ final class EventManager
 
 		// system has been installed
 		// use default mode
-		if(App::getInstance()->isInstall())
+		if( App::getInstance()->installed() )
 		{
 			$cache = new Cache($name, 'events');
 

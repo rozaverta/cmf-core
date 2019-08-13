@@ -136,7 +136,7 @@ class Terminal
 			throw new Exception("Default commands not registered");
 		}
 
-		if( $this->app->isInstall() )
+		if( $this->app->installed() )
 		{
 			/** @var Modules_SchemeDesigner[] $modules */
 			$modules = Modules_SchemeDesigner::find()
@@ -174,7 +174,7 @@ class Terminal
 		$name_space = $config->getNamespaceName() . "CliCommands\\";
 		$key = md5($path);
 
-		if( $this->app->isInstall() )
+		if( $this->app->installed() )
 		{
 			$cache = $this->cache->newCache( $key, "console" );
 			if( $cache->ready() )

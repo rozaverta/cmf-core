@@ -83,6 +83,8 @@ final class App
 {
 	use SingletonInstanceTrait;
 
+	private $systemInit = false;
+
 	private $hostDefined = false;
 
 	private $ci = [];
@@ -132,13 +134,26 @@ final class App
 	}
 
 	/**
-	 * Initial system
+	 * The system has been initialized.
+	 *
+	 * @return bool
+	 */
+	public function initialized(): bool
+	{
+		return $this->systemInit;
+	}
+
+	/**
+	 * Initial system.
 	 *
 	 * @return $this
 	 *
+	 * @throws Exceptions\ClassNotFoundException
 	 * @throws Exceptions\WriteException
 	 * @throws Module\Exceptions\ResourceReadException
 	 * @throws NotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function init()
 	{
@@ -220,11 +235,13 @@ final class App
 			$this->singleton($name, $object);
 		}
 
+		$this->systemInit = true;
+
 		return $this;
 	}
 
 	/**
-	 * Load singleton object
+	 * Load singleton object.
 	 *
 	 * @param string $name
 	 *
@@ -234,6 +251,8 @@ final class App
 	 * @throws Exceptions\WriteException
 	 * @throws Module\Exceptions\ResourceReadException
 	 * @throws NotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function service( string $name )
 	{
@@ -290,13 +309,15 @@ final class App
 	}
 
 	/**
-	 * The Singleton class has been loaded
+	 * The Singleton class has been loaded.
 	 *
 	 * @param string $name
-	 * @param bool $autoLoad
+	 * @param bool   $autoLoad
 	 * @return bool
 	 * @throws Exceptions\WriteException
 	 * @throws Module\Exceptions\ResourceReadException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function loaded( string $name, bool $autoLoad = false ): bool
 	{
@@ -322,12 +343,15 @@ final class App
 	}
 
 	/**
-	 * Load and get the current context
+	 * Load and get the current context.
 	 *
 	 * @return Context
+	 * @throws Exceptions\ClassNotFoundException
 	 * @throws Exceptions\WriteException
 	 * @throws Module\Exceptions\ResourceReadException
 	 * @throws NotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function loadContext(): Context
 	{
@@ -368,13 +392,13 @@ final class App
 	}
 
 	/**
-	 * Check if the system has been installed
+	 * Check if the system has been installed.
 	 *
 	 * @return bool
 	 *
 	 * @throws \Throwable
 	 */
-	public function isInstall(): bool
+	public function installed(): bool
 	{
 		return (bool) $this->system("install", false);
 	}
@@ -401,7 +425,7 @@ final class App
 		// load system config
 		// check install
 
-		if( $this->isInstall() )
+		if( $this->installed() )
 		{
 			$status = $this->system("status");
 			if( strpos($status, "-progress") > 0 || $status === "progress" )
@@ -494,7 +518,7 @@ final class App
 	{
 		// web access
 
-		if( ! $this->isInstall() )
+		if( !$this->installed() )
 		{
 			$host = $this->host;
 
@@ -1046,33 +1070,36 @@ final class App
 
 		$close = true;
 
-		// rollback database transaction
-		foreach($this->database->getActiveConnections() as $conn)
+		if( $this->installed() )
 		{
-			if($conn->isTransactionActive())
+			// rollback database transaction
+			foreach( $this->database->getActiveConnections() as $conn )
 			{
-				$conn->rollBack();
+				if( $conn->isTransactionActive() )
+				{
+					$conn->rollBack();
+				}
+			}
+
+			$err = error_get_last();
+			if( is_array( $err ) && $err['type'] != E_NOTICE && $err['type'] != E_USER_NOTICE )
+			{
+				$this->log->line(
+					"PHP shutdown error: " . trim( $err['message'] ) .
+					", file: " . $err['file'] .
+					", line: " . $err['line']
+				);
+			}
+
+			// write logs
+			if( $this->loaded( 'log' ) )
+			{
+				$this->log->flush();
 			}
 		}
 
-		$err = error_get_last();
-		if( is_array($err) && $err['type'] != E_NOTICE && $err['type'] != E_USER_NOTICE )
-		{
-			$this->log->line(
-				"PHP shutdown error: " . trim($err['message']) .
-				", file: " . $err['file'] .
-				", line: " . $err['line']
-			);
-		}
-
-		// write logs
-		if( $this->loaded('log') )
-		{
-			$this->log->flush();
-		}
-
 		// shutdown callback
-		$this->event->dispatch(new Events\ShutdownEvent());
+		$this->initialized() && $this->event->dispatch( new Events\ShutdownEvent() );
 	}
 
 	public function __get( $name )

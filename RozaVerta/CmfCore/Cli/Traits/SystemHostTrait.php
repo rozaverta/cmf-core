@@ -24,7 +24,7 @@ trait SystemHostTrait
 
 	public function isInstall(): bool
 	{
-		return App::getInstance()->isInstall();
+		return App::getInstance()->installed();
 	}
 
 	public function inInstallUpdateProgress(): bool

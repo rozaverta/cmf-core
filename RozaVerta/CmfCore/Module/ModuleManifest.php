@@ -7,10 +7,12 @@
 
 namespace RozaVerta\CmfCore\Module;
 
+use ReflectionClass;
+use ReflectionException;
+use RozaVerta\CmfCore\Exceptions\JsonParseException;
 use RozaVerta\CmfCore\Helper\Arr;
 use RozaVerta\CmfCore\Helper\Json;
 use RozaVerta\CmfCore\Helper\Str;
-use ReflectionClass;
 use RozaVerta\CmfCore\Module\Exceptions\ModuleBadNameException;
 use RozaVerta\CmfCore\Module\Exceptions\ResourceInvalidTypeException;
 use RozaVerta\CmfCore\Module\Exceptions\ResourceNotFoundException;
@@ -46,9 +48,9 @@ abstract class ModuleManifest extends Modular implements ModuleManifestInterface
 	{
 		try {
 			$ref = new ReflectionClass( $this );
-		}
-		catch( \ReflectionException $e ) {
-			throw new ResourceNotFoundException("The manifest class load error", $e);
+		} catch( ReflectionException $e )
+		{
+			throw new ResourceNotFoundException( "The manifest class load error.", $e );
 		}
 
 		$this->pathname = dirname($ref->getFileName()) . DIRECTORY_SEPARATOR;
@@ -59,32 +61,32 @@ abstract class ModuleManifest extends Modular implements ModuleManifestInterface
 		$file = $this->pathname . "resources" . DIRECTORY_SEPARATOR . "manifest.json";
 		if( !file_exists($file) )
 		{
-			throw new ResourceNotFoundException("The manifest file not found");
+			throw new ResourceNotFoundException( "The manifest file not found." );
 		}
 
 		$raw = @ file_get_contents($file);
 		if( !$raw )
 		{
-			throw new ResourceReadException("Cannot ready manifest file '{$this->name}'");
+			throw new ResourceReadException( "Cannot ready manifest file \"{$this->name}\"." );
 		}
 
 		try {
 			$manifest = Json::parse($raw, true);
 			if( ! is_array($manifest) )
 			{
-				throw new \InvalidArgumentException("Manifest data is not array");
+				throw new JsonParseException( "Manifest data is not array." );
 			}
-		}
-		catch( \InvalidArgumentException $e ) {
-			throw new ResourceReadException("Cannot read manifest file '{$this->name}', json parser error: " . $e->getCode());
+		} catch( JsonParseException $e )
+		{
+			throw new ResourceReadException( "Cannot read manifest file \"{$this->name}\", json parser error: " . $e->getCode() );
 		}
 
 		if( ! isset($manifest["type"]) || $manifest["type"] !== "#/module" )
 		{
-			throw new ResourceInvalidTypeException("Invalid manifest file type");
+			throw new ResourceInvalidTypeException( "Invalid manifest file type." );
 		}
 
-		foreach($this->props as $name => $value)
+		foreach( $this->props as $name => $value)
 		{
 			$this->{$name} = isset($manifest[$name]) && gettype($manifest[$name]) === gettype($value) ? $manifest[$name] : $value;
 		}
@@ -98,7 +100,7 @@ abstract class ModuleManifest extends Modular implements ModuleManifestInterface
 
 		if( ! ModuleHelper::validName($this->name) )
 		{
-			throw new ModuleBadNameException("Bad module name '{$this->name}'");
+			throw new ModuleBadNameException( "Bad module name \"{$this->name}\"." );
 		}
 
 		// create module title
@@ -127,7 +129,7 @@ abstract class ModuleManifest extends Modular implements ModuleManifestInterface
 			];
 		}
 
-		foreach($authors as & $author)
+		foreach( $authors as & $author)
 		{
 			if( is_string($author) )
 			{

@@ -231,7 +231,7 @@ final class HostManager
 	{
 		if( $this->isDefined() )
 		{
-			throw new InvalidArgumentException("You cannot reload host after defining the constants");
+			throw new InvalidArgumentException( "You cannot reload host after defining the constants." );
 		}
 
 		$this->loaded = false;
@@ -258,7 +258,7 @@ final class HostManager
 
 			if( !filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) )
 			{
-				throw new InvalidArgumentException("Invalid host name '{$host}'");
+				throw new InvalidArgumentException( "Invalid host name \"{$host}\"." );
 			}
 		}
 		else
@@ -341,7 +341,7 @@ final class HostManager
 	{
 		if( ! $this->isLoaded() )
 		{
-			throw new InvalidArgumentException("The selected domain is not installed or the configuration file is not specified current domain name");
+			throw new InvalidArgumentException( "The selected domain is not installed or the configuration file is not specified current domain name." );
 		}
 
 		if( ! $this->isDefined() )
@@ -444,7 +444,7 @@ final class HostManager
 
 		if( !file_exists($file) )
 		{
-			throw new FileNotFoundException("HostManager file not found");
+			throw new FileNotFoundException( "HostManager file not found." );
 		}
 
 		$this->file = $file;

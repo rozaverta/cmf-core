@@ -353,9 +353,9 @@ final class HostManager
 			define( "APP_ASSETS_PATH"       , $this->getAssetsPathname() );
 			define( "APP_ASSETS_WEB_PATH"   , $this->getAssetsWebPathname() );
 
-			defined("APP_ENCODING")   || define("APP_ENCODING"      , $this->encoding );
-			defined("APP_PROTOCOL")   || define("APP_PROTOCOL"      , $this->ssl ? 'https' : 'http');
-			defined("APP_DEBUG_MODE") || define("APP_DEBUG_MODE"    , $this->getDebugMode());
+			defined( "APP_ENCODING" ) || define( "APP_ENCODING", $this->encoding );
+			defined( "APP_SSL" ) || define( "APP_SSL", $this->ssl );
+			defined( "APP_DEBUG_MODE" ) || define( "APP_DEBUG_MODE", $this->getDebugMode() );
 		}
 	}
 
@@ -433,9 +433,9 @@ final class HostManager
 		{
 			$file = HOST_FILE;
 		}
-		else if( defined("BASE_DIR") )
+		else if( defined( "APP_BASE_PATH" ) )
 		{
-			$file = BASE_DIR . "hosts.php";
+			$file = APP_BASE_PATH . "hosts.php";
 		}
 		else
 		{

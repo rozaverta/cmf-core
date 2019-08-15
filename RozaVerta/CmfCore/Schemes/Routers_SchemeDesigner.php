@@ -75,7 +75,7 @@ class Routers_SchemeDesigner extends ModuleSchemeDesigner
 					},
 				],
 			],
-			"criteria" => [
+			"where" => [
 				[ "tm.id", "!=", null ],
 				"tm.install" => true,
 			],

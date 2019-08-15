@@ -32,6 +32,7 @@ use RozaVerta\CmfCore\Workshops\Event\EventProcessor;
 use RozaVerta\CmfCore\Workshops\Event\HandlerProcessor;
 use RozaVerta\CmfCore\Workshops\Event\Interfaces\EventProcessorExceptionInterface;
 use RozaVerta\CmfCore\Workshops\View\PackageManagerProcessor;
+use Throwable;
 
 /**
  * Class ModuleComponent
@@ -213,7 +214,13 @@ class ModuleComponent extends Workshop
 			$uninstall ? null : ModuleHelper::workshop( $this->getModuleId() )
 		);
 
-		$dispatcher->complete($action, $uninstall ? null : $this->getModule());
+		try
+		{
+			$dispatcher->complete( $action, $uninstall ? null : $this->getModule() );
+		} catch( Throwable $e )
+		{
+			$this->addError( $e->getMessage() );
+		}
 
 		$this->addDebug(Text::text($debugText, $moduleName));
 
@@ -382,7 +389,7 @@ class ModuleComponent extends Workshop
 				foreach($events as $eventName)
 				{
 					try {
-						$drv->link($eventName, $className);
+						$drv->link( $className, $eventName );
 					} catch( EventAbortException | EventProcessorExceptionInterface $e )
 					{
 						$this->addError($e->getMessage());
@@ -637,7 +644,7 @@ class ModuleComponent extends Workshop
 				{
 					try
 					{
-						$drv->link( $eventName, $className, null, true );
+						$drv->link( $className, $eventName, null, true );
 					} catch( EventAbortException | EventProcessorExceptionInterface $e )
 					{
 						$this->addError( $e->getMessage() );
@@ -825,7 +832,7 @@ class ModuleComponent extends Workshop
 		try
 		{
 			$loader = new TableLoader( $table, $this->getModule() );
-		} catch( \Throwable $e )
+		} catch( Throwable $e )
 		{
 			$this->addError( "Database insert error. " . $e->getMessage() );
 			return null;

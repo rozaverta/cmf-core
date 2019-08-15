@@ -202,6 +202,19 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 	}
 
 	/**
+	 * Bind "where" parameter value.
+	 *
+	 * @param string $name
+	 * @param        $value
+	 *
+	 * @return $this
+	 */
+	public function bindWhere( string $name, $value )
+	{
+		return $this->bind( "where", $name, $value );
+	}
+
+	/**
 	 * Add a "having" clause to the query.
 	 *
 	 * @param string|array|\Closure $name
@@ -226,6 +239,19 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 	{
 		$this->havingType = $type === Criteria::TYPE_OR ? Criteria::TYPE_OR : Criteria::TYPE_AND;
 		return $this;
+	}
+
+	/**
+	 * Bind "having" parameter value.
+	 *
+	 * @param string $name
+	 * @param        $value
+	 *
+	 * @return $this
+	 */
+	public function bindHaving( string $name, $value )
+	{
+		return $this->bind( "having", $name, $value );
 	}
 
 	/**
@@ -640,6 +666,20 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 				if( !isset( $this->columns[$name] ) ) $this->columns[$name] = $asName;
 			}
 		}
+	}
+
+	protected function bind( string $type, string $name, $value )
+	{
+		if( !isset( $this->{$type} ) )
+		{
+			$this->{$type} = $this->newCriteria( $this->{$type . "Type"} );
+		}
+
+		/** @var Parameters $parameters */
+		$parameters = $this->{$type}->getParameters();
+		$parameters->bind( $name, $value );
+
+		return $this;
 	}
 
 	/**

@@ -206,7 +206,7 @@ final class View extends Lexer
 		if( !is_object($object) )
 		{
 			try {
-				$ref = new ReflectionClass($object);
+				$ref = new ReflectionClass( (string) $object );
 			}
 			catch( ReflectionException $e ) {
 				$this->log->addError( "Cannot load extender class \"{$name}\". " . $e->getMessage() );
@@ -220,6 +220,11 @@ final class View extends Lexer
 			}
 
 			$object = $ref->newInstance($name, $this);
+		}
+		else if( !$object instanceof ExtenderInterface )
+		{
+			$this->log->addError( "Extender class \"{$name}\" must implements of the \"" . ExtenderInterface::class . "\" interface." );
+			return $this;
 		}
 
 		if(isset($this->extends[$name]))

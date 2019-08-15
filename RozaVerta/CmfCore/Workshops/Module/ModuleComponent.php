@@ -392,15 +392,6 @@ class ModuleComponent extends Workshop
 			unset($drv);
 		}
 
-		// 4. plugins
-
-		$rec = $this->getResourceData("plugins", "#/plugin_collection");
-		if(count($rec))
-		{
-			// todo
-			unset($drv);
-		}
-
 		// 5. templates
 
 		$rec = $manifest->getArray( "packages" );

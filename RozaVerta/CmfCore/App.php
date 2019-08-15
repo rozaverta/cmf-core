@@ -223,10 +223,6 @@ final class App
 			return new Url( Prop::prop('url') );
 		};
 
-		$this->completable['view'] = function(View $view) {
-			$view->load();
-		};
-
 		$event = new Events\SingletonEvent();
 		$this->event->dispatch($event);
 

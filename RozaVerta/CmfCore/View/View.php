@@ -15,7 +15,6 @@ use RozaVerta\CmfCore\Exceptions\WriteException;
 use RozaVerta\CmfCore\Helper\Arr;
 use RozaVerta\CmfCore\Helper\Path;
 use RozaVerta\CmfCore\Helper\Str;
-use RozaVerta\CmfCore\Schemes\TemplatePlugins_SchemeDesigner;
 use RozaVerta\CmfCore\Exceptions\NotFoundException;
 use RozaVerta\CmfCore\Support\Prop;
 use RozaVerta\CmfCore\Traits\ServiceTrait;
@@ -25,7 +24,7 @@ use RozaVerta\CmfCore\View\Events\RenderGetterEvent;
 use RozaVerta\CmfCore\View\Helpers\PackageHelper;
 use RozaVerta\CmfCore\View\Interfaces\ExtenderInterface;
 use RozaVerta\CmfCore\View\Interfaces\PluginDynamicInterface;
-use RozaVerta\CmfCore\View\Interfaces\PluginInterface;
+use RozaVerta\CmfCore\View\Interfaces\PluginThrowableInterface;
 
 /**
  * Class View
@@ -103,11 +102,6 @@ final class View extends Lexer
 	protected $request;
 
 	/**
-	 * @var \RozaVerta\CmfCore\Database\Connection
-	 */
-	protected $db;
-
-	/**
 	 * View constructor.
 	 *
 	 * @param array $items
@@ -121,7 +115,7 @@ final class View extends Lexer
 	public function __construct( array $items = [], array $config = [] )
 	{
 		parent::__construct( $items );
-		$this->thisServices( "db", "log", "url", "event", "request", "cache" );
+		$this->thisServices( "log", "url", "event", "request", "cache" );
 
 		$this->config = $config;
 
@@ -129,70 +123,6 @@ final class View extends Lexer
 		if( !isset( $this->config["host"] ) ) $this->config["host"] = $this->url->getHost();
 		if( !isset( $this->config["assets"] ) ) $this->config["assets"] = "/assets/";
 		if( !isset( $this->config["charset"] ) ) $this->config["charset"] = Str::encoding();
-	}
-
-	static private $load = false;
-
-	public function load()
-	{
-		if( self::$load )
-		{
-			return $this;
-		}
-
-		self::$load = true;
-
-		// load plugins
-
-		$cache = $this->cache->newCache("plugins", 'template');
-		if( $cache->ready() )
-		{
-			foreach($cache->import() as $className)
-			{
-				Plugin::register($className);
-			}
-		}
-		else
-		{
-			$all = TemplatePlugins_SchemeDesigner::find()
-				->where("visible", true)
-				->orderBy("name")
-				->get();
-
-			$plugins = [];
-
-			/** @var TemplatePlugins_SchemeDesigner $item */
-			foreach($all as $item)
-			{
-				$className = $item->getClassName();
-
-				try
-				{
-					$ref = new ReflectionClass( $className );
-				}
-				catch( ReflectionException $e )
-				{
-					$this->log->line("Plugin load error, class '{$className}' not found");
-					continue;
-				}
-
-				if( ! $ref->implementsInterface(PluginInterface::class) )
-				{
-					$this->log->line("Plugin load error, class '{$className}' must be inherited of " . PluginInterface::class);
-					continue;
-				}
-
-				if( !in_array($className, $plugins, true))
-				{
-					$plugins[] = $className;
-					Plugin::register($className);
-				}
-			}
-
-			$cache->export($plugins);
-		}
-
-		return $this;
 	}
 
 	public function mergeConfig( array $config )

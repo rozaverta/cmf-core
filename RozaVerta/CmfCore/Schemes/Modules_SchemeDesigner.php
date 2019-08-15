@@ -66,13 +66,13 @@ class Modules_SchemeDesigner extends SchemeDesigner
 		$manifestClassName = trim($items["namespace_name"], '\\') . '\Manifest';
 		if( ! class_exists($manifestClassName, true) )
 		{
-			throw new ModuleNotFoundException("The '{$items['name']}' module not found");
+			throw new ModuleNotFoundException( "The \"{$items['name']}\" module not found." );
 		}
 
 		$this->manifest = new $manifestClassName();
 		if( $this->manifest->getName() !== $items["name"] )
 		{
-			throw new ModuleBadNameException("Failure manifest data for module '{$items['name']}'");
+			throw new ModuleBadNameException( "Failure manifest data for module \"{$items['name']}\"." );
 		}
 
 		$items["extra"] = $this->manifest->getExtras();

@@ -7,6 +7,8 @@
 
 namespace RozaVerta\CmfCore\View;
 
+use ReflectionClass;
+use ReflectionException;
 use RozaVerta\CmfCore\Cache\CacheManager;
 use RozaVerta\CmfCore\Event\EventManager;
 use RozaVerta\CmfCore\Events\ShutdownEvent;
@@ -38,18 +40,18 @@ abstract class Plugin implements PluginInterface
 
 	static private $plugins = [];
 
-	static public function plugin($name, LexerInterface $lexer): PluginInterface
+	static public function plugin( $name, LexerInterface $lexer): PluginInterface
 	{
 		if( ! isset(self::$plugins[$name]) )
 		{
-			throw new Exceptions\PluginNotFoundException("The '{$name}' plugin not found");
+			throw new Exceptions\PluginNotFoundException( "The \"{$name}\" plugin not found." );
 		}
 
 		$plug = self::$plugins[$name];
 		return new $plug["className"](Module::module($plug["moduleId"]), $lexer);
 	}
 
-	static public function exists($name)
+	static public function exists( $name)
 	{
 		return isset(self::$plugins[$name]);
 	}
@@ -71,10 +73,10 @@ abstract class Plugin implements PluginInterface
 		}
 
 		try {
-			$ref = new \ReflectionClass( $className );
-		}
-		catch( \ReflectionException $e ) {
-			throw new Exceptions\PluginNotFoundException("The '{$className}' plugin class not found", $e);
+			$ref = new ReflectionClass( $className );
+		} catch( ReflectionException $e )
+		{
+			throw new Exceptions\PluginNotFoundException( "The \"{$className}\" plugin class not found.", $e );
 		}
 
 		if( ! $ref->implementsInterface(PluginInterface::class) )
@@ -84,14 +86,14 @@ abstract class Plugin implements PluginInterface
 
 		try {
 			$name = $ref->getMethod( "getPluginName" )->invoke( null );
-		}
-		catch( \ReflectionException $e ) {
+		} catch( ReflectionException $e )
+		{
 			throw new \Exception(); // todo
 		}
 
 		if( self::exists($name) )
 		{
-			throw new \InvalidArgumentException("Plugin '{$name}' already exists");
+			throw new \InvalidArgumentException( "The \"{$name}\" plugin already exists." );
 		}
 
 		if( !$listen )

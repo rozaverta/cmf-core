@@ -176,7 +176,7 @@ final class View extends Lexer
 	}
 
 	/**
-	 * Get view extender
+	 * Get view extender.
 	 *
 	 * @param string $name
 	 * @return object|UnknownExtenderProxy
@@ -200,11 +200,6 @@ final class View extends Lexer
 	 * @param string | ExtenderInterface | object $object
 	 *
 	 * @return $this
-	 *
-	 * @throws NotFoundException
-	 * @throws WriteException
-	 * @throws \RozaVerta\CmfCore\Exceptions\ClassNotFoundException
-	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
 	 */
 	public function register(string $name, $object)
 	{
@@ -214,13 +209,13 @@ final class View extends Lexer
 				$ref = new ReflectionClass($object);
 			}
 			catch( ReflectionException $e ) {
-				$this->log->addError( "Cannot load extender class ({$name}). " . $e->getMessage() );
+				$this->log->addError( "Cannot load extender class \"{$name}\". " . $e->getMessage() );
 				return $this;
 			}
 
 			if( $ref->implementsInterface(ExtenderInterface::class) )
 			{
-				$this->log->addError( "Extender class ({$name}) must implements of " . ExtenderInterface::class );
+				$this->log->addError( "Extender class \"{$name}\" must implements of the \"" . ExtenderInterface::class . "\" interface." );
 				return $this;
 			}
 
@@ -229,14 +224,13 @@ final class View extends Lexer
 
 		if(isset($this->extends[$name]))
 		{
-			$this->log->addDebug( "Override view extender method '{$name}'" );
+			$this->log->addDebug( "Override view extender method \"{$name}\"." );
 		}
 
 		$this->extends[$name] = $object;
 
 		return $this;
 	}
-
 
 	/**
 	 * @return Package|null
@@ -473,7 +467,7 @@ final class View extends Lexer
 	{
 		if( $this->depth > 0 )
 		{
-			throw new \RuntimeException("View process is run");
+			throw new \RuntimeException( "View process is run." );
 		}
 
 		if( !isset( $this->package ) )

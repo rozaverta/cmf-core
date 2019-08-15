@@ -54,7 +54,7 @@ class ModuleComponent extends Workshop
 	 * @return $this
 	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
 	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
-	 * @throws \Throwable
+	 * @throws Throwable
 	 */
 	public function install()
 	{
@@ -96,7 +96,7 @@ class ModuleComponent extends Workshop
 	 *
 	 * @return $this
 	 *
-	 * @throws \Throwable
+	 * @throws Throwable
 	 */
 	public function update( bool $force = false )
 	{
@@ -281,7 +281,7 @@ class ModuleComponent extends Workshop
 	 * @throws \Doctrine\DBAL\Exception\TableNotFoundException
 	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
 	 * @throws \RozaVerta\CmfCore\Filesystem\Exceptions\FileReadException
-	 * @throws \Throwable
+	 * @throws Throwable
 	 */
 	protected function installProcess()
 	{
@@ -395,7 +395,6 @@ class ModuleComponent extends Workshop
 		// 5. templates
 
 		$rec = $manifest->getArray( "packages" );
-		//$rec = $this->getResourceData("templates", "#/template_collection");
 		if(count($rec))
 		{
 			$drv = new PackageManagerProcessor( $module );
@@ -479,8 +478,6 @@ class ModuleComponent extends Workshop
 		}
 
 		$this->resourceWriteDataCache("manifest", "#/module", $manifest->toArray());
-
-		// todo add cache clean
 	}
 
 	/**
@@ -488,7 +485,7 @@ class ModuleComponent extends Workshop
 	 * @param bool   $force
 	 *
 	 * @throws DBALException
-	 * @throws \Throwable
+	 * @throws Throwable
 	 */
 	protected function updateProcess( string $oldVersion, bool $force )
 	{

@@ -9,7 +9,7 @@
 		}
 	],
 	"license": "MIT",
-	"version": "0.1.0-beta6",
+	"version": "0.1.0-beta7",
 	"databaseTables": [
 		"scheme_tables",
 		"modules",
@@ -17,7 +17,6 @@
 		"event_handlers",
 		"event_handler_links",
 		"template_packages",
-		"template_plugins",
 		"context",
 		"context_router_links",
 		"routers"

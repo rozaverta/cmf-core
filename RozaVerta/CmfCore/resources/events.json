@@ -26,6 +26,11 @@
 			"completable": true
 		},
 		{
+			"name": "onSystemProcessorPackage",
+			"title": "Template Package Modification events.",
+			"completable": true
+		},
+		{
 			"name": "onThrowable",
 			"title": "Fatal error"
 		},

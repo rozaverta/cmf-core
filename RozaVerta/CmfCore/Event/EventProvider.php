@@ -20,6 +20,7 @@ use RozaVerta\CmfCore\Workshops\Event\Events\AbstractEvent;
 use RozaVerta\CmfCore\Workshops\Module\Events\DatabaseTableEvent;
 use RozaVerta\CmfCore\Workshops\Module\Events\ModuleEvent;
 use RozaVerta\CmfCore\Workshops\Module\Events\SaveConfigFileEvent;
+use RozaVerta\CmfCore\Workshops\View\Events\PackageEvent;
 
 /**
  * Class EventProvider
@@ -92,6 +93,7 @@ final class EventProvider implements Arrayable
 				SaveConfigFileEvent::eventName(),
 				DatabaseTableEvent::eventName(),
 				AbstractEvent::eventName(),
+				PackageEvent::eventName(),
 			], true);
 		}
 	}

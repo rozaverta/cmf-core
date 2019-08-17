@@ -114,7 +114,7 @@ class Grammar
 		}
 
 		// check function
-		if( strpos( $value, '(' ) !== false )
+		if( strpos( $value, '(' ) === false )
 		{
 			if( strpos( $value, "." ) !== false )
 			{

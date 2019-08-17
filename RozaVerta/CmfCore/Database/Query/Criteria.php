@@ -453,7 +453,7 @@ class Criteria extends AbstractConnectionContainer implements Countable
 			$operator = self::EQ;
 		}
 
-		$expr = $this->expr($this->rename($name), $this->operator($operator), $this->expr->literal($value));
+		$expr = $this->expr( $name, $this->operator( $operator ), $this->expr->literal( $value ) );
 		return empty($expr) ? $this : $this->push($expr);
 	}
 
@@ -562,7 +562,8 @@ class Criteria extends AbstractConnectionContainer implements Countable
 
 	protected function rename( string $name ): string
 	{
-		return $this->renameClosure === null ? $name : (string) call_user_func( $this->renameClosure, $name );
+		$name = $this->renameClosure === null ? $name : (string) call_user_func( $this->renameClosure, $name );
+		return $this->grammar->wrap( $name );
 	}
 
 	protected function operator( $operator ): string

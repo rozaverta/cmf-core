@@ -675,6 +675,11 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 			$this->{$type} = $this->newCriteria( $this->{$type . "Type"} );
 		}
 
+		if( $name[0] !== ":" )
+		{
+			$name = ":" . $name;
+		}
+
 		/** @var Parameters $parameters */
 		$parameters = $this->{$type}->getParameters();
 		$parameters->bind( $name, $value );
@@ -758,15 +763,20 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 
 	protected function columnAlias( string $column, & $columns )
 	{
-		if( isset( $this->columns[$column] ) && strpos( $this->columns[$column], "." ) === false )
+		if( isset( $this->columns[$column] ) )
 		{
-			$columns[] = $column . " AS " . $this->columns[$column];
-			return true;
+			if( strpos( $this->columns[$column], "." ) === false )
+			{
+				$columns[] = $column . " AS " . $this->columns[$column];
+				return true;
+			}
+			if( strpos( $column, "." ) === false )
+			{
+				$columns[] = $this->columns[$column] . " AS " . $column;
+				return true;
+			}
 		}
-		else
-		{
-			return false;
-		}
+		return false;
 	}
 
 	protected function getSelectSql( bool $full = false )

@@ -307,22 +307,22 @@ class Request
 
 	public function get($key, $default = null)
 	{
-		return $this->params_get->getOr($key, $default);
+		return $this->params_get->get( $key, $default );
 	}
 
 	public function post($key, $default = null)
 	{
-		return $this->params_post->getOr($key, $default);
+		return $this->params_post->get( $key, $default );
 	}
 
 	public function cookie($key, $default = null)
 	{
-		return $this->cookies->getOr($key, $default);
+		return $this->cookies->get( $key, $default );
 	}
 
 	public function name($key, $default = null)
 	{
-		return $this->params_named->getOr($key, $default);
+		return $this->params_named->get( $key, $default );
 	}
 
 	/**
@@ -354,7 +354,7 @@ class Request
 
 		if( $check_header )
 		{
-			$type = $this->server->getIs("CONTENT_TYPE") ? $this->server->get("CONTENT_TYPE") : $this->server->getOr("HTTP_ACCEPT", '');
+			$type = $this->server->has( "CONTENT_TYPE" ) ? $this->server->get( "CONTENT_TYPE" ) : $this->server->get( "HTTP_ACCEPT", '' );
 			if( ! preg_match('/(?:application|text)\/json(?:$|;| )/', $type) )
 			{
 				return false;
@@ -445,7 +445,7 @@ class Request
 	 */
 	public function uri()
 	{
-		return $this->server->getOr('REQUEST_URI', '/');
+		return $this->server->get( 'REQUEST_URI', '/' );
 	}
 
 	/**
@@ -457,10 +457,11 @@ class Request
 	 */
 	public function referer( $valid_host = false, $valid_string = '' )
 	{
-		$ref = $this->server->getOr('HTTP_REFERER', '');
+		$ref = $this->server->get( 'HTTP_REFERER', '' );
 		if( $ref ) {
 
 			if($valid_host) {
+				// todo fixed constants
 				$host = BASE_PROTOCOL . "://" . APP_HOST;
 				$len = strlen($host);
 
@@ -515,12 +516,12 @@ class Request
 	 */
 	public function method($is = null, $allow_override = true)
 	{
-		$method = $this->server->getOr('REQUEST_METHOD', 'GET');
+		$method = $this->server->get( 'REQUEST_METHOD', 'GET' );
 
 		// Override
 		if($allow_override && $method === 'POST')
 		{
-			$override = $this->server->getIs('X_HTTP_METHOD_OVERRIDE') ? $this->server->get('X_HTTP_METHOD_OVERRIDE') : null;
+			$override = $this->server->has( 'X_HTTP_METHOD_OVERRIDE' ) ? $this->server->get( 'X_HTTP_METHOD_OVERRIDE' ) : null;
 			if( ! $override )
 			{
 				$method = $this->param('_method', $method);

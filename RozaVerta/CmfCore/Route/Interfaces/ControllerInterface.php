@@ -7,6 +7,7 @@
 
 namespace RozaVerta\CmfCore\Route\Interfaces;
 
+use RozaVerta\CmfCore\Interfaces\Getter;
 use RozaVerta\CmfCore\Module\Interfaces\ModuleGetterInterface;
 use RozaVerta\CmfCore\Module\Interfaces\ModuleInterface;
 
@@ -15,7 +16,7 @@ use RozaVerta\CmfCore\Module\Interfaces\ModuleInterface;
  *
  * @package RozaVerta\CmfCore\Route\Interfaces
  */
-interface ControllerInterface extends ModuleGetterInterface
+interface ControllerInterface extends ModuleGetterInterface, Getter
 {
 	/**
 	 * ControllerInterface constructor.

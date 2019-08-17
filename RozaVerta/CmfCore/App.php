@@ -546,7 +546,7 @@ final class App
 
 		$url->reloadRequest( $this->host->getOriginalHost() );
 
-		if( $mnf->count() && $url->getMode() == 'rewrite' && $url->count() > 0 && $mnf->getIs($url->getPath()) )
+		if( $mnf->count() && $url->getMode() == 'rewrite' && $url->count() > 0 && $mnf->has( $url->getPath() ) )
 		{
 			$path = $url->getPath();
 			$data = Data::value( $mnf->get($path) );
@@ -598,7 +598,7 @@ final class App
 
 		// update system language
 
-		if( $prop->getIs("language") )
+		if( $prop->has( "language" ) )
 		{
 			$language = $prop->get("language");
 			if( $this->loaded("language") )
@@ -1011,7 +1011,7 @@ final class App
 				}
 			}
 		}
-		else if( $mnf->getIs('header') )
+		else if( $mnf->has( 'header' ) )
 		{
 			$response->header($mnf->get('header'));
 		}
@@ -1024,17 +1024,17 @@ final class App
 		}
 		else
 		{
-			$response->cache( $mnf->getOr('cache', null) );
+			$response->cache( $mnf->get( 'cache' ) );
 		}
 
 		// content
-		if( $mnf->getIs('content') )
+		if( $mnf->has( 'content' ) )
 		{
 			$response->setBody($mnf->get('content'));
 		}
 		else
 		{
-			$file = Path::application( $mnf->getOr('file', $path) );
+			$file = Path::application( $mnf->get( 'file', $path ) );
 			if( file_exists($file) )
 			{
 				$response->file($file);

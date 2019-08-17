@@ -25,7 +25,7 @@ trait ExtraTrait
 	 */
 	public function extra(string $name, $default = null)
 	{
-		return $this->extra === null ? $default : $this->extra->getOr($name, $default);
+		return $this->extra === null ? $default : $this->extra->get( $name, $default );
 	}
 
 	/**

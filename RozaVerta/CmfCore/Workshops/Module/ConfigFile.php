@@ -11,6 +11,7 @@ use RozaVerta\CmfCore\Event\Exceptions\EventAbortException;
 use RozaVerta\CmfCore\Filesystem\Exceptions\FileWriteException;
 use RozaVerta\CmfCore\Filesystem\Traits\WriteFileTrait;
 use RozaVerta\CmfCore\Helper\Path;
+use RozaVerta\CmfCore\Interfaces\SetterAndGetter;
 use RozaVerta\CmfCore\Module\WorkshopModuleProcessor;
 use RozaVerta\CmfCore\Support\Workshop;
 use RozaVerta\CmfCore\Traits\GetTrait;
@@ -22,7 +23,7 @@ use RozaVerta\CmfCore\Traits\SetTrait;
  *
  * @package RozaVerta\CmfCore\Workshops\Module
  */
-class ConfigFile extends Workshop
+class ConfigFile extends Workshop implements SetterAndGetter
 {
 	use WriteFileTrait;
 	use SetTrait;

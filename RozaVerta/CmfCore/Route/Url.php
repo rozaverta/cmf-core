@@ -54,7 +54,7 @@ class Url implements \Countable
 	{
 		$prop = $config instanceof Prop ? $config : new Prop( $config === null ? [] : $config );
 
-		if( $prop->getIs("directory") )
+		if( $prop->has( "directory" ) )
 		{
 			$prefix = trim( $prop["directory"], " \t/" );
 			if( strlen($prefix) )
@@ -73,7 +73,7 @@ class Url implements \Countable
 			$this->lower = true;
 		}
 
-		if( $prop->getIs("base") )
+		if( $prop->has( "base" ) )
 		{
 			$this->basePath = Str::lower(trim($prop->get("base")));
 		}
@@ -909,7 +909,7 @@ class Url implements \Countable
 	{
 		if( strlen($path) && $path !== "/" )
 		{
-			if( $this->config->getOr("mode", "get") === 'get' )
+			if( $this->config->get( "mode", "get" ) === 'get' )
 			{
 				$query['q'] = $path;
 			}

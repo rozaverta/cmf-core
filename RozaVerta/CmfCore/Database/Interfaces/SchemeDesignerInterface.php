@@ -8,13 +8,14 @@
 namespace RozaVerta\CmfCore\Database\Interfaces;
 
 use RozaVerta\CmfCore\Database\Query\SchemeDesignerFetchBuilder;
+use RozaVerta\CmfCore\Interfaces\Getter;
 
 /**
  * Interface SchemeDesignerInterface
  *
  * @package RozaVerta\CmfCore\Database\Interfaces
  */
-interface SchemeDesignerInterface
+interface SchemeDesignerInterface extends Getter
 {
 	static public function __set_state( $data );
 

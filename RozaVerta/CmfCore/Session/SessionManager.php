@@ -7,6 +7,7 @@
 
 namespace RozaVerta\CmfCore\Session;
 
+use RozaVerta\CmfCore\Interfaces\Getter;
 use RozaVerta\CmfCore\Support\Prop;
 use RozaVerta\CmfCore\Traits\ComparatorTrait;
 use RozaVerta\CmfCore\Traits\GetTrait;
@@ -19,7 +20,7 @@ use RozaVerta\CmfCore\Traits\SingletonInstanceTrait;
  *
  * @package RozaVerta\CmfCore\Session
  */
-class SessionManager
+class SessionManager implements Getter
 {
 	use SingletonInstanceTrait;
 	use GetTrait;
@@ -55,7 +56,7 @@ class SessionManager
 
 			$hnr = false;
 
-			if( $prop->getIs('handler') )
+			if( $prop->has( 'handler' ) )
 			{
 				$handler = $prop['handler'];
 				if( is_string($handler) && class_exists($prop['handler'], true) )
@@ -74,7 +75,7 @@ class SessionManager
 				}
 			}
 
-			if( $prop->getIs('session_name') )
+			if( $prop->has( 'session_name' ) )
 			{
 				session_name($prop['session_name']);
 			}

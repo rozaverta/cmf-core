@@ -16,21 +16,17 @@ use RozaVerta\CmfCore\Interfaces\Arrayable;
  */
 trait GetTrait
 {
-	protected $itemsGetUndefined = false;
-
 	/**
 	 * Get an item from the collection by key.
 	 *
-	 * @param  mixed  $name
+	 * @param mixed $name
+	 * @param null  $default
+	 *
 	 * @return mixed
 	 */
-	public function get( $name )
+	public function get( string $name, $default = null )
 	{
-		if ($this->offsetExists($name))
-		{
-			return $this->items[$name];
-		}
-		return $this->itemsGetUndefined;
+		return $this->offsetExists( $name ) ? $this->items[$name] : $default;
 	}
 
 	/**
@@ -71,14 +67,16 @@ trait GetTrait
 	/**
 	 * Get an item from an array or object using "dot" notation.
 	 *
-	 * @param $name
+	 * @param      $name
+	 * @param null $default
+	 *
 	 * @return mixed
 	 */
-	public function fetch( $name )
+	public function fetch( $name, $default = null )
 	{
 		return is_string($name) && strpos($name, ".") === false
 			? $this->get($name)
-			: Data::getIn($this->items, $name, $this->itemsGetUndefined);
+			: Data::getIn( $this->items, $name, $default );
 	}
 
 	/**
@@ -87,22 +85,24 @@ trait GetTrait
 	 * @param $name
 	 * @param $default
 	 * @return mixed
+	 * @deprecated
 	 */
 	public function fetchOr( $name, $default )
 	{
 		return is_string($name) && strpos($name, ".") === false
-			? $this->getOr($name, $default)
+			? $this->get( $name, $default )
 			: Data::getIn($this->items, $name, $default);
 	}
 
 	/**
 	 * Get an item from the collection by keys.
 	 *
-	 * @param  array $keys
-	 * @param bool $default default value
+	 * @param array $keys
+	 * @param mixed $default default value
+	 *
 	 * @return mixed
 	 */
-	public function choice( array $keys, $default = false )
+	public function choice( array $keys, $default = null )
 	{
 		foreach( $keys as $key )
 		{
@@ -120,7 +120,7 @@ trait GetTrait
 	 *
 	 * @return array
 	 */
-	public function getAll()
+	public function getAll(): array
 	{
 		return $this->items;
 	}
@@ -141,6 +141,7 @@ trait GetTrait
 	 * @param  mixed  $name
 	 * @param  mixed  $default_value
 	 * @return mixed
+	 * @deprecated
 	 */
 	public function getOr( $name, $default_value )
 	{
@@ -184,16 +185,16 @@ trait GetTrait
 	/**
 	 * Determine if an item exists in the collection by key.
 	 *
-	 * @param  mixed  $name
+	 * @param string | array $name
 	 * @return bool
 	 */
-	public function getIs( $name )
+	public function has( $name ): bool
 	{
-		if( ! is_array($name) )
+		if( !is_array( $name ) )
 		{
 			if( func_num_args() == 1 )
 			{
-				return $this->offsetExists($name);
+				return $this->offsetExists( $name );
 			}
 			else
 			{
@@ -201,15 +202,27 @@ trait GetTrait
 			}
 		}
 
-		foreach($name as $value)
+		foreach( $name as $value )
 		{
-			if (! $this->offsetExists($value))
+			if( !$this->offsetExists( $value ) )
 			{
 				return false;
 			}
 		}
 
 		return true;
+	}
+
+	/**
+	 * Determine if an item exists in the collection by key.
+	 *
+	 * @param  $args
+	 * @return bool
+	 * @deprecated
+	 */
+	public function getIs( ... $args )
+	{
+		return $this->has( ... $args );
 	}
 
 	/**

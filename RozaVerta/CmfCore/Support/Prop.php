@@ -14,6 +14,7 @@ use Countable;
 use IteratorAggregate;
 use RozaVerta\CmfCore\Helper\Callback;
 use RozaVerta\CmfCore\Helper\Path;
+use RozaVerta\CmfCore\Interfaces\SetterAndGetter;
 use Traversable;
 use RozaVerta\CmfCore\Interfaces\Arrayable;
 use RozaVerta\CmfCore\Traits\GetTrait;
@@ -25,7 +26,7 @@ use RozaVerta\CmfCore\Traits\ComparatorTrait;
  *
  * @package RozaVerta\CmfCore\Support
  */
-class Prop implements ArrayAccess, Countable, Arrayable, IteratorAggregate
+class Prop implements SetterAndGetter, ArrayAccess, Countable, Arrayable, IteratorAggregate
 {
 	use GetTrait;
 	use SetTrait;
@@ -103,7 +104,7 @@ class Prop implements ArrayAccess, Countable, Arrayable, IteratorAggregate
 		}
 		else
 		{
-			return $choice ? $this->choice($args[0], $args[1]) : $this->getOr($args[0], $args[1]);
+			return $choice ? $this->choice( $args[0], $args[1] ) : $this->get( $args[0], $args[1] );
 		}
 	}
 

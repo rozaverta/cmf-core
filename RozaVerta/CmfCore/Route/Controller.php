@@ -168,7 +168,7 @@ abstract class Controller implements ControllerInterface
 	 */
 	public function getProperty( string $name, $default = false )
 	{
-		return $this->properties->getOr($name, $default);
+		return $this->properties->get( $name, $default );
 	}
 
 	/**

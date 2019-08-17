@@ -7,7 +7,9 @@
 
 namespace RozaVerta\CmfCore\Module\Interfaces;
 
-interface ResourceInterface extends ModuleGetterInterface
+use RozaVerta\CmfCore\Interfaces\Getter;
+
+interface ResourceInterface extends ModuleGetterInterface, Getter
 {
 	/**
 	 * Get resource type

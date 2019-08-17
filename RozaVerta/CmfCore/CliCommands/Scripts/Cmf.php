@@ -137,7 +137,7 @@ class Cmf extends AbstractScript
 
 		$file = new Config("db");
 		$file->reload();
-		if( ! $file->getIs("default") || $io->confirm("Override database config (y/n)? ") )
+		if( !$file->has( "default" ) || $io->confirm( "Override database config (y/n)? " ) )
 		{
 			$this->writeConfig($file, $this->installConfigDb( $file->toArray() ));
 		}
@@ -333,11 +333,11 @@ class Cmf extends AbstractScript
 
 		// info, name, description, version, build, date
 
-		$io->write($manifest->getOr("title", "Elastic-CMF"));
+		$io->write( $manifest->get( "title", "Elastic-CMF" ) );
 		$info = ["version", "build", "license", "description", "date"];
 		foreach($info as $key)
 		{
-			if( $manifest->getIs($key) )
+			if( $manifest->has( $key ) )
 			{
 				$value = $manifest->get($key);
 				if( $key === 'version' ) {
@@ -349,7 +349,7 @@ class Cmf extends AbstractScript
 
 		// info about author
 
-		$author = $manifest->getOr("authors", []);
+		$author = $manifest->get( "authors", [] );
 		$at = [];
 
 		if( is_array($author) && count($author) > 0 )
@@ -359,7 +359,7 @@ class Cmf extends AbstractScript
 				$at[] = $this->getAuthor($one);
 			}
 		}
-		else if( $manifest->getIs('author') )
+		else if( $manifest->has( 'author' ) )
 		{
 			$at[] = $this->getAuthor( $manifest->get('author') );
 		}

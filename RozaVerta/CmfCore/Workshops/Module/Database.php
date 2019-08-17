@@ -98,8 +98,8 @@ class Database extends Workshop
 		$record = [
 			"module_id" => $moduleId,
 			"name" => $tableName,
-			"title" => $fileResource->getIs("title") ? $fileResource->get("title") : "Table {$tableName}",
-			"description" => $fileResource->getOr("description", ""),
+			"title" => $fileResource->has( "title" ) ? $fileResource->get( "title" ) : "Table {$tableName}",
+			"description" => $fileResource->get( "description", "" ),
 			"version" => $this->getModuleVersion()
 		];
 
@@ -264,7 +264,7 @@ class Database extends Workshop
 
 		foreach(["title", "description"] as $key)
 		{
-			if($resource->getIs($key))
+			if( $resource->has( $key ) )
 			{
 				$value = $resource->get($key);
 				if($value !== $designer->get($key))

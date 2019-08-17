@@ -76,7 +76,7 @@ final class LogManager implements LoggableInterface
 			$this->levels["ALL"] = 0;
 
 			$init = true;
-			$level = Prop::prop("system")->getOr("debug_level", "ALL");
+			$level = Prop::prop( "system" )->get( "debug_level", "ALL" );
 
 			if( is_int($level) )
 			{

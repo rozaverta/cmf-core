@@ -119,18 +119,18 @@ class CacheManager
 	 */
 	protected function createMemcachedDriver(string $name, Prop $config)
 	{
-		$memcached = new \Memcached($config->getOr("persistent_id", null));
+		$memcached = new \Memcached( $config->get( "persistent_id" ) );
 
 		if($config->isArray("options"))
 		{
 			$memcached->setOptions($config->get("options"));
 		}
 
-		if($config->getIs("username") && method_exists($memcached, "setSaslAuthData"))
+		if( $config->has( "username" ) && method_exists( $memcached, "setSaslAuthData" ) )
 		{
 			$memcached->setSaslAuthData(
 				$config->get("username"),
-				$config->getOr("password", "")
+				$config->get( "password", "" )
 			);
 		}
 
@@ -141,17 +141,17 @@ class CacheManager
 		else
 		{
 			$memcached->addServer(
-				$config->getOr("host", "127.0.0.1"),
-				$config->getOr("port", 11211),
-				$config->getOr("weight", 0)
+				$config->get( "host", "127.0.0.1" ),
+				$config->get( "port", 11211 ),
+				$config->get( "weight", 0 )
 			);
 		}
 
 		return new MemcachedStore(
 			$memcached,
 			$name,
-			$config->getOr("prefix", ""),
-			$config->getOr("life", 0)
+			$config->get( "prefix", "" ),
+			$config->get( "life", 0 )
 		);
 	}
 
@@ -189,7 +189,7 @@ class CacheManager
 		return new RedisStore(
 			new Client($config->toArray(), $options),
 			$name,
-			$config->getOr("life", 0)
+			$config->get( "life", 0 )
 		);
 	}
 
@@ -203,10 +203,10 @@ class CacheManager
 	protected function createDatabaseDriver(string $name, Prop $config)
 	{
 		return new DatabaseStore(
-			App::getInstance()->database->getConnection($config->getOr("connection", null)),
+			App::getInstance()->database->getConnection( $config->get( "connection" ) ),
 			$name,
-			$config->getOr("table", "cache"),
-			$config->getOr("life", 0)
+			$config->get( "table", "cache" ),
+			$config->get( "life", 0 )
 		);
 	}
 
@@ -233,8 +233,8 @@ class CacheManager
 
 		return new ApcStore(
 			$name,
-			$config->getOr("prefix", ""),
-			$config->getOr("life", 0)
+			$config->get( "prefix", "" ),
+			$config->get( "life", 0 )
 		);
 	}
 
@@ -250,8 +250,8 @@ class CacheManager
 		return new FileStore(
 			Filesystem::getInstance(),
 			$name,
-			$config->getOr("directory", "cache"),
-			$config->getOr("life", 0)
+			$config->get( "directory", "cache" ),
+			$config->get( "life", 0 )
 		);
 	}
 

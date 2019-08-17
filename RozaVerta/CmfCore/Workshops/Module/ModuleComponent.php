@@ -521,7 +521,7 @@ class ModuleComponent extends Workshop
 			$version = $item["version"] ?? "0";
 			if( $from && $to )
 			{
-				if( $tableVersion->getIs($from) && ! $tableVersion->getIs($to) && version_compare($version, $tableVersion->get($from), ">=") )
+				if( $tableVersion->has( $from ) && !$tableVersion->has( $to ) && version_compare( $version, $tableVersion->get( $from ), ">=" ) )
 				{
 					$oldest[$to] = $from;
 				}
@@ -533,7 +533,7 @@ class ModuleComponent extends Workshop
 		{
 			foreach($moduleDatabaseTables as $tableName)
 			{
-				$update = $force || isset($oldest[$tableName]) || ! $tableVersion->getIs($tableName) || version_compare($tableVersion->get($tableName), $moduleVersion, "<");
+				$update = $force || isset( $oldest[$tableName] ) || !$tableVersion->has( $tableName ) || version_compare( $tableVersion->get( $tableName ), $moduleVersion, "<" );
 				$currentTableName = $oldest[$tableName] ?? $tableName;
 				if($update)
 				{

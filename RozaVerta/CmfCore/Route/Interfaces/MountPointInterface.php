@@ -9,6 +9,7 @@ namespace RozaVerta\CmfCore\Route\Interfaces;
 
 use Countable;
 use RozaVerta\CmfCore\Interfaces\Arrayable;
+use RozaVerta\CmfCore\Interfaces\Getter;
 use RozaVerta\CmfCore\Module\Interfaces\ModuleGetterInterface;
 
 /**
@@ -16,7 +17,7 @@ use RozaVerta\CmfCore\Module\Interfaces\ModuleGetterInterface;
  *
  * @package RozaVerta\CmfCore\Route\Interfaces
  */
-interface MountPointInterface extends Countable, ModuleGetterInterface, Arrayable
+interface MountPointInterface extends Countable, Getter, ModuleGetterInterface, Arrayable
 {
 	/**
 	 * Get the mount point identifier.

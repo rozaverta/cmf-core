@@ -7,6 +7,7 @@
 
 namespace RozaVerta\CmfCore\Support;
 
+use RozaVerta\CmfCore\Interfaces\Getter;
 use RozaVerta\CmfCore\Interfaces\VarExportInterface;
 use RozaVerta\CmfCore\Traits\GetTrait;
 
@@ -15,7 +16,7 @@ use RozaVerta\CmfCore\Traits\GetTrait;
  *
  * @package RozaVerta\CmfCore\Support
  */
-class CollectionResult implements VarExportInterface
+class CollectionResult implements VarExportInterface, Getter
 {
 	use GetTrait;
 

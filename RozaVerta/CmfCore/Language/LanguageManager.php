@@ -79,7 +79,7 @@ final class LanguageManager
 		$this->thisServices( "event" );
 
 		// set default
-		$this->language = Prop::prop( "system" )->getOr( "language", $this->langDefault );
+		$this->language = Prop::prop( "system" )->get( "language", $this->langDefault );
 		$this->langDefault = $this->language;
 
 		$event = new ReadyLanguageEvent($this);

@@ -11,11 +11,12 @@ use RozaVerta\CmfCore\Filesystem\Exceptions\FileWriteException;
 use RozaVerta\CmfCore\Filesystem\Exceptions\PathInvalidArgumentException;
 use RozaVerta\CmfCore\Filesystem\Traits\WriteFileTrait;
 use RozaVerta\CmfCore\Helper\Path;
+use RozaVerta\CmfCore\Interfaces\SetterAndGetter;
 use RozaVerta\CmfCore\Traits\GetTrait;
 use RozaVerta\CmfCore\Traits\MergeTrait;
 use RozaVerta\CmfCore\Traits\SetTrait;
 
-class Config
+class Config implements SetterAndGetter
 {
 	use WriteFileTrait;
 	use SetTrait;

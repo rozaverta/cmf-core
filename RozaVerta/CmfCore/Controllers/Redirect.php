@@ -41,7 +41,7 @@ final class Redirect extends Controller implements ControllerContentOutputInterf
 	 */
 	public function initialize(): bool
 	{
-		if($this->properties->getIs("location"))
+		if( $this->properties->has( "location" ) )
 		{
 			$this->setId($this->mountPoint->getId());
 			return true;
@@ -62,9 +62,9 @@ final class Redirect extends Controller implements ControllerContentOutputInterf
 	public function complete(): void
 	{
 		self::service( "response" )->redirect(
-			$this->properties->getOr("location", "/"),
-			(bool) $this->properties->getOr("permanent", false),
-			(bool) $this->properties->getOr("refresh", false)
+			$this->properties->get( "location", "/" ),
+			(bool) $this->properties->get( "permanent", false ),
+			(bool) $this->properties->get( "refresh", false )
 		);
 
 		parent::complete();

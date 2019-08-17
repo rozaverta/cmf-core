@@ -9,7 +9,6 @@ namespace RozaVerta\CmfCore\Http\Collections;
 
 use RozaVerta\CmfCore\Support\Collection;
 use RozaVerta\CmfCore\Helper\Str;
-use RozaVerta\CmfCore\Helper\Data;
 
 class HeaderCollection extends Collection
 {
@@ -55,34 +54,19 @@ class HeaderCollection extends Collection
 	/**
 	 * Get an item from the collection by key.
 	 *
-	 * @param  mixed  $name
-	 * @return mixed
-	 */
-	public function get( $name )
-	{
-		$name = self::normalizeKey($name);
-		if(parent::offsetExists($name))
-		{
-			return $this->items[$name];
-		}
-		return $this->itemsGetUndefined;
-	}
-
-	/**
-	 * Get an item from the collection by key or default value if not exists.
+	 * @param mixed $name
+	 * @param null  $default
 	 *
-	 * @param  mixed  $name
-	 * @param  mixed  $default_value
 	 * @return mixed
 	 */
-	public function getOr( $name, $default_value )
+	public function get( string $name, $default = null )
 	{
 		$name = self::normalizeKey($name);
 		if(parent::offsetExists($name))
 		{
 			return $this->items[$name];
 		}
-		return Data::value($default_value);
+		return $default;
 	}
 
 	/**

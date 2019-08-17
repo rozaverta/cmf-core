@@ -165,7 +165,7 @@ class PackageManagerProcessor extends Workshop
 
 		$package->getVersion();
 		$manifest = $this->unZip( $name, true );
-		$compare = version_compare( $package->getVersion(), $manifest->getOr( "version", "1.0" ), ">" );
+		$compare = version_compare( $package->getVersion(), $manifest->get( "version", "1.0" ), ">" );
 		if( $compare < 1 )
 		{
 			if( $compare < 0 )
@@ -574,8 +574,8 @@ class PackageManagerProcessor extends Workshop
 					->insertGetId( [
 						"module_id" => $this->getModuleId(),
 						"name" => $name,
-						"version" => $manifest->getOr( "version", "1.0" ),
-						"addon" => $manifest->getOr( "addon", false ),
+						"version" => $manifest->get( "version", "1.0" ),
+						"addon" => $manifest->get( "addon", false ),
 					] );
 
 				$this->setLastInsertId( $id );
@@ -583,7 +583,7 @@ class PackageManagerProcessor extends Workshop
 			else
 			{
 				$builder->update( [
-					"version" => $manifest->getOr( "version", "1.0" ),
+					"version" => $manifest->get( "version", "1.0" ),
 				] );
 			}
 		} catch( DBALException $e )

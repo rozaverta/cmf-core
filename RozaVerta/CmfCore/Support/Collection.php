@@ -14,6 +14,7 @@ use IteratorAggregate;
 use JsonSerializable;
 use RozaVerta\CmfCore\Helper\Arr;
 use RozaVerta\CmfCore\Helper\Json;
+use RozaVerta\CmfCore\Interfaces\SetterAndGetter;
 use RozaVerta\CmfCore\Interfaces\VarExportInterface;
 use Traversable;
 use RozaVerta\CmfCore\Traits\ComparatorTrait;
@@ -22,7 +23,7 @@ use RozaVerta\CmfCore\Traits\SetTrait;
 use RozaVerta\CmfCore\Interfaces\Arrayable;
 use RozaVerta\CmfCore\Interfaces\Jsonable;
 
-class Collection implements ArrayAccess, IteratorAggregate, Arrayable, Jsonable, Countable, JsonSerializable, VarExportInterface
+class Collection implements ArrayAccess, SetterAndGetter, IteratorAggregate, Arrayable, Jsonable, Countable, JsonSerializable, VarExportInterface
 {
 	use GetTrait;
 	use SetTrait;

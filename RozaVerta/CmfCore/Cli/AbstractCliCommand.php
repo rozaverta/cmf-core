@@ -56,14 +56,14 @@ abstract class AbstractCliCommand extends Command
 	protected function configure()
 	{
 		// the short description shown while running "php bin/console list"
-		if( $this->docs->getIs("description") )
+		if( $this->docs->has( "description" ) )
 		{
 			$this->setDescription($this->docs["description"]);
 		}
 
 		// the full command description shown when running the command with
 		// the "--help" option
-		if( $this->docs->getIs("help") )
+		if( $this->docs->has( "help" ) )
 		{
 			$this->setHelp($this->docs["help"]);
 		}

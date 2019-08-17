@@ -7,7 +7,9 @@
 
 namespace RozaVerta\CmfCore\View\Interfaces;
 
-interface PluginDynamicInterface extends PluginInterface
+use RozaVerta\CmfCore\Interfaces\Getter;
+
+interface PluginDynamicInterface extends PluginInterface, Getter
 {
 	/**
 	 * Load plugin data

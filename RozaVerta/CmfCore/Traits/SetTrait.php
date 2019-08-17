@@ -7,78 +7,43 @@
 
 namespace RozaVerta\CmfCore\Traits;
 
-use RozaVerta\CmfCore\Support\Collection;
-use RozaVerta\CmfCore\Interfaces\Arrayable;
-use RozaVerta\CmfCore\Interfaces\Jsonable;
 use RozaVerta\CmfCore\Interfaces\TypeOfInterface;
-use RozaVerta\CmfCore\Helper\Json;
-use JsonSerializable;
-use Traversable;
 
 /**
  * @property array $items
  */
 trait SetTrait
 {
-	public function set( $name, $value = null )
+	public function set( string $name, $value )
 	{
-		if( func_num_args() == 1 )
-		{
-			if( ! is_array($name) && ! ($name instanceof Traversable) )
-			{
-				if($name instanceof Collection)
-				{
-					$name = $name->getAll();
-				}
-				else if($name instanceof Arrayable)
-				{
-					$name = $name->toArray();
-				}
-				else if($name instanceof Jsonable)
-				{
-					$name = Json::parse($name->toJson(), true);
-				}
-				else if($name instanceof JsonSerializable)
-				{
-					$name = $name->jsonSerialize();
-				}
-				else
-				{
-					$this->offsetSet(null, $name);
-					return $this;
-				}
-			}
-
-			$index = 0;
-
-			foreach($name as $key => $value)
-			{
-				if( $key === $index )
-				{
-					++ $index;
-					$this->offsetSet(null, $value);
-				}
-				else
-				{
-					$this->offsetSet($key, $value);
-				}
-			}
-		}
-		else
-		{
-			$this->offsetSet( $name, $value );
-		}
-
+		$this->offsetSet( $name, $value );
 		return $this;
 	}
 
 	/**
-	 * @param $name
+	 * @param string $name
 	 * @return $this
 	 */
-	public function setNull( $name )
+	public function setNull( string $name )
 	{
-		$this->offsetUnset($name);
+		$this->offsetUnset( $name );
+		return $this;
+	}
+
+	public function setData( array $data )
+	{
+		if( $this instanceof TypeOfInterface )
+		{
+			$this->items = [];
+			foreach( $data as $name => $value )
+			{
+				$this->offsetSet( $name, $value );
+			}
+		}
+		else
+		{
+			$this->items = $data;
+		}
 		return $this;
 	}
 

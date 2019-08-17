@@ -7,7 +7,7 @@
 
 namespace RozaVerta\CmfCore\Traits;
 
-use RozaVerta\CmfCore\Workshops\Module\ConfigFile;
+use RozaVerta\CmfCore\Interfaces\TypeOfInterface;
 
 /**
  * Trait MergeTrait
@@ -18,6 +18,10 @@ use RozaVerta\CmfCore\Workshops\Module\ConfigFile;
  */
 trait MergeTrait
 {
+	abstract public function setData( array $data );
+
+	abstract public function offsetSet( $offset, $value );
+
 	abstract public function offsetExists( $offset );
 
 	/**
@@ -32,11 +36,21 @@ trait MergeTrait
 	{
 		if( !count( $this->items ) )
 		{
-			$this->items = $items;
+			$this->setData( $items );
 		}
 		else if( $update )
 		{
-			$this->items = array_merge( $this->items, $items );
+			if( $this instanceof TypeOfInterface )
+			{
+				foreach( $items as $key => $value )
+				{
+					$this->offsetSet( $key, $value );
+				}
+			}
+			else
+			{
+				$this->items = array_merge( $this->items, $items );
+			}
 		}
 		else
 		{
@@ -44,7 +58,7 @@ trait MergeTrait
 			{
 				if( !$this->offsetExists( $key ) )
 				{
-					$this->items[$key] = $value;
+					$this->offsetSet( $key, $value );
 				}
 			}
 		}

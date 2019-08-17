@@ -67,7 +67,7 @@ class EventHandlerLinks_WithHandlers_SchemeDesigner extends ModuleSchemeDesigner
 				[
 					"tableName" => EventHandlers_SchemeDesigner::getTableName(),
 					"alias" => "eh",
-					"type" => "left",
+					"mode" => "LEFT",
 					"criteria" => function( Criteria $criteria ) {
 						$criteria->columns( "eh.id", "ehl.handler_id" );
 					},

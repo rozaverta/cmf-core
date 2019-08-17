@@ -14,6 +14,7 @@ use IteratorAggregate;
 use JsonSerializable;
 use RozaVerta\CmfCore\Helper\Arr;
 use RozaVerta\CmfCore\Helper\Json;
+use RozaVerta\CmfCore\Interfaces\VarExportInterface;
 use Traversable;
 use RozaVerta\CmfCore\Traits\ComparatorTrait;
 use RozaVerta\CmfCore\Traits\GetTrait;
@@ -21,7 +22,7 @@ use RozaVerta\CmfCore\Traits\SetTrait;
 use RozaVerta\CmfCore\Interfaces\Arrayable;
 use RozaVerta\CmfCore\Interfaces\Jsonable;
 
-class Collection implements ArrayAccess, IteratorAggregate, Arrayable, Jsonable, Countable, JsonSerializable
+class Collection implements ArrayAccess, IteratorAggregate, Arrayable, Jsonable, Countable, JsonSerializable, VarExportInterface
 {
 	use GetTrait;
 	use SetTrait;
@@ -492,5 +493,12 @@ class Collection implements ArrayAccess, IteratorAggregate, Arrayable, Jsonable,
 	public static function __set_state($an_array)
 	{
 		return new static($an_array["items"] ?? []);
+	}
+
+	public function getArrayForVarExport(): array
+	{
+		return [
+			"items" => $this->items,
+		];
 	}
 }

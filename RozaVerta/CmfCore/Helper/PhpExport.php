@@ -25,14 +25,14 @@ class PhpExport
 	const SHORT_ARRAY_SYNTAX = 2;
 
 	private $pretty = false;
-	private $array_open = '[';
-	private $array_close = ']';
-	private $max_depth = 10;
+	private $arrayOpen = '[';
+	private $arrayClose = ']';
+	private $maxDepth = 10;
 	private $depth = [];
 
 	/**
 	 * Create data string `$data = 'value';`
-	 * 
+	 *
 	 * @param mixed $value
 	 * @param string $name
 	 * @param bool $init
@@ -67,10 +67,10 @@ class PhpExport
 		if( $init )
 		{
 			$get .= $map;
-			$get .= $is_object ? " = new \\ArrayIterator();\n" : " = {$this->array_open}{$this->array_close};\n";
+			$get .= $is_object ? " = new \\ArrayIterator();\n" : " = {$this->arrayOpen}{$this->arrayClose};\n";
 		}
 
-		if( $is_object && !$this->isTraversable($value) )
+		if( $is_object && !is_iterable( $value ) )
 		{
 			$value = get_object_vars( $value );
 		}
@@ -94,7 +94,7 @@ class PhpExport
 
 			if( $short && is_array($val) && count($val) > 9 )
 			{
-				$get .= " = {$this->array_open}{$this->array_close};\n";
+				$get .= " = {$this->arrayOpen}{$this->arrayClose};\n";
 				$key = $map . '[' . $key . ']';
 				$j2 = 0;
 
@@ -144,7 +144,7 @@ class PhpExport
 		}
 		else if( !is_array($values) )
 		{
-			$get = $this->array_open . $this->array_close;
+			$get = $this->arrayOpen . $this->arrayClose;
 			$this->clean();
 			return $get;
 		}
@@ -154,13 +154,13 @@ class PhpExport
 				0 => & $values
 			];
 
-		if( $is_object && ! $this->isTraversable($values) )
+		if( $is_object && !is_iterable( $values ) )
 		{
 			$values = get_object_vars( $values );
 		}
 
 		$values = (array) $values;
-		$get = $this->array_open;
+		$get = $this->arrayOpen;
 		$first = true;
 
 		foreach( $values as $val )
@@ -177,7 +177,7 @@ class PhpExport
 			$get .= $this->fromType( $val, 1 );
 		}
 
-		$get .= $this->array_close;
+		$get .= $this->arrayClose;
 		$this->clean();
 		return $get;
 	}
@@ -196,12 +196,12 @@ class PhpExport
 		}
 		else if( !is_array($values) )
 		{
-			$get = $this->array_open . $this->array_close;
+			$get = $this->arrayOpen . $this->arrayClose;
 			$this->clean();
 			return $get;
 		}
 
-		if( $is_object && ! $this->isTraversable($values) )
+		if( $is_object && !is_iterable( $values ) )
 		{
 			$values = get_object_vars( $values );
 		}
@@ -211,7 +211,7 @@ class PhpExport
 				0 => & $values
 			];
 
-		$get = $this->array_open;
+		$get = $this->arrayOpen;
 		$first = true;
 		$j = 0;
 
@@ -238,7 +238,7 @@ class PhpExport
 			$get .= $this->fromType( $value, 1 );
 		}
 
-		$get .= $this->array_close;
+		$get .= $this->arrayClose;
 		$this->clean();
 		return $get;
 	}
@@ -271,13 +271,13 @@ class PhpExport
 		// display format
 		if( $flag & self::SHORT_ARRAY_SYNTAX )
 		{
-			$this->array_open = '[';
-			$this->array_close = ']';
+			$this->arrayOpen = '[';
+			$this->arrayClose = ']';
 		}
 		else
 		{
-			$this->array_open = 'array(';
-			$this->array_close = ')';
+			$this->arrayOpen = 'array(';
+			$this->arrayClose = ')';
 		}
 
 		// pretty print
@@ -293,20 +293,20 @@ class PhpExport
 		// max depth level
 		if( $depth < 1 )
 		{
-			$this->max_depth = 0;
+			$this->maxDepth = 0;
 		}
 		else if( $depth > 256 )
 		{
-			$this->max_depth = 256;
+			$this->maxDepth = 256;
 		}
 		else {
-			$this->max_depth = $depth;
+			$this->maxDepth = $depth;
 		}
 
 		return $this;
 	}
 
-	public function escape($value)
+	public function escape( $value )
 	{
 		do {
 			$tmp = '{php_close' . Str::random(20) . '/}';
@@ -325,22 +325,9 @@ class PhpExport
 	private function getAssoc( $values, $level, $printLevel )
 	{
 		$tab = $this->pretty ? str_repeat("\t", $printLevel) : "";
-		$out = $this->array_open;
+		$out = $this->arrayOpen;
 		$first = true;
-
-		$is_array = is_array($values);
-		if($is_array)
-		{
-			$i = 0;
-			foreach(array_keys($values) as $key)
-			{
-				if( $key !== $i ++ )
-				{
-					$is_array = false;
-					break;
-				}
-			}
-		}
+		$isArray = is_array( $values ) && !Arr::associative( $values );
 
 		foreach( $values as $key => $value )
 		{
@@ -358,7 +345,7 @@ class PhpExport
 				$out .= "\n\t" . $tab;
 			}
 
-			if( ! $is_array )
+			if( !$isArray )
 			{
 				$out .= (is_int($key) ? $key : $this->string( $key )) . ' => ';
 			}
@@ -371,19 +358,7 @@ class PhpExport
 			$out .= "\n" . $tab;
 		}
 
-		return $out . $this->array_close;
-	}
-
-	private function isTraversable( $object )
-	{
-		if( PHP_VERSION >= 7.1 )
-		{
-			return is_iterable($object);
-		}
-		else
-		{
-			return $object instanceof \Traversable;
-		}
+		return $out . $this->arrayClose;
 	}
 
 	private function isDepth( & $val, $level )
@@ -407,9 +382,9 @@ class PhpExport
 	private function clean()
 	{
 		$this->pretty = false;
-		$this->array_open  = '[';
-		$this->array_close  = ']';
-		$this->max_depth = 10;
+		$this->arrayOpen = '[';
+		$this->arrayClose = ']';
+		$this->maxDepth = 10;
 		$this->depth = [];
 	}
 
@@ -428,7 +403,7 @@ class PhpExport
 			// fix recursive
 			if( $this->isDepth($val, $level) )
 			{
-				return $this->array_open . $this->array_close;
+				return $this->arrayOpen . $this->arrayClose;
 			}
 			else
 			{
@@ -436,7 +411,7 @@ class PhpExport
 			}
 
 			$type = "array";
-			if( !$this->isTraversable($val) )
+			if( !is_iterable( $val ) )
 			{
 				$val = get_object_vars( $val );
 			}
@@ -450,7 +425,7 @@ class PhpExport
 				{
 					if( $this->isDepth($val, $level) )
 					{
-						return $this->array_open . $this->array_close;
+						return $this->arrayOpen . $this->arrayClose;
 					}
 					else
 					{
@@ -458,7 +433,7 @@ class PhpExport
 					}
 				}
 
-				return $level >= $this->max_depth ? ($this->array_open . $this->array_close) : $this->getAssoc( $val, $level, $printLevel );
+				return $level >= $this->maxDepth ? ( $this->arrayOpen . $this->arrayClose ) : $this->getAssoc( $val, $level, $printLevel );
 
 			case "boolean"  : return $val ? "true" : "false";
 			case "resource" :
@@ -475,7 +450,14 @@ class PhpExport
 		// 1. The object custom VarExportInterface
 		if( $val instanceof VarExportInterface )
 		{
-			$result = get_class($val) . '::__set_state(' . var_export($val->getArrayForVarExport(), true) . ')';
+			if( $val instanceof PhpVarExportProxy )
+			{
+				$result = var_export( $val, true );
+			}
+			else
+			{
+				$result = get_class( $val ) . '::__set_state(' . var_export( PhpVarExportProxy::proxy( $val->getArrayForVarExport(), $this->maxDepth ), true ) . ')';
+			}
 		}
 
 		// 2. The object itself converts data

@@ -7,6 +7,7 @@
 
 namespace RozaVerta\CmfCore\Support;
 
+use RozaVerta\CmfCore\Interfaces\VarExportInterface;
 use RozaVerta\CmfCore\Traits\GetTrait;
 
 /**
@@ -14,7 +15,7 @@ use RozaVerta\CmfCore\Traits\GetTrait;
  *
  * @package RozaVerta\CmfCore\Support
  */
-class CollectionResult
+class CollectionResult implements VarExportInterface
 {
 	use GetTrait;
 
@@ -32,12 +33,12 @@ class CollectionResult
 	 * CollectionResult constructor.
 	 *
 	 * @param Collection $collection
-	 * @param int $limit
-	 * @param int $offset
-	 * @param int|null $total
-	 * @param array $additional
+	 * @param int        $limit
+	 * @param int        $offset
+	 * @param int|null   $total
+	 * @param array      $additional
 	 */
-	public function __construct(Collection $collection, int $limit = 0, int $offset = 0, ? int $total = null, array $additional = [])
+	public function __construct( Collection $collection, int $limit = 0, int $offset = 0, ? int $total = null, array $additional = [])
 	{
 		$this->collection = $collection;
 
@@ -135,5 +136,25 @@ class CollectionResult
 	public function getPages(): int
 	{
 		return ceil($this->total / $this->limit);
+	}
+
+	/**
+	 * @param array $data
+	 * @return static
+	 */
+	public static function __set_state( $data )
+	{
+		return new static( $data["collection"], $data["limit"], $data["offset"], $data["total"], $data["items"] );
+	}
+
+	public function getArrayForVarExport(): array
+	{
+		return [
+			"offset" => $this->offset,
+			"limit" => $this->limit,
+			"total" => $this->total,
+			"items" => $this->items,
+			"collection" => $this->collection,
+		];
 	}
 }

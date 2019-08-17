@@ -62,6 +62,9 @@ class Column implements Arrayable, Jsonable, JsonSerializable, VarExportInterfac
 	{
 		$this->name = $name;
 		$this->type = $options["type"] ?? Type::STRING;
+		$this->extra = isset( $options['extra'] )
+			? ( $options['extra'] instanceof Prop ? $options['extra'] : new Prop( $options['extra'] ) )
+			: new Prop();
 
 		if( isset($options['length']) ) $this->length = $options['length'];
 		if( isset($options['precision']) ) $this->precision = $options['precision'];
@@ -71,7 +74,6 @@ class Column implements Arrayable, Jsonable, JsonSerializable, VarExportInterfac
 		if( isset($options['notNull']) ) $this->notNull = $options['notNull'];
 		if( isset($options['autoIncrement']) ) $this->autoIncrement = $options['autoIncrement'];
 		if( isset($options['platformOptions']) ) $this->platformOptions = $options['platformOptions'];
-		if( isset($options['extra']) ) $this->extra = $options['extra'] instanceof Prop ? $options['extra'] : new Prop($options['extra']);
 		if( isset($options['default']) ) $this->default = $options['default'];
 		if( isset($options['columnDefinition']) ) $this->columnDefinition = $options['columnDefinition'];
 		if( isset($options['comment']) ) $this->comment = $options['comment'];

@@ -27,10 +27,8 @@ interface PluginDynamicInterface extends PluginInterface
 
 	/**
 	 * Completion of loading and processing component data
-	 *
-	 * @return $this
 	 */
-	public function complete();
+	public function complete(): void;
 
 	/**
 	 * Get cache type.

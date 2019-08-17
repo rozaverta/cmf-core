@@ -624,7 +624,13 @@ final class View extends Lexer
 		$lexer[$this->depth] = $local;
 
 		ob_start();
-		$body = Path::includeFile( $path, [ 'path' => $path, 'chunk' => $name, 'view' => $this, 'app' => self::app() ] );
+		$body = Path::includeFile( $path, [
+			'path' => $path,
+			'chunk' => $name,
+			'view' => $this,
+			'local' => $local,
+			'app' => self::app(),
+		] );
 		$chunk = ob_get_contents();
 		ob_end_clean();
 

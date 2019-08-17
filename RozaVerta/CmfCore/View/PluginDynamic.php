@@ -34,9 +34,9 @@ abstract class PluginDynamic extends Plugin implements PluginDynamicInterface
 		"PAGE"      => self::CACHE_PAGE
 	];
 
-	private $items = [];
+	protected $items = [];
 
-	private $pluginData = [];
+	protected $pluginData = [];
 
 	/**
 	 * @values self::CACHE_NOCACHE | self::CACHE_DATA | self::CACHE_PLUGIN | self::CACHE_PAGE
@@ -60,7 +60,7 @@ abstract class PluginDynamic extends Plugin implements PluginDynamicInterface
 			if( is_string($cacheType) )
 			{
 				$cacheType = strtoupper( trim( $cacheType ) );
-				if( isset(self::$cacheText[$cacheType]) )
+				if( isset( self::$cacheText[$cacheType] ) )
 				{
 					$cacheType = self::$cacheText[$cacheType];
 				}
@@ -216,7 +216,8 @@ abstract class PluginDynamic extends Plugin implements PluginDynamicInterface
 		}
 		else
 		{
-			$cache->export($this->complete()->getPluginData());
+			$this->complete();
+			$cache->export( $this->getPluginData() );
 		}
 	}
 
@@ -230,7 +231,8 @@ abstract class PluginDynamic extends Plugin implements PluginDynamicInterface
 		}
 		else
 		{
-			$this->pluginCache = $this->complete()->render();
+			$this->complete();
+			$this->pluginCache = $this->render();
 			$cache->set($this->pluginCache);
 		}
 	}

@@ -68,7 +68,7 @@ abstract class Plugin implements PluginInterface
 
 		if( isset($plug[$className]) )
 		{
-			$plugins[$plug[$className]["name"]] = $plug[$className];
+			self::$plugins[$plug[$className]["name"]] = $plug[$className];
 			return;
 		}
 

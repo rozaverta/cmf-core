@@ -737,7 +737,7 @@ class Response
 			if( $host->isDefined() )
 			{
 				$prefix = $host->isSsl() ? "https://" : "http://";
-				$prefix .= $host->getName();
+				$prefix .= $host->getOriginalName();
 				if( $host->getPort() && $host->getPort() != 80 )
 				{
 					$prefix .= ":" . $host->getPort();

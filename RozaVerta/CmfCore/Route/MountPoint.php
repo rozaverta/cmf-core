@@ -154,7 +154,7 @@ class MountPoint implements MountPointInterface, VarExportInterface
 	/**
 	 * @return bool
 	 */
-	public function isClose(): bool
+	public function isContainer(): bool
 	{
 		return $this->close;
 	}

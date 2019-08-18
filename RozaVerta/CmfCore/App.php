@@ -689,7 +689,7 @@ final class App
 					{
 						$math = true;
 					}
-					else if(! $mountPoint->isClose())
+					else if( !$mountPoint->isContainer() )
 					{
 						$math = !$url->isDir() && $pagePath === $mountPoint->getPath();
 					}

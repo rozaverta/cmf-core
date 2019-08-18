@@ -58,7 +58,7 @@ interface MountPointInterface extends Countable, Getter, ModuleGetterInterface, 
 	/**
 	 * @return bool
 	 */
-	public function isClose(): bool;
+	public function isContainer(): bool;
 
 	/**
 	 * Get a path segment.

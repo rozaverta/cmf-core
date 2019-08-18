@@ -15,6 +15,8 @@ use RozaVerta\CmfCore\Database\Connection;
 use RozaVerta\CmfCore\Database\DatabaseManager;
 use RozaVerta\CmfCore\Database\Interfaces\ProxySchemeDesignerInterface;
 use RozaVerta\CmfCore\Database\Interfaces\SchemeDesignerInterface;
+use RozaVerta\CmfCore\Database\Query\Builder;
+use RozaVerta\CmfCore\Database\Query\PlainBuilder;
 use RozaVerta\CmfCore\Database\Query\SchemeDesignerFetchBuilder;
 use RozaVerta\CmfCore\Interfaces\Arrayable;
 use RozaVerta\CmfCore\Interfaces\VarExportInterface;
@@ -143,7 +145,7 @@ class SchemeDesigner implements SchemeDesignerInterface, Arrayable, JsonSerializ
 	}
 
 	/**
-	 * Create query builder for current table
+	 * Create special query builder for current table.
 	 *
 	 * @param string|null $connection
 	 *
@@ -154,5 +156,35 @@ class SchemeDesigner implements SchemeDesignerInterface, Arrayable, JsonSerializ
 	static public function find( ? string $connection = null ): SchemeDesignerFetchBuilder
 	{
 		return DatabaseManager::schemeDesignerFetchBuilder( static::class, $connection );
+	}
+
+	/**
+	 * Create query builder for current table.
+	 *
+	 * @param string|null $alias
+	 * @param string|null $connection
+	 *
+	 * @return Builder
+	 *
+	 * @throws \Throwable
+	 */
+	static public function builder( ? string $alias = null, ? string $connection = null ): Builder
+	{
+		return DatabaseManager::builder( static::getTableName(), $alias, $connection );
+	}
+
+	/**
+	 * Create plain query builder for current table.
+	 *
+	 * @param string|null $alias
+	 * @param string|null $connection
+	 *
+	 * @return PlainBuilder
+	 *
+	 * @throws \Throwable
+	 */
+	static public function plainBuilder( ? string $alias = null, ? string $connection = null ): PlainBuilder
+	{
+		return DatabaseManager::plainBuilder( $connection )->from( static::getTableName(), $alias );
 	}
 }

@@ -697,7 +697,7 @@ final class App
 					{
 						$mountPath = $mountPoint->getPath();
 						$mountLength = strlen($mountPath);
-						if( strlen($pagePath) <= $mountLength && substr($pagePath, 0, $mountLength) === $mountPath )
+						if( strlen( $pagePath ) >= $mountLength && substr( $pagePath, 0, $mountLength ) === $mountPath )
 						{
 							$math = true;
 						}

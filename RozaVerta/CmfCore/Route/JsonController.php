@@ -8,6 +8,7 @@
 namespace RozaVerta\CmfCore\Route;
 
 use Doctrine\DBAL\DBALException;
+use RozaVerta\CmfCore\Event\Dispatcher;
 use RozaVerta\CmfCore\Interfaces\ThrowableInterface;
 use RozaVerta\CmfCore\Route\Interfaces\ControllerContentOutputInterface;
 use RozaVerta\CmfCore\Events\ThrowableEvent;
@@ -39,13 +40,12 @@ abstract class JsonController extends Controller implements ControllerContentOut
 		$this
 			->event
 			->dispatcher(ThrowableEvent::eventName())
-			->register(
-				function( ThrowableEvent $event )
-				{
+			->register( function( Dispatcher $dispatcher ) {
+				$dispatcher->listen( function( ThrowableEvent $event ) {
 					$throwable = $event->throwable;
 					$code = $throwable->getCode();
 
-					if( ! $event->app->loaded('controller') || $event->app->controller !== $this || in_array( $code, [403, 404, 500] ) )
+					if( !$event->app->loaded( 'controller' ) || $event->app->controller !== $this || in_array( $code, [ 403, 404, 500 ] ) )
 					{
 						return null;
 					}
@@ -54,7 +54,7 @@ abstract class JsonController extends Controller implements ControllerContentOut
 					$this->pageData =
 						[
 							"status" => "error",
-							"errorMessage" => $event->throwable instanceof DBALException ? 'DataBase fatal error' : $event->throwable->getMessage()
+							"errorMessage" => $event->throwable instanceof DBALException ? 'DataBase fatal error' : $event->throwable->getMessage(),
 						];
 
 					if( $code )
@@ -62,16 +62,16 @@ abstract class JsonController extends Controller implements ControllerContentOut
 						$this->pageData['errorCode'] = $code;
 					}
 
-					if($throwable instanceof ThrowableInterface)
+					if( $throwable instanceof ThrowableInterface )
 					{
 						$this->pageData['errorName'] = $throwable->getCodeName();
 					}
 
-					return function()
-					{
-						defined("SERVER_CLI_MODE") && SERVER_CLI_MODE || $this->output();
+					return function() {
+						defined( "SERVER_CLI_MODE" ) && SERVER_CLI_MODE || $this->output();
 					};
-				}, "controller.jsonThrowable");
+				} );
+			}, "controller.jsonThrowable" );
 	}
 
 	/**

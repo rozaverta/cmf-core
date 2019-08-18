@@ -81,7 +81,7 @@ abstract class Router implements RouterInterface
 	 */
 	protected function createController( string $controller, ? array $properties = null ): bool
 	{
-		return $this->setController( new $controller($this->getModule(), $this->mountPoint, is_array($properties) ? $properties : $this->mountPoint->toArray()) );
+		return $this->setController( new $controller( $this->mountPoint, is_array( $properties ) ? $properties : $this->mountPoint->toArray() ) );
 	}
 
 	/**

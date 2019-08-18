@@ -100,7 +100,9 @@ abstract class JsonController extends Controller implements ControllerContentOut
 
 		$this
 			->response
-			->json($this->pageData);
+			->json(
+				$this->jsonFormat( $this->pageData )
+			);
 	}
 
 	/**
@@ -111,5 +113,17 @@ abstract class JsonController extends Controller implements ControllerContentOut
 	public function getContentType(): string
 	{
 		return "application/json";
+	}
+
+	/**
+	 * Override the method if you want to change json content before output.
+	 *
+	 * @param array $json
+	 *
+	 * @return array
+	 */
+	protected function jsonFormat( array $json ): array
+	{
+		return $json;
 	}
 }

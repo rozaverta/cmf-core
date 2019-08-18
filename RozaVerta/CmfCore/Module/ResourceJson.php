@@ -54,7 +54,7 @@ class ResourceJson implements Interfaces\ResourceInterface
 		}
 		else if( $ext !== 'json' )
 		{
-			throw new ResourceReadException("The resource must be a json data file, the selected type is '{$ext}'");
+			throw new ResourceReadException( "The resource must be a json data file, the selected type is \"{$ext}\"." );
 		}
 
 		$this->setModule($module);
@@ -189,6 +189,18 @@ class ResourceJson implements Interfaces\ResourceInterface
 		return $this->raw;
 	}
 
+	/**
+	 * Reading JSON data from the path.
+	 *
+	 * @param string $path
+	 * @param null   $file
+	 * @param null   $raw
+	 *
+	 * @return array
+	 *
+	 * @throws ResourceNotFoundException
+	 * @throws ResourceReadException
+	 */
 	public static function pathToJson( string $path, & $file = null, & $raw = null ): array
 	{
 		$path = realpath( $path );

@@ -12,7 +12,6 @@ use RozaVerta\CmfCore\Cache\CacheManager;
 use RozaVerta\CmfCore\Exceptions\RuntimeException;
 use RozaVerta\CmfCore\Module\Exceptions\ModuleNotFoundException;
 use RozaVerta\CmfCore\Schemes\Modules_SchemeDesigner;
-use RozaVerta\CmfCore\Database\DatabaseManager as DB;
 use RozaVerta\CmfCore\Helper\Str;
 
 /**
@@ -136,7 +135,7 @@ final class ModuleHelper
 	 * @return bool
 	 *
 	 * @throws \Doctrine\DBAL\DBALException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
+	 * @throws \Throwable
 	 */
 	static public function installed( string $name, & $moduleId = null ): bool
 	{
@@ -155,6 +154,7 @@ final class ModuleHelper
 	 * @param array $modules
 	 *
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	static public function dependenceStrict( array $modules )
 	{
@@ -177,12 +177,12 @@ final class ModuleHelper
 	 * @return bool
 	 *
 	 * @throws \Doctrine\DBAL\DBALException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
+	 * @throws \Throwable
 	 */
 	static public function exists( string $name, & $moduleId = null ): bool
 	{
 		try {
-			$builder = DB::plainBuilder()->from( Modules_SchemeDesigner::getTableName() );
+			$builder = Modules_SchemeDesigner::plainBuilder();
 
 			if( is_numeric($name) )
 			{
@@ -220,7 +220,7 @@ final class ModuleHelper
 	 * @return int|null
 	 *
 	 * @throws \Doctrine\DBAL\DBALException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
+	 * @throws \Throwable
 	 */
 	static public function getId( string $name ): ?int
 	{
@@ -239,11 +239,11 @@ final class ModuleHelper
 	 * @throws Exceptions\ResourceReadException
 	 * @throws ModuleNotFoundException
 	 * @throws \Doctrine\DBAL\DBALException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
+	 * @throws \Throwable
 	 */
 	static public function workshop( $name ): WorkshopModuleProcessor
 	{
-		$builder = DB::plainBuilder()->from( Modules_SchemeDesigner::getTableName() );
+		$builder = Modules_SchemeDesigner::plainBuilder();
 
 		if( is_numeric($name) )
 		{
@@ -263,7 +263,7 @@ final class ModuleHelper
 
 		if( ! is_numeric($id) )
 		{
-			throw new ModuleNotFoundException("The '{$name}' module not found");
+			throw new ModuleNotFoundException( "The \"{$name}\" module not found." );
 		}
 
 		/** @noinspection PhpIncompatibleReturnTypeInspection */
@@ -282,6 +282,7 @@ final class ModuleHelper
 	 * @throws ModuleNotFoundException
 	 * @throws \Doctrine\DBAL\DBALException
 	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
+	 * @throws \Throwable
 	 */
 	static public function module( $name ): Module
 	{
@@ -292,7 +293,7 @@ final class ModuleHelper
 			return Module::module($id);
 		}
 
-		throw new ModuleNotFoundException("The '{$name}' module not found");
+		throw new ModuleNotFoundException( "The \"{$name}\" module not found." );
 	}
 
 	/**
@@ -444,7 +445,7 @@ final class ModuleHelper
 	 * @return int
 	 *
 	 * @throws \Doctrine\DBAL\DBALException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
+	 * @throws \Throwable
 	 */
 	static protected function idn( $name ): int
 	{
@@ -459,8 +460,7 @@ final class ModuleHelper
 			}
 			else
 			{
-				$all = DB::plainBuilder()
-					->from( Modules_SchemeDesigner::getTableName() )
+				$all = Modules_SchemeDesigner::plainBuilder()
 					->where( "install", true )
 					->project( function( $item ) {
 						$item["id"] = (int) $item["id"];

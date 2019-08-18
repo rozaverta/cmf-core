@@ -8,7 +8,6 @@
 namespace RozaVerta\CmfCore\Module;
 
 use Doctrine\DBAL\Exception\TableNotFoundException;
-use RozaVerta\CmfCore\Database\DatabaseManager;
 use RozaVerta\CmfCore\Cache\Cache;
 use RozaVerta\CmfCore\Interfaces\VarExportInterface;
 use RozaVerta\CmfCore\Module\Exceptions\ModuleConflictVersionException;
@@ -134,6 +133,7 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 	 * @throws Exceptions\ResourceReadException
 	 * @throws ModuleNotFoundException
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	static public function module( int $id ): ModuleInterface
 	{
@@ -166,12 +166,11 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 	 * @throws Exceptions\ResourceReadException
 	 * @throws ModuleNotFoundException
 	 * @throws \Doctrine\DBAL\DBALException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
+	 * @throws \Throwable
 	 */
 	static protected function load( int $id, bool $install = true )
 	{
-		$builder = DatabaseManager::plainBuilder()
-			->from( Modules_SchemeDesigner::getTableName() )
+		$builder = Modules_SchemeDesigner::plainBuilder()
 			->where( "id", $id )
 			->limit( 1 );
 
@@ -198,7 +197,7 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 		}
 		else if( $install || $id !== 1 )
 		{
-			throw new ModuleNotFoundException("The '{$id}' module not found");
+			throw new ModuleNotFoundException( "The \"#{$id}\" module not found." );
 		}
 		else
 		{
@@ -217,7 +216,7 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 		{
 			if( defined( "SERVER_CLI_MODE" ) && !SERVER_CLI_MODE && $manifest->getVersion() !== $row->getVersion() )
 			{
-				throw new ModuleConflictVersionException("The current version of the '{$row->get('name')}' module does not match the installed version of the module");
+				throw new ModuleConflictVersionException( "The current version of the \"{$row->getName()}\" module does not match the installed version of the module." );
 			}
 
 			if( ! isset(self::$manifests[$id]) )
@@ -245,7 +244,7 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 	}
 
 	/**
-	 * @param int $id
+	 * @param int  $id
 	 * @param bool $install
 	 *
 	 * @return Module
@@ -254,6 +253,7 @@ class Module extends Modular implements VarExportInterface, ModuleInterface
 	 * @throws Exceptions\ResourceReadException
 	 * @throws ModuleNotFoundException
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	static protected function create( int $id, bool $install = true )
 	{

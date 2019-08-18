@@ -7,6 +7,8 @@
 
 namespace RozaVerta\CmfCore\Module\Interfaces;
 
+use RozaVerta\CmfCore\Module\ResourceJson;
+
 interface ModuleInterface extends ModularInterface
 {
 	/**
@@ -29,6 +31,16 @@ interface ModuleInterface extends ModularInterface
 	 * @return ModuleManifestInterface
 	 */
 	public function getManifest(): ModuleManifestInterface;
+
+	/**
+	 * Create new ResourceJson module object from resources/{$name}.json file.
+	 *
+	 * @param string      $name
+	 * @param null|string $cacheVersion
+	 *
+	 * @return ResourceJson
+	 */
+	public function getResourceJson( string $name, ?string $cacheVersion = null ): ResourceJson;
 
 	/**
 	 * Get module instance

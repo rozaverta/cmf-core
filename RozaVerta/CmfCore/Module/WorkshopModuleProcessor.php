@@ -38,6 +38,7 @@ final class WorkshopModuleProcessor extends Module
 	 * @throws Exceptions\ResourceNotFoundException
 	 * @throws Exceptions\ResourceReadException
 	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	static public function module( int $id ): ModuleInterface
 	{

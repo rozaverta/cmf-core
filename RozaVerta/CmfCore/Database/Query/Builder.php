@@ -177,7 +177,7 @@ class Builder extends AbstractBuilder implements JoinBuilderInterface, WriteBuil
 		$state = $this->getState( $data );
 
 		return (int) $this
-			->plainBuilder
+			->calcPlainBuilder()
 			->update(
 				$state->getParameters(),
 				$state->getTypes()
@@ -198,7 +198,7 @@ class Builder extends AbstractBuilder implements JoinBuilderInterface, WriteBuil
 		$state = $this->getState( $data );
 
 		return (int) $this
-			->plainBuilder
+			->calcPlainBuilder()
 			->insert(
 				$state->getParameters(),
 				$state->getTypes()
@@ -219,7 +219,7 @@ class Builder extends AbstractBuilder implements JoinBuilderInterface, WriteBuil
 		$state = $this->getState( $data );
 
 		return (int) $this
-			->plainBuilder
+			->calcPlainBuilder()
 			->insertGetId(
 				$state->getParameters(),
 				$state->getTypes()
@@ -248,7 +248,7 @@ class Builder extends AbstractBuilder implements JoinBuilderInterface, WriteBuil
 	public function delete(): int
 	{
 		return (int) $this
-			->plainBuilder
+			->calcPlainBuilder()
 			->delete();
 	}
 

@@ -452,7 +452,7 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 	 */
 	public function count( ?string $column = null ): int
 	{
-		return $this->plainBuilder->count( $column, $this->getSelectSql() );
+		return $this->calcPlainBuilder()->count( $column, $this->getSelectSql() );
 	}
 
 	/**
@@ -466,7 +466,7 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 	 */
 	public function min( ?string $column = null ): int
 	{
-		return $this->plainBuilder->min( $column, $this->getSelectSql() );
+		return $this->calcPlainBuilder()->min( $column, $this->getSelectSql() );
 	}
 
 	/**
@@ -480,7 +480,7 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 	 */
 	public function max( ?string $column = null ): int
 	{
-		return $this->plainBuilder->max( $column, $this->getSelectSql() );
+		return $this->calcPlainBuilder()->max( $column, $this->getSelectSql() );
 	}
 
 	/**
@@ -494,7 +494,7 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 	 */
 	public function sum( ?string $column = null ): int
 	{
-		return $this->plainBuilder->sum( $column, $this->getSelectSql() );
+		return $this->calcPlainBuilder()->sum( $column, $this->getSelectSql() );
 	}
 
 	/**
@@ -508,7 +508,7 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 	 */
 	public function avg( ?string $column = null ): int
 	{
-		return $this->plainBuilder->avg( $column, $this->getSelectSql() );
+		return $this->calcPlainBuilder()->avg( $column, $this->getSelectSql() );
 	}
 
 	/**

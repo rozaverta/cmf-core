@@ -316,7 +316,7 @@ class Lexer implements LexerInterface
 
 		if( !Plugin::exists($name) )
 		{
-			return "[ERROR: the {$name} plugin not loaded]";
+			return "[ERROR: the \"{$name}\" plugin not loaded]";
 		}
 
 		if( isset($this->plugins[$name]) )
@@ -337,7 +337,7 @@ class Lexer implements LexerInterface
 			return $this->pluginDynamic($name, $plugin, $data);
 		}
 
-		return $plugin->render();
+		return "[ERROR: the \"{$name}\" plugin interface error]";
 	}
 
 	protected function pluginDynamic(string $name, PluginDynamicInterface $plugin, array $data): string
@@ -473,7 +473,7 @@ class Lexer implements LexerInterface
 			}
 		}
 
-		print_r($parts);
+		// print_r($parts);
 
 		if($increment && self::$globalDepth > 0)
 		{

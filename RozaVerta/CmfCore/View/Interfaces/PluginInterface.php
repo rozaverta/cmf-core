@@ -20,10 +20,5 @@ interface PluginInterface extends ModuleGetterInterface
 	 */
 	public function __construct( ModuleInterface $module, LexerInterface $lexer );
 
-	/**
-	 * @return string
-	 */
-	public function render(): string;
-
 	static public function getPluginName(): string;
 }

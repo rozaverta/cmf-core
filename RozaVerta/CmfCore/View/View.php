@@ -213,7 +213,7 @@ final class View extends Lexer
 				return $this;
 			}
 
-			if( $ref->implementsInterface(ExtenderInterface::class) )
+			if( !$ref->implementsInterface( ExtenderInterface::class ) )
 			{
 				$this->log->addError( "Extender class \"{$name}\" must implements of the \"" . ExtenderInterface::class . "\" interface." );
 				return $this;
@@ -424,6 +424,11 @@ final class View extends Lexer
 		if(is_null($id))
 		{
 			throw new Exceptions\PackageNotFoundException( "The \"{$name}\" package not found." );
+		}
+
+		if( $this->package && $this->package->getId() === $id )
+		{
+			return $this;
 		}
 
 		$this->package = Package::package($id);
@@ -862,7 +867,7 @@ final class View extends Lexer
 					}
 					else if( $exists )
 					{
-						$time = @ filemtime( $file );
+						$time = @ filemtime( $path );
 						if( $time )
 						{
 							$file .= '?t=' . $time;

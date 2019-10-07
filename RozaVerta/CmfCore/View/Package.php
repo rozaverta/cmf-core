@@ -161,7 +161,9 @@ final class Package implements Interfaces\PackageInterface, VarExportInterface
 	 */
 	public function loadFunctions(View $view)
 	{
-		$this->items["functional"] && Callback::tap( function($file) use($view) { require $file; }, $this->items["functional"] );
+		$this->items["functional"] && Callback::tap( function( $file ) use ( $view ) {
+			require_once $file;
+		}, $this->items["functional"] );
 		return $this;
 	}
 

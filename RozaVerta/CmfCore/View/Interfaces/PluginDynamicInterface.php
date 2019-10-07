@@ -21,6 +21,11 @@ interface PluginDynamicInterface extends PluginInterface, Getter
 	public function ready( array $data = [] );
 
 	/**
+	 * @return string
+	 */
+	public function render(): string;
+
+	/**
 	 * Get plugin data
 	 *
 	 * @return array

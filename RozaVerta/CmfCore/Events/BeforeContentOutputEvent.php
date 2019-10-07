@@ -23,7 +23,7 @@ class BeforeContentOutputEvent extends SystemEvent
 		parent::__construct([
 			'contentType' => $contentType,
 			'cache' => $cache,
-			'cacheable' => ! $cache && $cacheable
+			'cacheable' => $cacheable,
 		]);
 		$this->setAllowed("cacheable", "bool");
 	}

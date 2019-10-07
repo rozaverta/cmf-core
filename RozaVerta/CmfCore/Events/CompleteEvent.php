@@ -10,8 +10,8 @@ namespace RozaVerta\CmfCore\Events;
 /**
  * Class CompleteEvent
  *
- * @property-read string $content_type
- * @property-read bool $cache
+ * @property-read string $contentType
+ * @property-read bool   $cache
  *
  * @package RozaVerta\CmfCore\Events
  */

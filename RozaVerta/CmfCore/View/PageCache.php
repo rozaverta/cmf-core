@@ -86,7 +86,7 @@ class PageCache
 		if( $this->pageCache->ready() )
 		{
 			$data = $this->pageCache->import();
-			if( isset($data["package"], $data["template"], $data["body"], $data["data"], $data["headers"], $data["protected"], $data["contentType"], $data["plugins"]) )
+			if( isset( $data["package"], $data["template"], $data["body"], $data["data"], $data["headers"], $data["contentType"], $data["plugins"] ) )
 			{
 				$this->ready = true;
 
@@ -248,7 +248,10 @@ class PageCache
 			"code"          => $this->pageCode,
 			"headers"       => $this->pageHeaders,
 			"contentType"   => $this->pageContentType,
-			"plugins"       => $this->pagePlugins
+			"plugins" => $this->pagePlugins,
+			"data" => $this->pageData,
+			"body" => $this->pageBody,
+			"package" => $this->pagePackage,
 		];
 
 		$export = $this->pageCache->export( $data );

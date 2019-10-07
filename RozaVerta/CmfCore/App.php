@@ -913,8 +913,8 @@ final class App
 				->setCode($response->getCode())
 				->setHeaders($response->headers()->toArray())
 				->setContentType($contentType)
-				->setPackageName($view->getPackage()->getName())
-				->setTemplateName($view->getTemplate()->getName())
+				->setPackageName( $package )
+				->setTemplateName( $template )
 				->save();
 		}
 

@@ -458,26 +458,31 @@ class Request
 	public function referer( $valid_host = false, $valid_string = '' )
 	{
 		$ref = $this->server->get( 'HTTP_REFERER', '' );
-		if( $ref ) {
-
-			if($valid_host) {
+		if( $ref )
+		{
+			if( $valid_host )
+			{
 				// todo fixed constants
-				$host = BASE_PROTOCOL . "://" . APP_HOST;
+				$host = ( APP_SSL ? "https://" : "http://" ) . APP_ORIGINAL_HOST;
 				$len = strlen($host);
 
-				if( substr($ref, 0, $len) !== $host ) {
+				if( substr( $ref, 0, $len ) !== $host )
+				{
 					return '';
 				}
 
-				if( strlen($ref) > $len ) {
+				if( strlen( $ref ) > $len )
+				{
 					$end = $ref[$len];
-					if( $end !== "/" && $end !== ":" ) {
+					if( $end !== "/" && $end !== ":" )
+					{
 						return '';
 					}
 				}
 			}
 
-			if($valid_string && strpos($ref, $valid_string) === false) {
+			if( $valid_string && strpos( $ref, $valid_string ) === false )
+			{
 				return '';
 			}
 		}

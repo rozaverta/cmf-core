@@ -497,6 +497,15 @@ class PlainBuilder extends AbstractConnectionContainer
 	 */
 	public function exists( $select = null ): bool
 	{
+		if( is_array( $select ) )
+		{
+			$select = $this->grammar->columnize( $select );
+		}
+		else if( $select !== null )
+		{
+			$select = (string) $select;
+		}
+
 		/** @var Parameters $params */
 		$row = $this
 			->connection

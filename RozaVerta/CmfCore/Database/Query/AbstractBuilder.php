@@ -535,6 +535,20 @@ abstract class AbstractBuilder extends AbstractConnectionContainer implements Fe
 	}
 
 	/**
+	 * Check rows exists in current query
+	 *
+	 * @return bool
+	 *
+	 * @throws DBALException
+	 */
+	public function exists(): bool
+	{
+		return $this
+			->calcPlainBuilder()
+			->exists( $this->getSelectSql() );
+	}
+
+	/**
 	 * Get the first value of the first row of the result.
 	 *
 	 * @param string|null $column

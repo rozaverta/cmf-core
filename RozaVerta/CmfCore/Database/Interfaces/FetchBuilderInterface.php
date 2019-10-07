@@ -187,6 +187,13 @@ interface FetchBuilderInterface
 	public function groupBy( $groupBy );
 
 	/**
+	 * Check rows exists in current query
+	 *
+	 * @return bool
+	 */
+	public function exists(): bool;
+
+	/**
 	 * Get the first value of the first row
 	 *
 	 * @param string|null $column

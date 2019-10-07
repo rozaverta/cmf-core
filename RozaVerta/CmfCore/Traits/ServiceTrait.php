@@ -12,12 +12,12 @@ use RozaVerta\CmfCore\App;
 /**
  * Class ServiceTrait
  *
+ * @property array $services
+ *
  * @package RozaVerta\CmfCore\Traits
  */
 trait ServiceTrait
 {
-	protected $services = [];
-
 	/**
 	 * Append services to this object
 	 *
@@ -28,25 +28,32 @@ trait ServiceTrait
 	protected function thisServices( ... $args )
 	{
 		$count = count( $args );
-
-		if( $count < 1 )
+		if( $count > 0 )
 		{
-			$args = $this->services;
-			$count = count( $args );
+			$this->thisServicesLoader( $count === 1 && is_array( $args[0] ) ? $args[0] : $args );
 		}
 
-		if( $count === 1 && is_array( $args[0] ) )
+		if( isset( $this->services ) && is_array( $this->services ) )
 		{
-			$args = $args[0];
+			$this->thisServicesLoader( $this->services );
+			$this->services = null;
 		}
+	}
 
-		foreach( $args as $service )
+	/**
+	 * @param array $services
+	 *
+	 * @throws \Throwable
+	 */
+	private function thisServicesLoader( array $services )
+	{
+		foreach( $services as $service )
 		{
 			if( $service === "app" )
 			{
 				$this->app = App::getInstance();
 			}
-			else
+			else if( !isset( $this->{$service} ) )
 			{
 				$this->{$service} = self::service( $service );
 			}

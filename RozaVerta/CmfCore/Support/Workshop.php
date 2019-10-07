@@ -27,6 +27,8 @@ abstract class Workshop implements WorkshopInterface
 	use LoggableTrait;
 	use ModuleGetterTrait;
 
+	protected $services = [ "app", "log", "filesystem", "lang", "session", "database", "db", "host", "event", "cache" ];
+
 	/** @var \RozaVerta\CmfCore\App $app */
 	protected $app;
 
@@ -68,21 +70,5 @@ abstract class Workshop implements WorkshopInterface
 	{
 		$this->setModule($module);
 		$this->thisServices();
-	}
-
-	protected function thisServices( ...$args )
-	{
-		$services = [ "app", "log", "filesystem", "lang", "session", "database", "db", "host", "event", "cache" ];
-		if( count( $args ) )
-		{
-			foreach( $args as $service )
-			{
-				if( !in_array( $service, $services, true ) )
-				{
-					$services[] = $service;
-				}
-			}
-		}
-		$this->thisServicesTrait( ...$services );
 	}
 }

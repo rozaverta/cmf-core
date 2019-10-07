@@ -96,13 +96,13 @@ set_exception_handler(static function( Throwable $exception )
 	$codeName = $exception instanceof \RozaVerta\CmfCore\Interfaces\ThrowableInterface ? $exception->getCodeName() : null;
 	$message  = $exception->getMessage();
 	$output   = false;
-	$is_send  = false;
 	$response = $app->response;
+	$isSend = $response->isSent() || $response->isLocked();
 	$page404  = $exception instanceof PageNotFoundException;
 
 	// header code
 
-	if( ! $is_send )
+	if( !$isSend )
 	{
 		$response
 			->header("Content-Type", "text/html; charset=utf-8")
@@ -112,13 +112,11 @@ set_exception_handler(static function( Throwable $exception )
 		{
 			$response->setCode($code);
 		}
-		else if($page404)
+		else if( $page404 )
 		{
 			$response->setCode(404);
 		}
 	}
-
-	$is_send = $response->isSent() || $response->isLocked();
 
 	// write an error to the log file
 
@@ -160,10 +158,10 @@ set_exception_handler(static function( Throwable $exception )
 	if( $output instanceof Closure )
 	{
 		$output();
-		$is_send = true;
+		$isSend = true;
 	}
 
-	if( $is_send )
+	if( $isSend )
 	{
 		exit;
 	}

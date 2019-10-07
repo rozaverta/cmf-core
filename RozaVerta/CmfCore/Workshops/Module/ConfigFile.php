@@ -46,10 +46,7 @@ class ConfigFile extends Workshop implements SetterAndGetter
 	 * @param string                  $name
 	 * @param WorkshopModuleProcessor $module
 	 *
-	 * @throws \RozaVerta\CmfCore\Exceptions\ClassNotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
-	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
+	 * @throws \Throwable
 	 */
 	public function __construct( string $name, WorkshopModuleProcessor $module )
 	{

@@ -23,10 +23,7 @@ trait ServiceTrait
 	 *
 	 * @param mixed ...$args
 	 *
-	 * @throws \RozaVerta\CmfCore\Exceptions\ClassNotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
-	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
+	 * @throws \Throwable
 	 */
 	protected function thisServices( ... $args )
 	{
@@ -80,10 +77,7 @@ trait ServiceTrait
 	 *
 	 * @return object
 	 *
-	 * @throws \RozaVerta\CmfCore\Exceptions\ClassNotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
-	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
+	 * @throws \Throwable
 	 */
 	public static function service( string $name )
 	{
@@ -98,8 +92,7 @@ trait ServiceTrait
 	 *
 	 * @return bool
 	 *
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
-	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
+	 * @throws \Throwable
 	 */
 	public static function loaded( string $name, bool $autoLoad = false ): bool
 	{

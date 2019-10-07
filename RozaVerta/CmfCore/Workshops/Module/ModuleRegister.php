@@ -41,10 +41,7 @@ class ModuleRegister extends Workshop
 	 *
 	 * @param string $namespaceName
 	 *
-	 * @throws NotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\ClassNotFoundException
-	 * @throws \RozaVerta\CmfCore\Exceptions\WriteException
-	 * @throws \RozaVerta\CmfCore\Module\Exceptions\ResourceReadException
+	 * @throws \Throwable
 	 */
 	public function __construct( string $namespaceName )
 	{

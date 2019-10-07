@@ -520,14 +520,14 @@ class PlainBuilder extends AbstractConnectionContainer
 	/**
 	 * Retrieve the "count" result of the query.
 	 *
-	 * @param string|null $column
-	 * @param string|null $select
+	 * @param string|null       $column
+	 * @param string|array|null $select
 	 *
 	 * @return mixed
 	 *
 	 * @throws DBALException
 	 */
-	public function count( ?string $column = null, ?string $select = null ): int
+	public function count( ?string $column = null, $select = null ): int
 	{
 		return $this->aggregate( __FUNCTION__, $column, $select );
 	}
@@ -535,14 +535,14 @@ class PlainBuilder extends AbstractConnectionContainer
 	/**
 	 * Retrieve the minimum value of a given column.
 	 *
-	 * @param string|null $column
-	 * @param string|null $select
+	 * @param string|null       $column
+	 * @param string|array|null $select
 	 *
 	 * @return mixed
 	 *
 	 * @throws DBALException
 	 */
-	public function min( ?string $column = null, ?string $select = null ): int
+	public function min( ?string $column = null, $select = null ): int
 	{
 		return $this->aggregate( __FUNCTION__, $column, $select );
 	}
@@ -550,14 +550,14 @@ class PlainBuilder extends AbstractConnectionContainer
 	/**
 	 * Retrieve the maximum value of a given column.
 	 *
-	 * @param string|null $column
-	 * @param string|null $select
+	 * @param string|null       $column
+	 * @param string|array|null $select
 	 *
 	 * @return mixed
 	 *
 	 * @throws DBALException
 	 */
-	public function max( ?string $column = null, ?string $select = null ): int
+	public function max( ?string $column = null, $select = null ): int
 	{
 		return $this->aggregate( __FUNCTION__, $column, $select );
 	}
@@ -565,14 +565,14 @@ class PlainBuilder extends AbstractConnectionContainer
 	/**
 	 * Retrieve the sum of the values of a given column.
 	 *
-	 * @param string|null $column
-	 * @param string|null $select
+	 * @param string|null       $column
+	 * @param string|array|null $select
 	 *
 	 * @return mixed
 	 *
 	 * @throws DBALException
 	 */
-	public function sum( ?string $column = null, ?string $select = null ): int
+	public function sum( ?string $column = null, $select = null ): int
 	{
 		return $this->aggregate( __FUNCTION__, $column, $select );
 	}
@@ -580,14 +580,14 @@ class PlainBuilder extends AbstractConnectionContainer
 	/**
 	 * Retrieve the average of the values of a given column.
 	 *
-	 * @param string|null $column
-	 * @param string|null $select
+	 * @param string|null       $column
+	 * @param string|array|null $select
 	 *
 	 * @return mixed
 	 *
 	 * @throws DBALException
 	 */
-	public function avg( ?string $column = null, ?string $select = null ): int
+	public function avg( ?string $column = null, $select = null ): int
 	{
 		return $this->aggregate( __FUNCTION__, $column, $select );
 	}

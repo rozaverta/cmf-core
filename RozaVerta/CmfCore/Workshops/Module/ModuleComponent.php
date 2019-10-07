@@ -533,6 +533,12 @@ class ModuleComponent extends Workshop
 		{
 			foreach($moduleDatabaseTables as $tableName)
 			{
+				if( !isset( $oldest[$tableName] ) && !in_array( $tableName, $tables, true ) )
+				{
+					$drv->createTable( $tableName );
+					continue;
+				}
+
 				$update = $force || isset( $oldest[$tableName] ) || !$tableVersion->has( $tableName ) || version_compare( $tableVersion->get( $tableName ), $moduleVersion, "<" );
 				$currentTableName = $oldest[$tableName] ?? $tableName;
 				if($update)

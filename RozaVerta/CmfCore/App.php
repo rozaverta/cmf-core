@@ -477,19 +477,27 @@ final class App
 	 */
 	public function changeController( ControllerInterface $controller ): ControllerInterface
 	{
-		if( isset( $this->ci["controller"] ) && !$this->controller->changeable( $controller ) )
+		if( isset( $this->ci["controller"] ) )
 		{
-			throw new Exceptions\AccessException( "Current controller \"" . get_class( $this->ci["controller"] ) . "\" does not allow change." );
-		}
+			if( $controller === $this->controller )
+			{
+				return $controller;
+			}
 
-		$event = new ChangeControllerEvent( $controller );
-		$this->event->dispatch( $event );
-		if( $event->isPropagationStopped() )
-		{
-			throw new Exceptions\AccessException( "Current controller \"" . get_class( $this->ci["controller"] ) . "\" does not allow change." );
-		}
+			if( !$this->controller->changeable( $controller ) )
+			{
+				throw new Exceptions\AccessException( "Current controller \"" . get_class( $this->ci["controller"] ) . "\" does not allow change." );
+			}
 
-		$controller = $event->controller;
+			$event = new ChangeControllerEvent( $controller );
+			$this->event->dispatch( $event );
+			if( $event->isPropagationStopped() )
+			{
+				throw new Exceptions\AccessException( "Current controller \"" . get_class( $this->ci["controller"] ) . "\" does not allow change." );
+			}
+
+			$controller = $event->controller;
+		}
 
 		unset( $this->ci["controller"] );
 		$this->ci["controller"] = $controller;

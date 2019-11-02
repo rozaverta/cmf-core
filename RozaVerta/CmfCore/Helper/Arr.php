@@ -452,12 +452,22 @@ final class Arr
 	/**
 	 * If the given value is not an array, wrap it in one.
 	 *
-	 * @param  mixed  $value
+	 * @param mixed $value
+	 * @param bool  $notNull
+	 *
 	 * @return array
 	 */
-	public static function wrap($value): array
+	public static function wrap( $value, bool $notNull = false ): array
 	{
-		return ! is_array($value) ? [$value] : $value;
+		if( is_array( $value ) )
+		{
+			return $value;
+		}
+		if( $notNull && $value === null )
+		{
+			return [];
+		}
+		return [ $value ];
 	}
 
 	/**

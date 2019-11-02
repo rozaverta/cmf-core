@@ -8,12 +8,13 @@
 namespace RozaVerta\CmfCore\CliCommands\Scripts;
 
 use Doctrine\DBAL\DBALException;
-use InvalidArgumentException;
 use RozaVerta\CmfCore\Cli\IO\ConfigOption;
 use RozaVerta\CmfCore\Cli\IO\Option;
 use RozaVerta\CmfCore\Database\DatabaseManager;
 use RozaVerta\CmfCore\Event\EventManager;
+use RozaVerta\CmfCore\Exceptions\InvalidArgumentException;
 use RozaVerta\CmfCore\Filesystem\Config;
+use RozaVerta\CmfCore\Log\Interfaces\LoggableInterface;
 use RozaVerta\CmfCore\Log\Log;
 use RozaVerta\CmfCore\Log\Logger;
 use RozaVerta\CmfCore\Module\Interfaces\ModuleInterface;
@@ -23,6 +24,7 @@ use RozaVerta\CmfCore\Manifest as ModuleCoreManifest;
 use RozaVerta\CmfCore\Helper\PhpExport;
 use RozaVerta\CmfCore\Schemes\TemplatePackages_SchemeDesigner;
 use RozaVerta\CmfCore\Support\Prop;
+use RozaVerta\CmfCore\Workshops\Module\CoreModuleFactory;
 use RozaVerta\CmfCore\Workshops\Module\Events\InstallModuleEvent;
 use RozaVerta\CmfCore\Workshops\Module\Events\ModuleEvent;
 use RozaVerta\CmfCore\Workshops\Module\ModuleComponent;
@@ -158,6 +160,21 @@ class Cmf extends AbstractScript
 
 		if( $io->confirm("<info>$</info> The basic setting was successful. Do you want to run the installation (y/n)? ") )
 		{
+			$installer = new CoreModuleFactory();
+			$this->listenLog( $installer );
+
+			try
+			{
+				$installer->install();
+				unset( $installer );
+			} catch( InvalidArgumentException $e )
+			{
+				throw $e;
+			} catch( \Throwable $e )
+			{
+				throw new InvalidArgumentException( "Install failure: " . $e->getMessage(), $e );
+			}
+
 			// set main package as addon, so that the next update will not overwrite the package
 
 			$io->confirm("<info>$</info> Do you want to use the main package as an addon (y/n)? ") &&
@@ -166,7 +183,7 @@ class Cmf extends AbstractScript
 					if($event instanceof InstallModuleEvent && $event->getProcessor()->getModuleId() === 1)
 					{
 						return function(string $action, ? ModuleInterface $module) {
-							if($action === "install")
+							if( $action === "update" )
 							{
 								DatabaseManager::connection()
 									->builder( TemplatePackages_SchemeDesigner::getTableName() )
@@ -182,10 +199,7 @@ class Cmf extends AbstractScript
 					return null;
 				});
 
-			$this->reloadSystemConfig(["status" => "install-progress"]);
-			$this->getWmp(true)->install();
-			$this->reloadSystemConfig(["status" => "install", "install" => true], true);
-			$this->goodBy();
+			$this->updateProcess( true );
 		}
 		else
 		{
@@ -214,12 +228,7 @@ class Cmf extends AbstractScript
 			throw new RuntimeException("Warning! System is update, please wait");
 		}
 
-		$status = $this->getSystemConfig()->get("status");
-
-		$this->reloadSystemConfig(["status" => "update-progress"]);
-		$this->getWmp()->update($force);
-		$this->reloadSystemConfig(["status" => $status], true);
-		$this->goodBy();
+		$this->updateProcess( $force );
 	}
 
 	/**
@@ -244,9 +253,10 @@ class Cmf extends AbstractScript
 		else
 		{
 			$flag = 0;
-			if( $io->confirm("Remove database tables (y/n)? ") ) $flag = ModuleComponentCore::UNINSTALL_DATABASE;
-			if( $io->confirm("Remove assets files (y/n)? ") ) $flag = $flag | ModuleComponentCore::UNINSTALL_ASSETS;
-			if( $io->confirm("Remove application files (y/n)? ") ) $flag = $flag | ModuleComponentCore::UNINSTALL_APPLICATION;
+			if( $io->confirm( "Remove assets files (y/n)? " ) ) $flag = ModuleComponent::UNINSTALL_ASSETS;
+			if( $io->confirm( "Remove addons (y/n)? " ) ) $flag = $flag | ModuleComponent::UNINSTALL_ADDONS;
+			if( $io->confirm( "Remove config files (y/n)? " ) ) $flag = $flag | ModuleComponent::UNINSTALL_CONFIG;
+			if( $io->confirm( "Remove package files (y/n)? " ) ) $flag = $flag | ModuleComponent::UNINSTALL_PACKAGES;
 
 			$this
 				->getWmp()
@@ -371,6 +381,29 @@ class Cmf extends AbstractScript
 	// private
 
 	/**
+	 * @param bool $force
+	 *
+	 * @throws \Throwable
+	 */
+	private function updateProcess( $force = false )
+	{
+		$status = $this
+			->getSystemConfig()
+			->reload()
+			->get( "status" );
+
+		if( !$status || $status === "failure" )
+		{
+			$status = "install";
+		}
+
+		$this->reloadSystemConfig( [ "status" => "update-progress" ] );
+		$this->getWmp()->update( $force );
+		$this->reloadSystemConfig( [ "status" => $status ], true );
+		$this->goodBy();
+	}
+
+	/**
 	 * @param $author
 	 *
 	 * @return string
@@ -436,36 +469,32 @@ class Cmf extends AbstractScript
 	}
 
 	/**
-	 * @param bool $install
-	 *
 	 * @return ModuleComponent
 	 *
 	 * @throws \Throwable
 	 */
-	private function getWmp( bool $install = false ): ModuleComponent
+	private function getWmp(): ModuleComponent
 	{
 		$conf = $this->getCoreManifest();
 
-		if( ModuleHelper::exists($conf->getName(), $moduleId) )
+		if( !ModuleHelper::exists( $conf->getName(), $moduleId ) )
 		{
-			if( $install )
-			{
-				throw new InvalidArgumentException($conf->getName() . " module already installed previously");
-			}
-		}
-		else if( ! $install )
-		{
-			throw new InvalidArgumentException($conf->getName() . " module not installed");
-		}
-		else
-		{
-			$moduleId = 1;
+			throw new InvalidArgumentException( $conf->getName() . " module not installed." );
 		}
 
 		$module = WorkshopModuleProcessor::module($moduleId);
 		$wmp = new ModuleComponent($module);
+		$this->listenLog( $wmp );
 
-		$wmp->listenLog(function(Log $log) {
+		return $wmp;
+	}
+
+	/**
+	 * @param LoggableInterface $loggable
+	 */
+	private function listenLog( LoggableInterface $loggable )
+	{
+		$loggable->listenLog( function( Log $log ) {
 
 			$isError = Logger::isHighLevel($log->getLevel());
 
@@ -476,8 +505,6 @@ class Cmf extends AbstractScript
 				->getIO()
 				->write("<{$t}>" . $e . "</{$t}> " . $log->message());
 		});
-
-		return $wmp;
 	}
 
 	/**

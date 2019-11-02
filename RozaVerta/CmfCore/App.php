@@ -400,6 +400,11 @@ final class App
 		return (bool) $this->system("install", false);
 	}
 
+	/**
+	 * @return string
+	 *
+	 * @throws \Throwable
+	 */
 	public function run(): string
 	{
 		static $is_run = false, $result = 'html';
@@ -509,10 +514,7 @@ final class App
 	/**
 	 * @return string
 	 *
-	 * @throws Exception
-	 * @throws Exceptions\NotFoundException
-	 * @throws Exceptions\ReadException
-	 * @throws ReflectionException
+	 * @throws \Throwable
 	 */
 	private function runCli(): string
 	{
@@ -1120,11 +1122,26 @@ final class App
 		$this->initialized() && $this->event->dispatch( new Events\ShutdownEvent() );
 	}
 
+	/**
+	 * @param $name
+	 *
+	 * @return object
+	 *
+	 * @throws Exceptions\ClassNotFoundException
+	 * @throws Exceptions\WriteException
+	 * @throws Module\Exceptions\ResourceReadException
+	 * @throws NotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
+	 */
 	public function __get( $name )
 	{
 		return $this->service( $name );
 	}
 
+	/**
+	 * @throws \Throwable
+	 */
 	public function __destruct()
 	{
 		$this->close();
@@ -1134,13 +1151,16 @@ final class App
 	 * Add new service object or singleton initializer.
 	 *
 	 * @param string $name
-	 * @param $object
+	 * @param        $object
 	 *
 	 * @return $this
 	 *
+	 * @throws Exceptions\ClassNotFoundException
 	 * @throws Exceptions\WriteException
 	 * @throws Module\Exceptions\ResourceReadException
 	 * @throws NotFoundException
+	 * @throws \Doctrine\DBAL\DBALException
+	 * @throws \Throwable
 	 */
 	public function singleton( string $name, $object )
 	{
@@ -1213,6 +1233,11 @@ final class App
 		$this->system = $system;
 	}
 
+	/**
+	 * @param MountPointInterface $mountPoint
+	 *
+	 * @return ControllerInterface|null
+	 */
 	private function initializeController( MountPointInterface $mountPoint )
 	{
 		$className = $mountPoint->getModule()->getNamespaceName() . 'Router';

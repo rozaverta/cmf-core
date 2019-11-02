@@ -13,7 +13,12 @@ use RozaVerta\CmfCore\Event\Exceptions\EventOverloadException;
 use RozaVerta\CmfCore\Event\Interfaces\EventInterface;
 use RozaVerta\CmfCore\Support\Collection;
 
-class Dispatcher
+/**
+ * Class Dispatcher
+ *
+ * @package RozaVerta\CmfCore\Event
+ */
+class Dispatcher implements \Countable
 {
 	/**
 	 * Event name
@@ -36,6 +41,9 @@ class Dispatcher
 	 */
 	private $registered = [];
 
+	/**
+	 * @var array
+	 */
 	private $complete = [];
 
 	/**
@@ -65,17 +73,30 @@ class Dispatcher
 		$this->preparatory = $preparatory;
 	}
 
+	/**
+	 * Get event name.
+	 *
+	 * @return string
+	 */
 	public function getName()
 	{
 		return $this->name;
 	}
 
+	/**
+	 * Count actions of an event.
+	 *
+	 * @return int
+	 */
 	public function count()
 	{
 		return $this->callbacks->count();
 	}
 
-	public function isRun()
+	/**
+	 * @return bool
+	 */
+	public function isRun(): bool
 	{
 		return $this->is_run;
 	}
@@ -83,6 +104,7 @@ class Dispatcher
 	/**
 	 * @param Closure $callback $callback
 	 * @param int $priority
+	 *
 	 * @return $this
 	 */
 	public function listen( Closure $callback, $priority = 0)
@@ -94,6 +116,7 @@ class Dispatcher
 	/**
 	 * @param Closure $callback
 	 * @param $name
+	 *
 	 * @return $this
 	 */
 	public function register( Closure $callback, $name)
@@ -106,11 +129,19 @@ class Dispatcher
 		return $this;
 	}
 
+	/**
+	 * @param $name
+	 *
+	 * @return bool
+	 */
 	public function isRegistered($name)
 	{
 		return in_array($name, $this->registered);
 	}
 
+	/**
+	 * @return bool
+	 */
 	public function isCompletable()
 	{
 		return count($this->complete) > 0;
@@ -149,7 +180,7 @@ class Dispatcher
 
 		if( $event->getName() !== $this->name )
 		{
-			throw new InvalidArgumentException("The name of the Event does not match the name of the Dispatcher");
+			throw new InvalidArgumentException( "The name of the Event does not match the name of the Dispatcher." );
 		}
 
 		$isCall = $callback instanceof Closure;
@@ -193,6 +224,9 @@ class Dispatcher
 		return $dispatch;
 	}
 
+	/**
+	 * @param mixed ...$args
+	 */
 	public function complete(... $args)
 	{
 		foreach( $this->complete as $call )

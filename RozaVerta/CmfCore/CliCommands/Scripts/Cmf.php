@@ -77,12 +77,12 @@ class Cmf extends AbstractScript
 		$this->getHost();
 		if( $this->isInstall() )
 		{
-			throw new InvalidArgumentException("System already installed");
+			throw new InvalidArgumentException( "System already installed." );
 		}
 
 		if( $this->inInstallUpdateProgress() )
 		{
-			throw new RuntimeException("Warning! System is update, please wait");
+			throw new RuntimeException( "Warning! System is update, please wait." );
 		}
 
 		// assets
@@ -146,17 +146,18 @@ class Cmf extends AbstractScript
 
 		// Check database connection
 
-		try {
+		try
+		{
 			if( ! DatabaseManager::connection()->ping() )
 			{
-				throw new DBALException("Database connection ping failed");
+				throw new DBALException( "Database connection ping failed." );
 			}
-		}
-		catch( DBALException $e ) {
+		} catch( DBALException $e )
+		{
 			throw new InvalidArgumentException("Error database connection: " . $e->getMessage());
 		}
 
-		$io->write("<info>$</info> Database connection is created");
+		$io->write( "<info>$</info> Database connection is created." );
 
 		if( $io->confirm("<info>$</info> The basic setting was successful. Do you want to run the installation (y/n)? ") )
 		{
@@ -220,12 +221,12 @@ class Cmf extends AbstractScript
 
 		if( !$this->isInstall() )
 		{
-			throw new InvalidArgumentException("System not installed yet");
+			throw new InvalidArgumentException( "System not installed yet." );
 		}
 
 		if( $this->inInstallUpdateProgress() )
 		{
-			throw new RuntimeException("Warning! System is update, please wait");
+			throw new RuntimeException( "Warning! System is update, please wait." );
 		}
 
 		$this->updateProcess( $force );

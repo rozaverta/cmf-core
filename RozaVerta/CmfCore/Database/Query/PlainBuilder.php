@@ -614,7 +614,8 @@ class PlainBuilder extends AbstractConnectionContainer
 
 		if( $this->hasPart( "groupBy" ) || $this->hasPart( "having" ) )
 		{
-			$col = end( explode( ".", $column ) );
+			$split = explode( ".", $column );
+			$col = end( $split );
 			$funcColumn = "*";
 
 			if( $col !== "*" )
@@ -728,12 +729,11 @@ class PlainBuilder extends AbstractConnectionContainer
 	{
 		if( isset( $this->sqlParts[$part] ) )
 		{
-			$value = $this->{$part} ?? false;
-			return $value !== null && $value !== false;
+			return !empty( $this->sqlParts[$part]["query"] );
 		}
 		else
 		{
-			return isset( $this->sqlParts[$part] );
+			return false;
 		}
 	}
 

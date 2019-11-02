@@ -40,7 +40,15 @@ abstract class Event implements EventInterface
 	 */
 	protected $params_allowed_type = [];
 
-	private $prevent = false;
+	/**
+	 * @var bool
+	 */
+	private $actionPrevented = false;
+
+	/**
+	 * @var bool
+	 */
+	private $propagationStopped = false;
 
 	public function __construct(array $params = [])
 	{
@@ -65,13 +73,30 @@ abstract class Event implements EventInterface
 	}
 
 	/**
+	 * @return $this
+	 */
+	public function preventAction()
+	{
+		$this->actionPrevented = true;
+		return $this;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function isActionPrevented(): bool
+	{
+		return $this->actionPrevented;
+	}
+
+	/**
 	 * Prevents the event from being passed to further listeners
 	 *
 	 * @return $this
 	 */
 	public function stopPropagation()
 	{
-		$this->prevent = true;
+		$this->propagationStopped = true;
 		return $this;
 	}
 
@@ -82,7 +107,7 @@ abstract class Event implements EventInterface
 	 */
 	public function isPropagationStopped(): bool
 	{
-		return $this->prevent;
+		return $this->propagationStopped;
 	}
 
 	/**

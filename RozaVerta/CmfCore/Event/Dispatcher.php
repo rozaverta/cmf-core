@@ -157,7 +157,7 @@ class Dispatcher
 
 		foreach( clone $this->callbacks as $call )
 		{
-			if( $event->isPropagationStopped() )
+			if( $event->isPropagationStopped() || $event->isActionPrevented() )
 			{
 				break;
 			}

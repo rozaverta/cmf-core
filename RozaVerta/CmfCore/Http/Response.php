@@ -430,11 +430,16 @@ class Response
 		}
 
 		// Call trigger
-		$dispatcher = $this->event->dispatcher( "onResponseSend" );
+		$dispatcher = $this->event->dispatcher( ResponseSendEvent::eventName() );
 		if( ! $dispatcher->isRun() )
 		{
 			// fixed json
-			$dispatcher->dispatch(new ResponseSendEvent($this));
+			$event = new ResponseSendEvent( $this );
+			$dispatcher->dispatch( $event );
+			if( $event->isPropagationStopped() )
+			{
+				return $this;
+			}
 		}
 
 		// Send our response data
@@ -497,8 +502,13 @@ class Response
 		}
 
 		// Call trigger
-		$dispatcher = $this->event->dispatcher( "onResponseSend" );
-		$dispatcher->dispatch(new ResponseFileEvent($this, $path, $filename, $mime_type));
+		$dispatcher = $this->event->dispatcher( ResponseFileEvent::eventName() );
+		$event = new ResponseFileEvent( $this, $path, $filename, $mime_type );
+		$dispatcher->dispatch( $event );
+		if( $event->isPropagationStopped() )
+		{
+			return $this;
+		}
 
 		$this->setBody('');
 
@@ -571,9 +581,13 @@ class Response
 		$this->requireUnlocked();
 
 		// Call trigger
-		$dispatcher = $this->event->dispatcher( "onResponseSend" );
-		$event = new ResponseJsonEvent($this, $object, $jsonp_prefix);
-		$dispatcher->dispatch($event);
+		$dispatcher = $this->event->dispatcher( ResponseJsonEvent::eventName() );
+		$event = new ResponseJsonEvent( $this, $object, $jsonp_prefix );
+		$dispatcher->dispatch( $event );
+		if( $event->isPropagationStopped() )
+		{
+			return $this;
+		}
 
 		$this->setBody('');
 		$this->noCache();
@@ -750,7 +764,12 @@ class Response
 			}
 		}
 
-		$app->event->dispatch( new ResponseRedirectEvent( $this, $url, $permanent, $refresh ) );
+		$event = new ResponseRedirectEvent( $this, $url, $permanent, $refresh );
+		$app->event->dispatch( $event );
+		if( $event->isPropagationStopped() )
+		{
+			return $this;
+		}
 
 		if( headers_sent() )
 		{
